@@ -9,9 +9,20 @@ const workflow = readFileSync("../.github/workflows/deploy-pages.yml", "utf8");
 test("appen inneholder seks komplette læringsmoduler", () => {
   const moduleIds = page.match(/\n    id: [1-6],/g) ?? [];
   assert.equal(moduleIds.length, 6);
-  for (const step of ["Problem", "Teori", "Prøv", "Observer", "Oppgave"]) {
+  for (const step of ["Problem", "Oppfriskning", "Lær", "Prøv", "Forklar", "Oppgave"]) {
     assert.match(page, new RegExp(`"${step}"`));
   }
+  assert.equal((page.match(/    refresh: \{/g) ?? []).length, 6);
+  assert.match(page, /navn = verdi/);
+  assert.match(page, /Slik lager du en variabel/);
+});
+
+test("modulvelgeren har et fritt Python-rom uten sidepanel", () => {
+  assert.match(page, /id="module-select"/);
+  assert.match(page, /Fritt Python-rom/);
+  assert.match(page, /playgroundCode/);
+  assert.match(page, /mitt_program\.py/);
+  assert.doesNotMatch(page, /<aside/);
 });
 
 test("elev- og lærermodus finnes", () => {

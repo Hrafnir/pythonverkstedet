@@ -9,7 +9,12 @@ type Module = {
   eyebrow: string;
   question: string;
   intro: string;
-  theory: { title: string; body: string; code?: string }[];
+  refresh: {
+    title: string;
+    body: string;
+    examples: { code: string; explanation: string }[];
+  };
+  theory: { title: string; body: string; code?: string; steps: string[] }[];
   starterCode: string;
   observe: string[];
   task: string;
@@ -33,21 +38,33 @@ const modules: Module[] = [
     question: "En jakke koster 800 kr. Hva blir prisen etter 25 % rabatt?",
     intro:
       "Vi lar Python holde orden på tallene, men matematikken er fortsatt vår. Målet er å kunne følge verdiene linje for linje og forklare hvorfor svaret blir riktig.",
+    refresh: {
+      title: "Hva er en variabel?",
+      body: "En variabel er som en boks med navnelapp. I boksen kan vi lagre et tall eller en tekst. Verdien kan brukes senere – og den kan byttes ut.",
+      examples: [
+        { code: "navn = verdi", explanation: "Oppskriften: navn til venstre, verdi til høyre." },
+        { code: "x = 50", explanation: "Variabelen x får tallverdien 50." },
+        { code: 'tekst = "Hei"', explanation: "Tekst må stå i anførselstegn. Tall skrives uten." },
+      ],
+    },
     theory: [
       {
-        title: "En variabel er et navn på en verdi",
-        body: "Når Python leser pris = 800, lagres verdien 800 under navnet pris. Likhetstegnet betyr her «gi variabelen en verdi».",
+        title: "Slik lager du en variabel",
+        body: "Når Python leser pris = 800, lagres verdien 800 under navnet pris. Her betyr likhetstegnet «gi variabelen en verdi» – ikke «regn ut begge sider».",
         code: "pris = 800",
+        steps: ["Velg et navn som forteller hva verdien betyr.", "Skriv ett likhetstegn.", "Skriv verdien på høyre side.", "Les linjen fra høyre: «pris får verdien 800»."],
       },
       {
         title: "Et uttrykk blir regnet ut",
         body: "Rabatt på 25 % gir vekstfaktoren 1 − 0,25 = 0,75. Python bruker punktum som desimalskilletegn.",
         code: "ny_pris = pris * (1 - rabatt)",
+        steps: ["Python henter verdiene til pris og rabatt.", "Parentesen regnes ut først: 1 − 0,25.", "Resultatet ganges med prisen.", "Svaret lagres i ny_pris."],
       },
       {
         title: "print viser resultatet",
         body: "print(...) skriver en verdi i resultatfeltet. Det gjør det mulig å observere hva programmet har regnet ut.",
         code: "print(ny_pris)",
+        steps: ["Skriv print og parenteser.", "Sett variabelen du vil se, inni parentesene.", "Kjør koden og sammenlign med overslaget ditt."],
       },
     ],
     starterCode: `pris = 800\nrabatt = 0.25\nny_pris = pris * (1 - rabatt)\nprint(ny_pris)`,
@@ -87,20 +104,33 @@ const modules: Module[] = [
     question: "Hvordan kan et program avgjøre om et tall er partall eller oddetall?",
     intro:
       "Et vilkår lar programmet velge mellom ulike veier. Her bruker vi divisjonsrest for å gjøre en matematisk regel om til kode.",
+    refresh: {
+      title: "Hva betyr sant eller usant?",
+      body: "Et vilkår er et spørsmål Python kan svare sant eller usant på. Programmet bruker svaret til å velge hvilken kode som skal kjøres.",
+      examples: [
+        { code: "5 > 3", explanation: "Sant: 5 er større enn 3." },
+        { code: "5 == 3", explanation: "Usant: to likhetstegn spør «er de like?»." },
+        { code: "tall = 5", explanation: "Ett likhetstegn gir variabelen en verdi." },
+      ],
+    },
     theory: [
       {
         title: "Sammenligning bruker to likhetstegn",
         body: "Uttrykket rest == 0 spør om rest er lik null. Svaret er enten sant eller usant.",
         code: "rest == 0",
+        steps: ["Finn verdien til rest.", "Sammenlign den med 0.", "Avgjør om spørsmålet er sant eller usant."],
       },
       {
         title: "% finner divisjonsresten",
         body: "17 % 2 blir 1, mens 18 % 2 blir 0. Alle partall gir rest 0 når de deles på 2.",
         code: "rest = tall % 2",
+        steps: ["Del tallet på 2.", "Se bare på resten etter delingen.", "Rest 0 betyr partall; rest 1 betyr oddetall."],
       },
       {
         title: "Innrykk viser hva som hører sammen",
         body: "Linjene under if og else må rykkes inn. Innrykket er en del av Python-språket.",
+        code: 'if rest == 0:\n    print("partall")',
+        steps: ["Skriv if, vilkåret og kolon.", "Rykk inn koden som skal kjøres når vilkåret er sant.", "Bruk else for det som skal skje ellers."],
       },
     ],
     starterCode: `tall = 18\nrest = tall % 2\n\nif rest == 0:\n    print("partall")\nelse:\n    print("oddetall")`,
@@ -140,20 +170,33 @@ const modules: Module[] = [
     question: "Hvordan kan fem kodelinjer lage en hel tallfølge?",
     intro:
       "En løkke gjentar en instruksjon. Det gjør programmering nyttig når vi vil utforske mønstre, tabeller og systematiske endringer.",
+    refresh: {
+      title: "Hva er en gjentakelse?",
+      body: "Når den samme handlingen skal utføres mange ganger, kan vi beskrive mønsteret én gang og la en løkke gjøre gjentakelsen.",
+      examples: [
+        { code: "print(2)\nprint(4)\nprint(6)", explanation: "Her skriver vi nesten samme kommando tre ganger." },
+        { code: "for n in range(1, 4):", explanation: "Her får n verdiene 1, 2 og 3 – én om gangen." },
+        { code: "    print(2 * n)", explanation: "Den innrykkede linjen kjøres for hver verdi av n." },
+      ],
+    },
     theory: [
       {
         title: "for gjentar",
         body: "For hver verdi i tallfølgen utføres den innrykkede linjen én gang.",
         code: "for n in range(1, 6):",
+        steps: ["Velg navn på løkkevariabelen, for eksempel n.", "Velg start og stopp med range.", "Avslutt linjen med kolon.", "Rykk inn det som skal gjentas."],
       },
       {
         title: "Sluttverdien er ikke med",
         body: "range(1, 6) gir tallene 1, 2, 3, 4 og 5. Tallet 6 er stoppunktet.",
+        code: "range(start, stopp)",
+        steps: ["Startverdien er med.", "Stoppverdien er ikke med.", "Tell verdiene før du kjører koden."],
       },
       {
         title: "Uttrykket endres hver runde",
         body: "Når n får en ny verdi, regnes 2 * n ut på nytt. Slik oppstår en tallfølge.",
         code: "print(2 * n)",
+        steps: ["Sett inn første verdi av n i uttrykket.", "Regn ut og skriv resultatet.", "Gjenta med neste n-verdi til løkken er ferdig."],
       },
     ],
     starterCode: `for n in range(1, 6):\n    print(2 * n)`,
@@ -193,20 +236,33 @@ const modules: Module[] = [
     question: "Kan vi gi en matematisk regel et navn og bruke den flere ganger?",
     intro:
       "En Python-funksjon tar imot verdier, arbeider med dem og kan returnere et resultat. Det ligner funksjonsbegrepet i matematikk.",
+    refresh: {
+      title: "Hva er en funksjon?",
+      body: "Tenk på en funksjon som en maskin: Du sender inn en verdi, maskinen følger en fast regel, og du får en ny verdi ut.",
+      examples: [
+        { code: "f(x) = 2x + 3", explanation: "Dette er regelen skrevet som matematikk." },
+        { code: "f(6) = 2 · 6 + 3", explanation: "Vi setter inn 6 der det står x." },
+        { code: "f(6) = 15", explanation: "15 er funksjonsverdien når x er 6." },
+      ],
+    },
     theory: [
       {
         title: "def lager funksjonen",
         body: "Navnet kommer etter def. Verdien i parentes kalles en parameter.",
         code: "def f(x):",
+        steps: ["Skriv def for å definere en funksjon.", "Gi funksjonen et navn.", "Skriv parameteren i parentes.", "Avslutt med kolon og rykk inn innholdet."],
       },
       {
         title: "return sender svaret tilbake",
         body: "Uttrykket etter return bestemmer funksjonsverdien.",
         code: "return 2 * x + 3",
+        steps: ["Skriv regelen som et Python-uttrykk.", "Bruk * for gange.", "Sett return foran uttrykket for å sende svaret tilbake."],
       },
       {
         title: "Et funksjonskall setter inn en verdi",
         body: "f(6) betyr at x får verdien 6. Resultatet blir 2 · 6 + 3 = 15.",
+        code: "resultat = f(6)",
+        steps: ["Skriv funksjonsnavnet.", "Sett inn ønsket verdi i parentes.", "Lagre svaret i en variabel eller skriv det ut med print."],
       },
     ],
     starterCode: `def f(x):\n    return 2 * x + 3\n\nresultat = f(6)\nprint(resultat)`,
@@ -246,20 +302,33 @@ const modules: Module[] = [
     question: "Hvor ofte får vi en sekser når vi kaster en terning 600 ganger?",
     intro:
       "En simulering gjentar et tilfeldig forsøk mange ganger. Vi sammenligner relativ frekvens med den teoretiske sannsynligheten 1/6.",
+    refresh: {
+      title: "Hva er sannsynlighet?",
+      body: "Sannsynlighet beskriver hvor stor sjanse en hendelse har. Relativ frekvens forteller hvor ofte hendelsen faktisk skjedde i et forsøk.",
+      examples: [
+        { code: "P(sekser) = 1 / 6", explanation: "Én gunstig side av seks mulige sider." },
+        { code: "relativ frekvens = treff / forsøk", explanation: "Antall seksere delt på antall kast." },
+        { code: "100 / 600 ≈ 0,167", explanation: "Et typisk resultat, men ikke et garantert resultat." },
+      ],
+    },
     theory: [
       {
         title: "random lager tilfeldige forsøk",
         body: "randint(1, 6) velger et heltall fra 1 til og med 6.",
         code: "kast = random.randint(1, 6)",
+        steps: ["Importer random øverst i programmet.", "Bruk randint med minste og største mulige verdi.", "Lagre det tilfeldige resultatet i en variabel."],
       },
       {
         title: "En teller samler resultater",
         body: "Hver gang kastet er 6, økes antall_seksere med én.",
         code: "antall_seksere += 1",
+        steps: ["Start telleren på 0 før løkken.", "Undersøk hvert kast med if.", "Legg til 1 bare når vilkåret er sant."],
       },
       {
         title: "Relativ frekvens",
         body: "Antall seksere delt på antall kast kan sammenlignes med 1/6 ≈ 0,167.",
+        code: "andel = antall_seksere / antall_kast",
+        steps: ["Tell hvor mange ganger hendelsen skjedde.", "Del på totalt antall forsøk.", "Sammenlign resultatet med teoretisk sannsynlighet."],
       },
     ],
     starterCode: `import random\n\nantall_kast = 600\nantall_seksere = 0\n\nfor _ in range(antall_kast):\n    kast = random.randint(1, 6)\n    if kast == 6:\n        antall_seksere += 1\n\nandel = antall_seksere / antall_kast\nprint(round(andel, 3))`,
@@ -299,19 +368,33 @@ const modules: Module[] = [
     question: "Hvordan utvikler 1 000 kr seg med 10 % vekst per periode?",
     intro:
       "Programmet kan beregne en modell raskt. Vår viktigste jobb er å forklare forutsetningene og vurdere når modellen slutter å være rimelig.",
+    refresh: {
+      title: "Hva er en vekstfaktor?",
+      body: "Ved prosentvis vekst ganger vi med den samme faktoren hver periode. Vekstfaktoren består av de opprinnelige 100 prosentene pluss veksten.",
+      examples: [
+        { code: "10 % vekst → 1 + 0,10 = 1,10", explanation: "Vi beholder 100 % og legger til 10 %." },
+        { code: "5 % vekst → 1 + 0,05 = 1,05", explanation: "Fem prosent vekst gir vekstfaktor 1,05." },
+        { code: "2 perioder → 1,10²", explanation: "Samme vekstfaktor brukes to ganger." },
+      ],
+    },
     theory: [
       {
         title: "Eksponentiell modell",
         body: "Ved 10 % vekst multipliseres verdien med vekstfaktoren 1,10 for hver periode.",
         code: "verdi = start * vekstfaktor ** tid",
+        steps: ["Finn startverdien.", "Gjør prosenten om til vekstfaktor.", "Opphøy vekstfaktoren i antall perioder.", "Gang med startverdien."],
       },
       {
         title: "** betyr potens",
         body: "1.10 ** 2 betyr 1,10². Python bruker to stjerner for potens.",
+        code: "vekstfaktor ** tid",
+        steps: ["Skriv grunntallet først.", "Bruk to stjerner.", "Skriv eksponenten etter stjernene."],
       },
       {
         title: "En modell har forutsetninger",
         body: "Konstant prosentvis vekst er en antakelse. Virkelige renter, priser eller bestander kan endre seg.",
+        code: "vekstfaktor = 1.10  # holdes konstant",
+        steps: ["Finn hva modellen antar er konstant.", "Spør hvor lenge antakelsen er rimelig.", "Skille mellom et beregnet modellsvar og virkeligheten."],
       },
     ],
     starterCode: `start = 1000\nvekstfaktor = 1.10\ntid = 2\n\nverdi = start * vekstfaktor ** tid\nprint(round(verdi, 2))`,
@@ -345,17 +428,23 @@ const modules: Module[] = [
   },
 ];
 
-const steps = ["Problem", "Teori", "Prøv", "Observer", "Oppgave"];
+const steps = ["Problem", "Oppfriskning", "Lær", "Prøv", "Forklar", "Oppgave"];
+const playgroundCode = `# Dette er deres frie Python-rom.
+# Slett eksemplet eller bygg videre på det.
+
+navn = "10. trinn"
+for tall in range(1, 6):
+    print(navn, "utforsker", tall ** 2)`;
 
 export default function Home() {
   const [activeId, setActiveId] = useState(1);
+  const [playground, setPlayground] = useState(false);
   const [teacherMode, setTeacherMode] = useState(false);
   const [code, setCode] = useState(modules[0].starterCode);
   const [output, setOutput] = useState("Trykk «Kjør kode» når du er klar.");
   const [runnerStatus, setRunnerStatus] = useState<"idle" | "loading" | "running" | "error">("idle");
   const [feedback, setFeedback] = useState("");
   const [completed, setCompleted] = useState<number[]>([]);
-  const [mobileMenu, setMobileMenu] = useState(false);
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -376,11 +465,19 @@ export default function Home() {
   }, []);
 
   function chooseModule(module: Module) {
+    setPlayground(false);
     setActiveId(module.id);
     setCode(module.starterCode);
     setOutput("Trykk «Kjør kode» når du er klar.");
     setFeedback("");
-    setMobileMenu(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function choosePlayground() {
+    setPlayground(true);
+    setCode(playgroundCode);
+    setOutput("Skriv eller endre koden, og trykk «Kjør kode».");
+    setFeedback("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -477,17 +574,6 @@ export default function Home() {
   return (
     <main>
       <header className="topbar">
-        <button
-          className="mobile-menu"
-          type="button"
-          onClick={() => setMobileMenu(!mobileMenu)}
-          aria-label="Åpne modulmeny"
-          aria-expanded={mobileMenu}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
         <a className="brand" href="#top" aria-label="Pythonverkstedet hjem">
           <span className="brand-mark">py</span>
           <span>
@@ -495,6 +581,25 @@ export default function Home() {
             <small>Matematikk · 8.–10. trinn</small>
           </span>
         </a>
+        <div className="module-picker">
+          <label htmlFor="module-select">Velg modul</label>
+          <select
+            id="module-select"
+            value={playground ? "playground" : String(active.id)}
+            onChange={(event) => {
+              if (event.target.value === "playground") choosePlayground();
+              else chooseModule(modules[Number(event.target.value) - 1]);
+            }}
+          >
+            {modules.map((module) => (
+              <option key={module.id} value={module.id}>
+                {completed.includes(module.id) ? "✓ " : ""}Modul {module.id}: {module.shortTitle}
+              </option>
+            ))}
+            <option value="playground">✦ Fritt Python-rom</option>
+          </select>
+          <span className="module-position">{completed.length} av {modules.length} fullført</span>
+        </div>
         <nav className="top-actions" aria-label="Verktøy">
           <button className="text-button print-button" type="button" onClick={() => window.print()}>
             Skriv ut
@@ -510,42 +615,98 @@ export default function Home() {
           </button>
         </nav>
       </header>
+      <div className="course-progress" aria-label={`${progress} prosent fullført`}>
+        <span style={{ width: `${progress}%` }} />
+      </div>
 
       <div className="app-shell" id="top">
-        <aside className={`sidebar ${mobileMenu ? "is-open" : ""}`}>
-          <div className="sidebar-heading">
-            <p className="kicker">Digitalt hefte</p>
-            <h2>Seks verksteder</h2>
-            <p>Les, prøv, observer og forklar.</p>
-          </div>
+        {playground && (
+          <article className="lesson playground-page">
+            <section className="lesson-hero playground-hero">
+              <div className="hero-copy">
+                <p className="kicker">Fritt verksted · Ingen fasit</p>
+                <h1>La oss prøve noe sammen</h1>
+                <p className="hero-intro">Her kan dere skrive egne Python-programmer fra bunnen av. Still et spørsmål, gjett hva som vil skje, kjør koden og bruk resultatet til å stille et nytt spørsmål.</p>
+                <div className="playground-prompts">
+                  <span>1 · Hva tror vi skjer?</span>
+                  <span>2 · Prøv</span>
+                  <span>3 · Observer</span>
+                  <span>4 · Endre én ting</span>
+                </div>
+              </div>
+              <div className="hero-stamp playground-stamp" aria-hidden="true">
+                <span>Python</span>
+                <strong>&gt;_</strong>
+                <small>fritt rom</small>
+              </div>
+            </section>
 
-          <div className="progress-card" aria-label={`${progress} prosent fullført`}>
-            <div><span>Din progresjon</span><strong>{completed.length}/{modules.length}</strong></div>
-            <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
-          </div>
+            <section className="content-section playground-guide">
+              <p className="section-label"><span>?</span> Start med undring</p>
+              <h2>Hva har dere lyst til å undersøke?</h2>
+              <div className="idea-chips" aria-label="Forslag til ting dere kan undersøke">
+                <button type="button" onClick={() => setCode('for tall in range(1, 11):\n    print(tall, tall ** 2)')}>Lag et tallmønster</button>
+                <button type="button" onClick={() => setCode('import random\n\nfor _ in range(10):\n    print(random.randint(1, 6))')}>Kast en terning</button>
+                <button type="button" onClick={() => setCode('def areal(lengde, bredde):\n    return lengde * bredde\n\nprint(areal(8, 5))')}>Lag en funksjon</button>
+                <button type="button" onClick={() => setCode(playgroundCode)}>Tilbake til startkoden</button>
+              </div>
+            </section>
 
-          <nav className="module-list" aria-label="Moduler">
-            {modules.map((module) => (
-              <button
-                key={module.id}
-                type="button"
-                className={`${module.id === active.id ? "active" : ""} ${completed.includes(module.id) ? "done" : ""}`}
-                onClick={() => chooseModule(module)}
-              >
-                <span className="module-number">{completed.includes(module.id) ? "✓" : module.id}</span>
-                <span><small>Modul {module.id}</small>{module.shortTitle}</span>
-              </button>
-            ))}
-          </nav>
+            <section className="content-section lab-section playground-lab">
+              <div className="section-heading lab-heading">
+                <div>
+                  <p className="section-label inverse"><span>▶</span> Python-editor</p>
+                  <h2>Skriv, kjør og undersøk</h2>
+                </div>
+                <div className="live-badge"><span /> Ekte Python i nettleseren</div>
+              </div>
+              <div className="code-workbench">
+                <div className="editor-panel">
+                  <div className="panel-bar">
+                    <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
+                    <strong>mitt_program.py</strong>
+                    <button type="button" onClick={() => setCode(playgroundCode)}>Tilbakestill</button>
+                  </div>
+                  <label htmlFor="playground-code" className="sr-only">Skriv fri Python-kode</label>
+                  <textarea
+                    id="playground-code"
+                    value={code}
+                    onChange={(event) => setCode(event.target.value)}
+                    spellCheck={false}
+                    autoCapitalize="off"
+                    aria-describedby="playground-help"
+                  />
+                  <div className="editor-footer" id="playground-help">
+                    <span>Prøv gjerne noe du ikke vet om virker.</span>
+                    <button type="button" className="run-button" onClick={runCode} disabled={runnerStatus === "loading" || runnerStatus === "running"}>
+                      <span>▶</span>{runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : "Kjør kode"}
+                    </button>
+                  </div>
+                </div>
+                <div className="output-panel" aria-live="polite">
+                  <div className="panel-bar output-bar">
+                    <strong>Resultat</strong>
+                    <span className={`status-dot ${runnerStatus}`} />
+                  </div>
+                  <pre>{output}</pre>
+                  <div className="output-tip"><strong>Neste spørsmål:</strong> Hva kan dere endre for å få et annet resultat?</div>
+                </div>
+              </div>
+            </section>
 
-          <div className="curriculum-note">
-            <span>LK20 · MAT01-06</span>
-            <p>Trener på å lese og forklare tekstbasert programkode i Python.</p>
-          </div>
-        </aside>
+            <section className="content-section playground-reflection">
+              <p className="section-label"><span>↻</span> Utforsk videre</p>
+              <h2>En god arbeidsmåte i det frie rommet</h2>
+              <ol className="question-list">
+                <li><span>1</span><p>Forutsi resultatet før dere kjører.</p></li>
+                <li><span>2</span><p>Endre bare én ting om gangen.</p></li>
+                <li><span>3</span><p>Forklar hva endringen gjorde – og hvorfor.</p></li>
+              </ol>
+            </section>
+          </article>
+        )}
 
-        {mobileMenu && <button className="menu-backdrop" aria-label="Lukk meny" onClick={() => setMobileMenu(false)} />}
-
+        {!playground && (
         <article className="lesson">
           <section className="lesson-hero">
             <div className="hero-copy">
@@ -571,21 +732,43 @@ export default function Home() {
             <p>Gjør et overslag eller tenk ut en strategi før du ser på koden. Hva forventer du at programmet må gjøre?</p>
           </section>
 
+          <section className="content-section refresh-section">
+            <div className="refresh-copy">
+              <p className="section-label"><span>2</span> Kort oppfriskning</p>
+              <h2>{active.refresh.title}</h2>
+              <p>{active.refresh.body}</p>
+              <p className="refresh-note">Les eksemplene høyt med egne ord. Da blir tegnene i koden lettere å forstå.</p>
+            </div>
+            <div className="refresh-examples">
+              {active.refresh.examples.map((example) => (
+                <div className="refresh-example" key={example.code}>
+                  <code>{example.code}</code>
+                  <p>{example.explanation}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <section className="content-section theory-section">
             <div className="section-heading">
               <div>
-                <p className="section-label"><span>2</span> Teori</p>
-                <h2>Les koden som en matematisk tekst</h2>
+                <p className="section-label"><span>3</span> Slik gjør du det</p>
+                <h2>Én idé om gangen – steg for steg</h2>
               </div>
-              <p>Ta én idé om gangen. Du trenger ikke pugge.</p>
+              <p>Følg rekkefølgen, og si hva hver linje gjør.</p>
             </div>
             <div className="theory-grid">
               {active.theory.map((item, index) => (
                 <div className="theory-card" key={item.title}>
                   <span className="theory-index">0{index + 1}</span>
-                  <h3>{item.title}</h3>
-                  <p>{item.body}</p>
-                  {item.code && <code>{item.code}</code>}
+                  <div className="theory-content">
+                    <h3>{item.title}</h3>
+                    <p>{item.body}</p>
+                    {item.code && <code>{item.code}</code>}
+                    <ol className="how-to-list">
+                      {item.steps.map((step) => <li key={step}>{step}</li>)}
+                    </ol>
+                  </div>
                 </div>
               ))}
             </div>
@@ -594,7 +777,7 @@ export default function Home() {
           <section className="content-section lab-section">
             <div className="section-heading lab-heading">
               <div>
-                <p className="section-label inverse"><span>3</span> Python-laboratorium</p>
+                <p className="section-label inverse"><span>4</span> Python-laboratorium</p>
                 <h2>Prøv. Endre. Kjør igjen.</h2>
               </div>
               <div className="live-badge"><span /> Ekte Python i nettleseren</div>
@@ -638,7 +821,7 @@ export default function Home() {
           <section className="content-section observe-section">
             <div className="section-heading">
               <div>
-                <p className="section-label"><span>4</span> Observer og forklar</p>
+                <p className="section-label"><span>5</span> Observer og forklar</p>
                 <h2>Stopp før du går videre</h2>
               </div>
               <p>Snakk med en medelev, eller skriv to setninger.</p>
@@ -656,7 +839,7 @@ export default function Home() {
 
           <section className="content-section task-section">
             <div className="task-copy">
-              <p className="section-label inverse"><span>5</span> Din oppgave</p>
+              <p className="section-label inverse"><span>6</span> Din oppgave</p>
               <h2>{active.task}</h2>
               <p>Gå tilbake til laboratoriet, gjør endringen og kjør programmet.</p>
             </div>
@@ -718,6 +901,7 @@ export default function Home() {
             </button>
           </nav>
         </article>
+        )}
       </div>
     </main>
   );
