@@ -1,0 +1,50 @@
+name: Publiser Pythonverkstedet
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webapp
+    steps:
+      - name: Hent kildekoden
+        uses: actions/checkout@v4
+      - name: Sett opp Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+      - name: Installer
+        run: npm ci
+      - name: Bygg statisk app
+        run: npm run build:github
+      - name: Last opp nettstedet
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: webapp/github-dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publiser
+        uses: actions/deploy-pages@v4
+        id: deployment
