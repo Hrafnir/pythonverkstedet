@@ -2,6 +2,8 @@
 
 Dette prosjektet er et arbeidsgrunnlag for et kort, praktisk hefte for matematikklærere på ungdomstrinnet. Hovedmålet er å gjøre lærerne trygge nok til å undervise i — og vurdere — programmering slik læreplanen faktisk krever.
 
+**Nettapp:** [Åpne Pythonverkstedet](https://hrafnir.github.io/pythonverkstedet/)
+
 ## Hva som er nytt fra 1. august 2026
 
 Den reviderte læreplanen **MAT01-06** erstatter MAT01-05. De eksisterende programmeringsmålene på 8., 9. og 10. trinn er videreført. Det nye, konkrete målet etter 10. trinn er at eleven skal kunne:
