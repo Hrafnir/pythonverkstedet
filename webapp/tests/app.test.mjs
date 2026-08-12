@@ -21,8 +21,21 @@ test("modulvelgeren har et fritt Python-rom uten sidepanel", () => {
   assert.match(page, /id="module-select"/);
   assert.match(page, /Fritt Python-rom/);
   assert.match(page, /playgroundCode/);
-  assert.match(page, /mitt_program\.py/);
+  assert.match(page, /Lokale prosjekter/);
+  assert.match(page, /Importer \.py/);
+  assert.match(page, /Kopier bilde/);
+  assert.match(page, /Kopier tekst/);
   assert.doesNotMatch(page, /<aside/);
+});
+
+test("Python-rommet støtter datapakker, grafer og prosjektlagring", () => {
+  assert.match(page, /import numpy as np/);
+  assert.match(page, /import matplotlib\.pyplot as plt/);
+  assert.match(page, /import pandas as pd/);
+  assert.match(page, /bjornsveen-python-projects/);
+  assert.match(worker, /loadPackagesFromImports/);
+  assert.match(worker, /savefig/);
+  assert.match(worker, /plot/);
 });
 
 test("elev- og lærermodus finnes", () => {
@@ -36,12 +49,12 @@ test("Python kjører i en arbeider med sikkerhetsstopp", () => {
   assert.match(worker, /loadPyodide/);
   assert.match(worker, /runPythonAsync/);
   assert.match(page, /new Worker/);
-  assert.match(page, /5000/);
+  assert.match(page, /playground \? 90000 : 8000/);
 });
 
 test("metadata og midlertidig startinnhold er ryddet", () => {
   const html = readFileSync("index.html", "utf8");
-  assert.match(html, /Pythonverkstedet/);
+  assert.match(html, /Bjørnsveen Pythonverksted/);
   assert.match(html, /<html lang="nb">/);
   assert.equal(existsSync("app/_sites-preview/SkeletonPreview.tsx"), false);
   assert.doesNotMatch(page, /codex-preview|SkeletonPreview/);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 
 type Module = {
   id: number;
@@ -27,6 +28,13 @@ type Module = {
     assess: string;
     extension: string;
   };
+};
+
+type LocalProject = {
+  id: string;
+  name: string;
+  code: string;
+  updatedAt: string;
 };
 
 const modules: Module[] = [
@@ -436,6 +444,17 @@ navn = "10. trinn"
 for tall in range(1, 6):
     print(navn, "utforsker", tall ** 2)`;
 
+const firstProject: LocalProject = {
+  id: "mitt-forste-prosjekt",
+  name: "Mitt første prosjekt",
+  code: playgroundCode,
+  updatedAt: new Date(0).toISOString(),
+};
+
+function safeProjectName(name: string) {
+  return name.trim().replace(/[\\/:*?"<>|]+/g, "-") || "python-prosjekt";
+}
+
 export default function Home() {
   const [activeId, setActiveId] = useState(1);
   const [playground, setPlayground] = useState(false);
@@ -445,6 +464,10 @@ export default function Home() {
   const [runnerStatus, setRunnerStatus] = useState<"idle" | "loading" | "running" | "error">("idle");
   const [feedback, setFeedback] = useState("");
   const [completed, setCompleted] = useState<number[]>([]);
+  const [projects, setProjects] = useState<LocalProject[]>([firstProject]);
+  const [activeProjectId, setActiveProjectId] = useState(firstProject.id);
+  const [shareStatus, setShareStatus] = useState("");
+  const [plotImage, setPlotImage] = useState("");
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -456,8 +479,22 @@ export default function Home() {
   useEffect(() => {
     const saved = window.localStorage.getItem("pythonverkstedet-progress");
     const savedMode = window.localStorage.getItem("pythonverkstedet-mode");
+    const savedProjects = window.localStorage.getItem("bjornsveen-python-projects");
+    const savedActiveProject = window.localStorage.getItem("bjornsveen-python-active-project");
     if (saved) setCompleted(JSON.parse(saved));
     if (savedMode === "teacher") setTeacherMode(true);
+    if (savedProjects) {
+      try {
+        const parsed = JSON.parse(savedProjects) as LocalProject[];
+        if (parsed.length) {
+          setProjects(parsed);
+          const selected = parsed.find((project) => project.id === savedActiveProject) ?? parsed[0];
+          setActiveProjectId(selected.id);
+        }
+      } catch {
+        window.localStorage.removeItem("bjornsveen-python-projects");
+      }
+    }
     return () => {
       workerRef.current?.terminate();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -470,14 +507,19 @@ export default function Home() {
     setCode(module.starterCode);
     setOutput("Trykk «Kjør kode» når du er klar.");
     setFeedback("");
+    setPlotImage("");
+    setShareStatus("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function choosePlayground() {
     setPlayground(true);
-    setCode(playgroundCode);
+    const project = projects.find((item) => item.id === activeProjectId) ?? projects[0];
+    setCode(project?.code ?? playgroundCode);
     setOutput("Skriv eller endre koden, og trykk «Kjør kode».");
     setFeedback("");
+    setPlotImage("");
+    setShareStatus("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -485,6 +527,169 @@ export default function Home() {
     const next = !teacherMode;
     setTeacherMode(next);
     window.localStorage.setItem("pythonverkstedet-mode", next ? "teacher" : "student");
+  }
+
+  function updateCode(nextCode: string) {
+    setCode(nextCode);
+    if (!playground) return;
+    const nextProjects = projects.map((project) =>
+      project.id === activeProjectId
+        ? { ...project, code: nextCode, updatedAt: new Date().toISOString() }
+        : project,
+    );
+    setProjects(nextProjects);
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(nextProjects));
+  }
+
+  function selectProject(projectId: string) {
+    const project = projects.find((item) => item.id === projectId);
+    if (!project) return;
+    setActiveProjectId(projectId);
+    setCode(project.code);
+    setOutput("Prosjektet er åpnet. Trykk «Kjør kode» når du er klar.");
+    setPlotImage("");
+    setShareStatus("");
+    window.localStorage.setItem("bjornsveen-python-active-project", projectId);
+  }
+
+  function createProject() {
+    const name = window.prompt("Hva skal prosjektet hete?", `Nytt prosjekt ${projects.length + 1}`);
+    if (!name?.trim()) return;
+    const project: LocalProject = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: safeProjectName(name),
+      code: "# Skriv Python-koden din her\n",
+      updatedAt: new Date().toISOString(),
+    };
+    const next = [...projects, project];
+    setProjects(next);
+    setActiveProjectId(project.id);
+    setCode(project.code);
+    setOutput("Nytt prosjekt opprettet lokalt på denne enheten.");
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
+    window.localStorage.setItem("bjornsveen-python-active-project", project.id);
+  }
+
+  function renameProject() {
+    const project = projects.find((item) => item.id === activeProjectId);
+    if (!project) return;
+    const name = window.prompt("Nytt navn på prosjektet:", project.name);
+    if (!name?.trim()) return;
+    const next = projects.map((item) => item.id === project.id ? { ...item, name: safeProjectName(name) } : item);
+    setProjects(next);
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
+  }
+
+  function deleteProject() {
+    if (projects.length === 1) {
+      setShareStatus("Du må ha minst ett prosjekt.");
+      return;
+    }
+    const project = projects.find((item) => item.id === activeProjectId);
+    if (!project || !window.confirm(`Slette «${project.name}» fra denne enheten?`)) return;
+    const next = projects.filter((item) => item.id !== activeProjectId);
+    setProjects(next);
+    setActiveProjectId(next[0].id);
+    setCode(next[0].code);
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
+    window.localStorage.setItem("bjornsveen-python-active-project", next[0].id);
+  }
+
+  function downloadProject() {
+    const project = projects.find((item) => item.id === activeProjectId) ?? firstProject;
+    const blob = new Blob([code], { type: "text/x-python;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${safeProjectName(project.name)}.py`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importProject(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const importedCode = await file.text();
+    const project: LocalProject = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: safeProjectName(file.name.replace(/\.py$/i, "")),
+      code: importedCode,
+      updatedAt: new Date().toISOString(),
+    };
+    const next = [...projects, project];
+    setProjects(next);
+    setActiveProjectId(project.id);
+    setCode(importedCode);
+    setOutput("Python-filen er importert som et lokalt prosjekt.");
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
+    window.localStorage.setItem("bjornsveen-python-active-project", project.id);
+    event.target.value = "";
+  }
+
+  async function copyCodeAsText() {
+    try {
+      if ("ClipboardItem" in window && navigator.clipboard?.write) {
+        const html = `<pre style="font-family: ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; background: #f4f4f4; padding: 16px; border-radius: 8px;"><code>${code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`;
+        await navigator.clipboard.write([new ClipboardItem({
+          "text/plain": new Blob([code], { type: "text/plain" }),
+          "text/html": new Blob([html], { type: "text/html" }),
+        })]);
+      } else {
+        await navigator.clipboard.writeText(code);
+      }
+      setShareStatus("Koden er kopiert som formatert tekst.");
+    } catch {
+      setShareStatus("Nettleseren tillot ikke kopiering. Marker koden og kopier manuelt.");
+    }
+  }
+
+  async function copyCodeAsImage(filename: string) {
+    const lines = code.replace(/\t/g, "    ").split("\n");
+    const fontSize = 20;
+    const lineHeight = 31;
+    const padding = 34;
+    const titleHeight = 58;
+    const canvas = document.createElement("canvas");
+    const measure = canvas.getContext("2d");
+    if (!measure) return;
+    measure.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
+    const width = Math.min(1800, Math.max(720, ...lines.map((line) => measure.measureText(line).width + padding * 2)));
+    const height = Math.max(260, titleHeight + padding + lines.length * lineHeight + padding);
+    canvas.width = width * 2;
+    canvas.height = height * 2;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.scale(2, 2);
+    context.fillStyle = "#102e2b";
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = "#183a36";
+    context.fillRect(0, 0, width, titleHeight);
+    context.fillStyle = "#f06f51";
+    context.beginPath(); context.arc(25, 29, 6, 0, Math.PI * 2); context.fill();
+    context.fillStyle = "#f4c95d";
+    context.beginPath(); context.arc(45, 29, 6, 0, Math.PI * 2); context.fill();
+    context.fillStyle = "#6fd79f";
+    context.beginPath(); context.arc(65, 29, 6, 0, Math.PI * 2); context.fill();
+    context.fillStyle = "#d9e8df";
+    context.font = "700 14px ui-monospace, SFMono-Regular, Consolas, monospace";
+    context.fillText(filename, 92, 34);
+    context.fillStyle = "#e7eee9";
+    context.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
+    lines.forEach((line, index) => context.fillText(line, padding, titleHeight + padding + (index + 1) * lineHeight));
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) return;
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      setShareStatus("Hele kodeeditoren er kopiert som bilde.");
+    } catch {
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${filename.replace(/\.py$/, "")}-kode.png`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setShareStatus("Bildet ble lastet ned fordi nettleseren ikke tillot bildekopiering.");
+    }
   }
 
   function makeWorker() {
@@ -500,12 +705,13 @@ export default function Home() {
     setRunnerStatus("loading");
     setOutput("Starter Python … Første kjøring kan ta litt tid.");
     setFeedback("");
+    setPlotImage("");
 
     const worker = makeWorker();
     let executionStarted = false;
 
     worker.onmessage = (event) => {
-      const data = event.data as { type: string; output?: string; error?: string };
+      const data = event.data as { type: string; output?: string; error?: string; plot?: string };
       if (data.type === "ready") {
         executionStarted = true;
         setRunnerStatus("running");
@@ -515,13 +721,14 @@ export default function Home() {
           worker.terminate();
           setRunnerStatus("error");
           setOutput("Programmet brukte for lang tid og ble stoppet. Sjekk særlig løkker som kanskje aldri avsluttes.");
-        }, 5000);
+        }, playground ? 90000 : 8000);
       }
 
       if (data.type === "result") {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         setRunnerStatus("idle");
         setOutput(data.output?.trim() || "Koden kjørte ferdig uten utskrift.");
+        setPlotImage(data.plot || "");
         worker.terminate();
       }
 
@@ -574,10 +781,10 @@ export default function Home() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="Pythonverkstedet hjem">
-          <span className="brand-mark">py</span>
+        <a className="brand" href="#top" aria-label="Bjørnsveen Pythonverksted hjem">
+          <span className="brand-mark">BP</span>
           <span>
-            <strong>Pythonverkstedet</strong>
+            <strong>Bjørnsveen Pythonverksted</strong>
             <small>Matematikk · 8.–10. trinn</small>
           </span>
         </a>
@@ -645,10 +852,36 @@ export default function Home() {
               <p className="section-label"><span>?</span> Start med undring</p>
               <h2>Hva har dere lyst til å undersøke?</h2>
               <div className="idea-chips" aria-label="Forslag til ting dere kan undersøke">
-                <button type="button" onClick={() => setCode('for tall in range(1, 11):\n    print(tall, tall ** 2)')}>Lag et tallmønster</button>
-                <button type="button" onClick={() => setCode('import random\n\nfor _ in range(10):\n    print(random.randint(1, 6))')}>Kast en terning</button>
-                <button type="button" onClick={() => setCode('def areal(lengde, bredde):\n    return lengde * bredde\n\nprint(areal(8, 5))')}>Lag en funksjon</button>
-                <button type="button" onClick={() => setCode(playgroundCode)}>Tilbake til startkoden</button>
+                <button type="button" onClick={() => updateCode('for tall in range(1, 11):\n    print(tall, tall ** 2)')}>Lag et tallmønster</button>
+                <button type="button" onClick={() => updateCode('import random\n\nfor _ in range(10):\n    print(random.randint(1, 6))')}>Kast en terning</button>
+                <button type="button" onClick={() => updateCode('def areal(lengde, bredde):\n    return lengde * bredde\n\nprint(areal(8, 5))')}>Lag en funksjon</button>
+                <button type="button" onClick={() => updateCode('import numpy as np\nimport matplotlib.pyplot as plt\n\nx = np.linspace(-5, 5, 100)\ny = x ** 2\n\nplt.plot(x, y)\nplt.title("Grafen til y = x²")\nplt.grid()\nplt.show()')}>Tegn en graf</button>
+                <button type="button" onClick={() => updateCode('import pandas as pd\n\ndata = {"navn": ["Ada", "Bo", "Celine"], "poeng": [8, 12, 10]}\ntabell = pd.DataFrame(data)\nprint(tabell.to_string(index=False))')}>Lag en tabell</button>
+                <button type="button" onClick={() => updateCode('import micropip\nawait micropip.install("snowballstemmer")\n\nimport snowballstemmer\nstemmer = snowballstemmer.stemmer("norwegian")\nprint(stemmer.stemWords(["lærer", "lærere", "læring"]))')}>Installer en ren Python-pakke</button>
+                <button type="button" onClick={() => updateCode(playgroundCode)}>Tilbake til startkoden</button>
+              </div>
+            </section>
+
+            <section className="content-section project-section">
+              <div className="project-heading">
+                <div>
+                  <p className="section-label"><span>⌂</span> Lokale prosjekter</p>
+                  <h2>Fortsett der dere slapp</h2>
+                  <p>Prosjektene lagres automatisk i nettleseren på denne enheten. Last ned en <code>.py</code>-fil hvis prosjektet skal flyttes eller sikkerhetskopieres.</p>
+                </div>
+                <button type="button" className="new-project-button" onClick={createProject}>+ Nytt prosjekt</button>
+              </div>
+              <div className="project-toolbar">
+                <label>
+                  <span>Åpent prosjekt</span>
+                  <select value={activeProjectId} onChange={(event) => selectProject(event.target.value)}>
+                    {projects.map((project) => <option value={project.id} key={project.id}>{project.name}</option>)}
+                  </select>
+                </label>
+                <button type="button" onClick={renameProject}>Gi nytt navn</button>
+                <button type="button" onClick={downloadProject}>Last ned .py</button>
+                <label className="import-button">Importer .py<input type="file" accept=".py,text/x-python" onChange={importProject} /></label>
+                <button type="button" className="delete-project-button" onClick={deleteProject}>Slett</button>
               </div>
             </section>
 
@@ -664,14 +897,17 @@ export default function Home() {
                 <div className="editor-panel">
                   <div className="panel-bar">
                     <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
-                    <strong>mitt_program.py</strong>
-                    <button type="button" onClick={() => setCode(playgroundCode)}>Tilbakestill</button>
+                    <strong>{safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py</strong>
+                    <span className="panel-tools">
+                      <button type="button" onClick={copyCodeAsText}>Kopier tekst</button>
+                      <button type="button" onClick={() => copyCodeAsImage(`${safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py`)}>Kopier bilde</button>
+                    </span>
                   </div>
                   <label htmlFor="playground-code" className="sr-only">Skriv fri Python-kode</label>
                   <textarea
                     id="playground-code"
                     value={code}
-                    onChange={(event) => setCode(event.target.value)}
+                    onChange={(event) => updateCode(event.target.value)}
                     spellCheck={false}
                     autoCapitalize="off"
                     aria-describedby="playground-help"
@@ -689,7 +925,19 @@ export default function Home() {
                     <span className={`status-dot ${runnerStatus}`} />
                   </div>
                   <pre>{output}</pre>
+                  {plotImage && <img className="plot-output" src={`data:image/png;base64,${plotImage}`} alt="Graf laget av Python-koden" />}
                   <div className="output-tip"><strong>Neste spørsmål:</strong> Hva kan dere endre for å få et annet resultat?</div>
+                </div>
+              </div>
+              {shareStatus && <p className="share-status" role="status">{shareStatus}</p>}
+              <div className="package-guide">
+                <div>
+                  <strong>Datapakker som fungerer her</strong>
+                  <p>NumPy, pandas, Matplotlib, SciPy, scikit-learn og mange flere Pyodide-pakker lastes automatisk. Rene Python-pakker kan også installeres med <code>micropip</code>.</p>
+                </div>
+                <div>
+                  <strong>Ikke helt som installert Python</strong>
+                  <p>Pakker som krever operativsystem, skjermvinduer, maskinvare eller en egen server kan ikke kjøre i nettleseren.</p>
                 </div>
               </div>
             </section>
@@ -788,7 +1036,11 @@ export default function Home() {
                 <div className="panel-bar">
                   <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
                   <strong>verksted.py</strong>
-                  <button type="button" onClick={() => { setCode(active.starterCode); setFeedback(""); }}>Tilbakestill</button>
+                  <span className="panel-tools">
+                    <button type="button" onClick={copyCodeAsText}>Kopier tekst</button>
+                    <button type="button" onClick={() => copyCodeAsImage("verksted.py")}>Kopier bilde</button>
+                    <button type="button" onClick={() => { setCode(active.starterCode); setFeedback(""); }}>Tilbakestill</button>
+                  </span>
                 </div>
                 <label htmlFor="python-code" className="sr-only">Python-kode</label>
                 <textarea
@@ -816,6 +1068,7 @@ export default function Home() {
                 <div className="output-tip"><strong>Observer:</strong> Stemmer resultatet med det du forventet?</div>
               </div>
             </div>
+            {shareStatus && <p className="share-status" role="status">{shareStatus}</p>}
           </section>
 
           <section className="content-section observe-section">

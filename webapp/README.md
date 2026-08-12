@@ -1,4 +1,4 @@
-# Pythonverkstedet
+# Bjørnsveen Pythonverksted
 
 Digitalt hefte og Python-laboratorium for matematikk på 8.–10. trinn.
 
@@ -11,6 +11,10 @@ Digitalt hefte og Python-laboratorium for matematikk på 8.–10. trinn.
 - lærertips, typiske misforståelser, vurderingsstøtte og utvidelser
 - progresjon lagret lokalt på enheten
 - utskriftsvennlig heftemodus
+- fritt Python-rom med flere lokale prosjekter
+- import og eksport av `.py`-filer
+- kopiering av kode som formatert tekst eller bilde
+- støtte for Pyodide-pakker som NumPy, pandas og Matplotlib
 
 ## Lokal utvikling
 

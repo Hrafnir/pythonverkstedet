@@ -2,7 +2,7 @@
 
 Dette prosjektet er et arbeidsgrunnlag for et kort, praktisk hefte for matematikklærere på ungdomstrinnet. Hovedmålet er å gjøre lærerne trygge nok til å undervise i — og vurdere — programmering slik læreplanen faktisk krever.
 
-**Nettapp:** [Åpne Pythonverkstedet](https://hrafnir.github.io/pythonverkstedet/)
+**Nettapp:** [Åpne Bjørnsveen Pythonverksted](https://hrafnir.github.io/pythonverkstedet/)
 
 ## Hva som er nytt fra 1. august 2026
 
@@ -86,11 +86,14 @@ Vi bør vente med brukerkontoer, elevdata, KI-funksjoner og en full kodeeditor t
 
 ## Webappen
 
-En førsteversjon av **Pythonverkstedet** ligger i mappen [`webapp`](webapp). Den inneholder:
+En førsteversjon av **Bjørnsveen Pythonverksted** ligger i mappen [`webapp`](webapp). Den inneholder:
 
 - seks moduler som følger mønsteret problemstilling → teori → prøv → observer → oppgave
 - en Python-motor som kjører elevens kode lokalt i nettleseren
-- fem sekunders sikkerhetsstopp for programmer som ikke avsluttes
+- sikkerhetsstopp for programmer som ikke avsluttes
+- et fritt Python-rom med lokale prosjekter, `.py`-import og eksport
+- deling av kode som formatert tekst eller bilde
+- støtte for blant annet NumPy, pandas og Matplotlib i nettleseren
 - elevmodus og lærermodus
 - lærertips, typiske misforståelser, vurderingsstøtte og utvidelsesoppgaver
 - lokal progresjon uten elevkonto eller innsending av elevdata
