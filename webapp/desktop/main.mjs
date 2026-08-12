@@ -31,6 +31,9 @@ async function createWindow() {
   await mainWindow.loadFile(path.join(webRoot, "index.html"));
 
   if (process.env.BJORNSVEEN_SMOKE_TEST === "1") {
+    mainWindow.webContents.on("console-message", (_event, level, message, line, sourceId) => {
+      process.stdout.write(`BJORNSVEEN_CONSOLE[${level}]: ${message} (${sourceId}:${line})\n`);
+    });
     const waitFor = async (check, timeout = 120000) => {
       const started = Date.now();
       while (Date.now() - started < timeout) {
@@ -53,7 +56,7 @@ async function createWindow() {
       await mainWindow.webContents.executeJavaScript(`
         const editor = document.querySelector('#playground-code');
         const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
-        setter.call(editor, 'import numpy as np\\nprint(int(np.array([2, 3, 5]).sum()))');
+        setter.call(editor, 'import numpy as np\\nimport matplotlib.pyplot as plt\\n\\nprint(int(np.array([2, 3, 5]).sum()))\\nx = np.linspace(-5, 5, 100)\\nplt.plot(x, x ** 2)\\nplt.title("Offline Matplotlib-test")\\nplt.grid()\\nplt.show()');
         editor.dispatchEvent(new Event('input', { bubbles: true }));
       `);
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -65,19 +68,23 @@ async function createWindow() {
           return JSON.stringify({ button: button?.textContent, disabled: button?.disabled, code: editor?.value });
         })()
       `)}\n`);
-      const output = await waitFor(`
+      const result = await waitFor(`
         (() => {
           const value = document.querySelector('.output-panel pre')?.textContent || '';
-          return value.trim().endsWith('10')
-            || value.includes('Kunne ikke')
+          const plot = document.querySelector('.plot-card img');
+          const complete = value.trim().startsWith('10') && plot?.complete && plot?.naturalWidth > 0;
+          return complete
+            ? JSON.stringify({ value, plotWidth: plot.naturalWidth })
+            : value.includes('Kunne ikke')
             || value.includes('stoppet')
             || value.includes('for lang tid')
-            ? value
+            ? JSON.stringify({ value, error: true })
             : '';
         })()
       `);
-      if (!output.trim().endsWith("10")) throw new Error(output.trim());
-      process.stdout.write("BJORNSVEEN_SMOKE_OK: 10\n");
+      const smokeResult = JSON.parse(result);
+      if (smokeResult.error || !smokeResult.plotWidth) throw new Error(smokeResult.value.trim());
+      process.stdout.write(`BJORNSVEEN_SMOKE_OK: 10 + matplotlib (${smokeResult.plotWidth}px)\n`);
       app.exit(0);
     } catch (error) {
       process.stderr.write(`BJORNSVEEN_SMOKE_FAILED: ${error.message}\n`);

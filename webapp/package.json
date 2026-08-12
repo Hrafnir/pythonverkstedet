@@ -1,6 +1,6 @@
 {
   "name": "pythonverkstedet",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -11,7 +11,7 @@
     "build:github": "vite build",
     "desktop:download": "node scripts/download-pyodide.mjs",
     "desktop:build": "node scripts/build-macos.mjs",
-    "desktop:start": "npm run desktop:download && npm run build && electron desktop/main.mjs",
+    "desktop:start": "npm run desktop:download && npm run build && node scripts/prepare-desktop-dev.mjs && electron desktop/main.mjs",
     "preview": "vite preview",
     "test": "npm run build && node --test tests/app.test.mjs"
   },

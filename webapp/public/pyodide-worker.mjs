@@ -50,31 +50,55 @@ self.onmessage = async (event) => {
     stdout = "";
     stderr = "";
     const globals = pyodide.globals.get("dict")();
+    const usesMatplotlib = /\b(matplotlib|pyplot)\b/.test(code);
+    if (usesMatplotlib) {
+      await pyodide.runPythonAsync(`
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+def _bjornsveen_show(*args, **kwargs):
+    # Nettleser-/offline-appen viser figurene i resultatpanelet etter kjøring.
+    # Derfor skal plt.show() ikke forsøke å åpne Pyodides DOM-baserte vindu.
+    return None
+
+plt.show = _bjornsveen_show
+`, { globals });
+    }
     await pyodide.runPythonAsync(code, { globals });
-    let plot = "";
-    if (/\b(matplotlib|pyplot)\b/.test(code)) try {
-      plot = await pyodide.runPythonAsync(`
+    let plots = [];
+    if (usesMatplotlib) try {
+      const encodedPlots = await pyodide.runPythonAsync(`
 import base64
 import io
+import json
 
-_bjornsveen_plot = ""
+_bjornsveen_plots = []
 try:
     import matplotlib.pyplot as plt
-    if plt.get_fignums():
+    for _bjornsveen_figure_number in plt.get_fignums():
+        _bjornsveen_figure = plt.figure(_bjornsveen_figure_number)
         _bjornsveen_buffer = io.BytesIO()
-        plt.gcf().savefig(_bjornsveen_buffer, format="png", dpi=150, bbox_inches="tight")
-        _bjornsveen_plot = base64.b64encode(_bjornsveen_buffer.getvalue()).decode("ascii")
-        plt.close("all")
+        _bjornsveen_figure.savefig(
+            _bjornsveen_buffer,
+            format="png",
+            dpi=170,
+            bbox_inches="tight",
+            facecolor="white",
+        )
+        _bjornsveen_plots.append(base64.b64encode(_bjornsveen_buffer.getvalue()).decode("ascii"))
+    plt.close("all")
 except ImportError:
     pass
 
-_bjornsveen_plot
+json.dumps(_bjornsveen_plots)
 `, { globals });
+      plots = JSON.parse(encodedPlots);
     } catch {
-      plot = "";
+      plots = [];
     }
     globals.destroy();
-    self.postMessage({ type: "result", output: `${stdout}${stderr}`, plot });
+    self.postMessage({ type: "result", output: `${stdout}${stderr}`, plots });
   } catch (error) {
     self.postMessage({ type: "error", error: error.message });
   }

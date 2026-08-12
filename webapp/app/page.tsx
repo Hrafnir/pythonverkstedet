@@ -608,7 +608,8 @@ export default function Home() {
   const [projects, setProjects] = useState<LocalProject[]>([firstProject]);
   const [activeProjectId, setActiveProjectId] = useState(firstProject.id);
   const [shareStatus, setShareStatus] = useState("");
-  const [plotImage, setPlotImage] = useState("");
+  const [plotImages, setPlotImages] = useState<string[]>([]);
+  const [expandedPlotIndex, setExpandedPlotIndex] = useState<number | null>(null);
   const [desktopFilePath, setDesktopFilePath] = useState("");
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -650,7 +651,8 @@ export default function Home() {
     setCode(practiceCodes[module.id] ?? "");
     setOutput("Trykk «Kjør kode» når du er klar.");
     setFeedback("");
-    setPlotImage("");
+    setPlotImages([]);
+    setExpandedPlotIndex(null);
     setShareStatus("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -661,7 +663,8 @@ export default function Home() {
     setCode(project?.code ?? playgroundCode);
     setOutput("Skriv eller endre koden, og trykk «Kjør kode».");
     setFeedback("");
-    setPlotImage("");
+    setPlotImages([]);
+    setExpandedPlotIndex(null);
     setShareStatus("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -696,7 +699,8 @@ export default function Home() {
     setCode(nextTab === "practice" ? (practiceCodes[active.id] ?? "") : (solutionCodes[active.id] ?? active.starterCode));
     setOutput("Trykk «Kjør kode» når du er klar.");
     setFeedback("");
-    setPlotImage("");
+    setPlotImages([]);
+    setExpandedPlotIndex(null);
   }
 
   function resetCurrentEditor() {
@@ -715,7 +719,8 @@ export default function Home() {
     setDesktopFilePath("");
     setCode(project.code);
     setOutput("Prosjektet er åpnet. Trykk «Kjør kode» når du er klar.");
-    setPlotImage("");
+    setPlotImages([]);
+    setExpandedPlotIndex(null);
     setShareStatus("");
     window.localStorage.setItem("bjornsveen-python-active-project", projectId);
   }
@@ -861,16 +866,17 @@ export default function Home() {
     if (!measure) return;
     measure.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
     const width = Math.min(1800, Math.max(720, ...[...lines, ...answerLines].map((line) => measure.measureText(line).width + padding * 2)));
-    let plot: HTMLImageElement | null = null;
-    if (plotImage) {
-      plot = new Image();
+    const plots = await Promise.all(plotImages.map(async (plotImage) => {
+      const plot = new Image();
       plot.src = `data:image/png;base64,${plotImage}`;
       await plot.decode();
-    }
+      return plot;
+    }));
     const codeHeight = padding + lines.length * lineHeight + padding;
     const answerHeaderHeight = 48;
     const answerHeight = padding + answerLines.length * lineHeight + padding;
-    const plotHeight = plot ? Math.min(430, (plot.height / plot.width) * (width - padding * 2)) + padding : 0;
+    const plotHeights = plots.map((plot) => Math.min(430, (plot.height / plot.width) * (width - padding * 2)));
+    const plotHeight = plotHeights.reduce((sum, item) => sum + item + padding, 0);
     const height = Math.max(320, titleHeight + codeHeight + answerHeaderHeight + answerHeight + plotHeight);
     canvas.width = width * 2;
     canvas.height = height * 2;
@@ -904,11 +910,13 @@ export default function Home() {
     context.fillStyle = "#e7eee9";
     context.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
     answerLines.forEach((line, index) => context.fillText(line, padding, answerTop + answerHeaderHeight + padding + (index + 1) * lineHeight));
-    if (plot) {
+    let nextPlotTop = answerTop + answerHeaderHeight + answerHeight;
+    plots.forEach((plot, index) => {
       const drawWidth = width - padding * 2;
-      const drawHeight = Math.min(430, (plot.height / plot.width) * drawWidth);
-      context.drawImage(plot, padding, answerTop + answerHeaderHeight + answerHeight, drawWidth, drawHeight);
-    }
+      const drawHeight = plotHeights[index];
+      context.drawImage(plot, padding, nextPlotTop, drawWidth, drawHeight);
+      nextPlotTop += drawHeight + padding;
+    });
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
     if (!blob) return;
     try {
@@ -925,6 +933,38 @@ export default function Home() {
     }
   }
 
+  function downloadPlot(index: number) {
+    const plotImage = plotImages[index];
+    if (!plotImage) return;
+    const activeProject = projects.find((item) => item.id === activeProjectId);
+    const baseName = playground ? safeProjectName(activeProject?.name ?? "python-graf") : `modul-${active.id}-graf`;
+    const anchor = document.createElement("a");
+    anchor.href = `data:image/png;base64,${plotImage}`;
+    anchor.download = `${baseName}${plotImages.length > 1 ? `-${index + 1}` : ""}.png`;
+    anchor.click();
+    setShareStatus("Grafen er lagret som PNG-bilde.");
+  }
+
+  function plotGallery() {
+    if (!plotImages.length) return null;
+    return (
+      <div className="plot-gallery" aria-label={plotImages.length === 1 ? "Graf" : `${plotImages.length} grafer`}>
+        {plotImages.map((plotImage, index) => (
+          <figure className="plot-card" key={`${index}-${plotImage.slice(0, 18)}`}>
+            <img className="plot-output" src={`data:image/png;base64,${plotImage}`} alt={`Graf ${index + 1} laget av Python-koden`} />
+            <figcaption>
+              <span>{plotImages.length === 1 ? "Graf" : `Graf ${index + 1}`}</span>
+              <span className="plot-actions">
+                <button type="button" onClick={() => setExpandedPlotIndex(index)}>Åpne stort</button>
+                <button type="button" onClick={() => downloadPlot(index)}>Lagre bilde</button>
+              </span>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    );
+  }
+
   function makeWorker() {
     workerRef.current?.terminate();
     const worker = new Worker(new URL("pyodide-worker.mjs", document.baseURI), {
@@ -938,13 +978,14 @@ export default function Home() {
     setRunnerStatus("loading");
     setOutput("Starter Python … Første kjøring kan ta litt tid.");
     setFeedback("");
-    setPlotImage("");
+    setPlotImages([]);
+    setExpandedPlotIndex(null);
 
     const worker = makeWorker();
     let executionStarted = false;
 
     worker.onmessage = (event) => {
-      const data = event.data as { type: string; output?: string; error?: string; plot?: string };
+      const data = event.data as { type: string; output?: string; error?: string; plots?: string[] };
       if (data.type === "ready") {
         executionStarted = true;
         setRunnerStatus("running");
@@ -960,8 +1001,9 @@ export default function Home() {
       if (data.type === "result") {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         setRunnerStatus("idle");
-        setOutput(data.output?.trim() || "Koden kjørte ferdig uten utskrift.");
-        setPlotImage(data.plot || "");
+        const nextPlots = data.plots ?? [];
+        setOutput(data.output?.trim() || (nextPlots.length ? `${nextPlots.length === 1 ? "Grafen" : `${nextPlots.length} grafer`} vises under.` : "Koden kjørte ferdig uten utskrift."));
+        setPlotImages(nextPlots);
         worker.terminate();
       }
 
@@ -973,13 +1015,14 @@ export default function Home() {
       }
     };
 
-    worker.onerror = () => {
+    worker.onerror = (event) => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       setRunnerStatus("error");
+      const detail = event.message ? ` Teknisk detalj: ${event.message}` : "";
       setOutput(
         executionStarted
-          ? "Python-motoren stoppet. Prøv å kjøre på nytt."
-          : "Kunne ikke laste Python-motoren. Sjekk nettilkoblingen og prøv igjen.",
+          ? `Python-motoren stoppet. Prøv å kjøre på nytt.${detail}`
+          : `Kunne ikke laste Python-motoren. Sjekk nettilkoblingen og prøv igjen.${detail}`,
       );
       worker.terminate();
     };
@@ -1015,7 +1058,7 @@ export default function Home() {
     <main>
       <header className="topbar">
         <a className="brand" href="#top" aria-label="Bjørnsveen Pythonverksted hjem">
-          <span className="brand-mark"><img src="./brand/kodeormen-256.png" alt="" /></span>
+          <span className="brand-mark"><img src="./brand/kodeormen-256.png" width="58" height="58" alt="" decoding="sync" /></span>
           <span>
             <strong>Bjørnsveen Pythonverksted</strong>
             <small>Matematikk · 8.–10. trinn</small>
@@ -1159,7 +1202,7 @@ export default function Home() {
                     <span className={`status-dot ${runnerStatus}`} />
                   </div>
                   <pre>{output}</pre>
-                  {plotImage && <img className="plot-output" src={`data:image/png;base64,${plotImage}`} alt="Graf laget av Python-koden" />}
+                  {plotGallery()}
                   <div className="output-tip"><strong>Neste spørsmål:</strong> Hva kan dere endre for å få et annet resultat?</div>
                 </div>
               </div>
@@ -1337,6 +1380,7 @@ export default function Home() {
                   <span className={`status-dot ${runnerStatus}`} />
                 </div>
                 <pre>{output}</pre>
+                {plotGallery()}
                 <div className="output-tip"><strong>Observer:</strong> Stemmer resultatet med det du forventet?</div>
               </div>
             </div>
@@ -1428,6 +1472,20 @@ export default function Home() {
         </article>
         )}
       </div>
+      {expandedPlotIndex !== null && plotImages[expandedPlotIndex] && (
+        <div className="plot-modal" role="dialog" aria-modal="true" aria-label={`Graf ${expandedPlotIndex + 1} i stor visning`} onClick={() => setExpandedPlotIndex(null)}>
+          <div className="plot-modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="plot-modal-bar">
+              <strong>{plotImages.length === 1 ? "Graf" : `Graf ${expandedPlotIndex + 1}`}</strong>
+              <span>
+                <button type="button" onClick={() => downloadPlot(expandedPlotIndex)}>Lagre PNG</button>
+                <button type="button" className="plot-close" onClick={() => setExpandedPlotIndex(null)} aria-label="Lukk stor graf">Lukk</button>
+              </span>
+            </div>
+            <img src={`data:image/png;base64,${plotImages[expandedPlotIndex]}`} alt={`Graf ${expandedPlotIndex + 1} laget av Python-koden`} />
+          </div>
+        </div>
+      )}
     </main>
   );
 }

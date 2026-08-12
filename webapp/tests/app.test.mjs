@@ -7,6 +7,7 @@ const worker = readFileSync("public/pyodide-worker.mjs", "utf8");
 const workflow = readFileSync("../.github/workflows/deploy-pages.yml", "utf8");
 const desktopMain = readFileSync("desktop/main.mjs", "utf8");
 const desktopBuild = readFileSync("scripts/build-macos.mjs", "utf8");
+const desktopPrepare = readFileSync("scripts/prepare-desktop-dev.mjs", "utf8");
 const offlinePackages = readFileSync("scripts/download-pyodide.mjs", "utf8");
 
 test("appen inneholder seks komplette læringsmoduler", () => {
@@ -48,8 +49,13 @@ test("Python-rommet støtter datapakker, grafer og prosjektlagring", () => {
   assert.match(page, /import pandas as pd/);
   assert.match(page, /bjornsveen-python-projects/);
   assert.match(worker, /loadPackagesFromImports/);
+  assert.match(worker, /matplotlib\.use\("Agg"\)/);
+  assert.match(worker, /plt\.show = _bjornsveen_show/);
   assert.match(worker, /savefig/);
-  assert.match(worker, /plot/);
+  assert.match(worker, /plots/);
+  assert.match(page, /Åpne stort/);
+  assert.match(page, /Lagre bilde/);
+  assert.match(page, /plotImages/);
 });
 
 test("elev- og lærermodus finnes", () => {
@@ -94,10 +100,16 @@ test("Mac-utgaven er offline, ARM64 og kan pakkes for IT", () => {
   assert.match(desktopBuild, /macos-arm64/);
   assert.match(desktopMain, /BJORNSVEEN_SMOKE_OK/);
   assert.match(desktopMain, /import numpy as np/);
+  assert.match(desktopMain, /import matplotlib\.pyplot as plt/);
+  assert.match(desktopMain, /plotWidth/);
+  assert.match(desktopPrepare, /github-dist/);
+  assert.match(desktopPrepare, /pyodide/);
   assert.match(desktopBuild, /hdiutil/);
   assert.match(desktopBuild, /pkgbuild/);
   assert.match(desktopBuild, /kodeormen\.icns/);
+  assert.match(desktopBuild, /--noextattr/);
   assert.equal(existsSync("public/brand/kodeormen-master.png"), true);
+  assert.equal(existsSync("public/brand/kodeormen-256.png"), true);
   assert.match(offlinePackages, /"numpy"/);
   assert.match(offlinePackages, /"matplotlib"/);
   assert.match(offlinePackages, /"scikit-learn"/);
