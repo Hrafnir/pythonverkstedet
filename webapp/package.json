@@ -1,6 +1,6 @@
 {
   "name": "pythonverkstedet",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -9,6 +9,9 @@
     "dev": "vite",
     "build": "vite build",
     "build:github": "vite build",
+    "desktop:download": "node scripts/download-pyodide.mjs",
+    "desktop:build": "node scripts/build-macos.mjs",
+    "desktop:start": "npm run desktop:download && npm run build && electron desktop/main.mjs",
     "preview": "vite preview",
     "test": "npm run build && node --test tests/app.test.mjs"
   },
@@ -17,9 +20,11 @@
     "react-dom": "19.2.6"
   },
   "devDependencies": {
+    "@electron/osx-sign": "^2.6.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
+    "electron": "^43.4.0",
     "typescript": "5.9.3",
     "vite": "8.0.13"
   },

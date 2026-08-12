@@ -5,6 +5,9 @@ import test from "node:test";
 const page = readFileSync("app/page.tsx", "utf8");
 const worker = readFileSync("public/pyodide-worker.mjs", "utf8");
 const workflow = readFileSync("../.github/workflows/deploy-pages.yml", "utf8");
+const desktopMain = readFileSync("desktop/main.mjs", "utf8");
+const desktopBuild = readFileSync("scripts/build-macos.mjs", "utf8");
+const offlinePackages = readFileSync("scripts/download-pyodide.mjs", "utf8");
 
 test("appen inneholder seks komplette læringsmoduler", () => {
   const moduleIds = page.match(/\n    id: [1-6],/g) ?? [];
@@ -70,4 +73,19 @@ test("GitHub Pages-pakken er komplett", () => {
   ]) {
     assert.equal(existsSync(path), true, `${path} mangler`);
   }
+});
+
+test("Mac-utgaven er offline, ARM64 og kan pakkes for IT", () => {
+  assert.match(desktopMain, /no\.bjornsveen\.pythonverksted|Bjørnsveen Pythonverksted/);
+  assert.match(desktopMain, /cancel: !allowed/);
+  assert.match(desktopMain, /project:open/);
+  assert.match(desktopMain, /project:save/);
+  assert.match(desktopBuild, /macos-arm64/);
+  assert.match(desktopMain, /BJORNSVEEN_SMOKE_OK/);
+  assert.match(desktopMain, /import numpy as np/);
+  assert.match(desktopBuild, /hdiutil/);
+  assert.match(desktopBuild, /pkgbuild/);
+  assert.match(offlinePackages, /"numpy"/);
+  assert.match(offlinePackages, /"matplotlib"/);
+  assert.match(offlinePackages, /"scikit-learn"/);
 });

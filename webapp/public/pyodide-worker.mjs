@@ -1,6 +1,31 @@
-import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v314.0.2/full/pyodide.mjs";
+const desktopMode = self.location.protocol === "file:";
+const localIndex = new URL("./pyodide/", self.location.href).href;
+async function localFileUrlToDataUrl(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Kunne ikke lese lokal Python-fil: ${response.status}`);
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+  }
+  return `data:application/octet-stream;base64,${btoa(binary)}`;
+}
+const moduleUrl = desktopMode
+  ? `${localIndex}pyodide.mjs`
+  : "https://cdn.jsdelivr.net/pyodide/v314.0.2/full/pyodide.mjs";
+const { loadPyodide } = await import(moduleUrl);
 
-const pyodideReady = loadPyodide();
+const pyodideReady = desktopMode
+  ? Promise.all([
+      localFileUrlToDataUrl(`${localIndex}pyodide.asm.wasm`),
+      localFileUrlToDataUrl(`${localIndex}python_stdlib.zip`),
+    ]).then(([wasmURL, stdLibURL]) => loadPyodide({
+      indexURL: localIndex,
+      lockFileURL: `${localIndex}pyodide-lock.json`,
+      stdLibURL,
+      _wasmBinaryFile: wasmURL,
+    }))
+  : loadPyodide();
 
 async function start() {
   try {
@@ -22,10 +47,12 @@ self.onmessage = async (event) => {
 
   try {
     await pyodide.loadPackagesFromImports(code);
+    stdout = "";
+    stderr = "";
     const globals = pyodide.globals.get("dict")();
     await pyodide.runPythonAsync(code, { globals });
     let plot = "";
-    try {
+    if (/\b(matplotlib|pyplot)\b/.test(code)) try {
       plot = await pyodide.runPythonAsync(`
 import base64
 import io

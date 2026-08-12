@@ -468,6 +468,7 @@ export default function Home() {
   const [activeProjectId, setActiveProjectId] = useState(firstProject.id);
   const [shareStatus, setShareStatus] = useState("");
   const [plotImage, setPlotImage] = useState("");
+  const [desktopFilePath, setDesktopFilePath] = useState("");
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -545,6 +546,7 @@ export default function Home() {
     const project = projects.find((item) => item.id === projectId);
     if (!project) return;
     setActiveProjectId(projectId);
+    setDesktopFilePath("");
     setCode(project.code);
     setOutput("Prosjektet er åpnet. Trykk «Kjør kode» når du er klar.");
     setPlotImage("");
@@ -564,6 +566,7 @@ export default function Home() {
     const next = [...projects, project];
     setProjects(next);
     setActiveProjectId(project.id);
+    setDesktopFilePath("");
     setCode(project.code);
     setOutput("Nytt prosjekt opprettet lokalt på denne enheten.");
     window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
@@ -606,6 +609,39 @@ export default function Home() {
     URL.revokeObjectURL(url);
   }
 
+  async function openDesktopProject() {
+    const opened = await window.bjornsveenDesktop?.openProject();
+    if (!opened) return;
+    const project: LocalProject = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: opened.name,
+      code: opened.code,
+      updatedAt: new Date().toISOString(),
+    };
+    const next = [...projects, project];
+    setProjects(next);
+    setActiveProjectId(project.id);
+    setDesktopFilePath(opened.filePath);
+    setCode(opened.code);
+    setOutput("Prosjektet er åpnet fra Mac-en.");
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
+  }
+
+  async function saveDesktopProject(saveAs = false) {
+    const project = projects.find((item) => item.id === activeProjectId) ?? firstProject;
+    const saved = await window.bjornsveenDesktop?.saveProject({
+      filePath: saveAs ? undefined : desktopFilePath || undefined,
+      name: project.name,
+      code,
+    });
+    if (!saved) return;
+    setDesktopFilePath(saved.filePath);
+    const next = projects.map((item) => item.id === activeProjectId ? { ...item, name: saved.name } : item);
+    setProjects(next);
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
+    setShareStatus("Prosjektet er lagret som en vanlig .py-fil på Mac-en.");
+  }
+
   async function importProject(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -619,6 +655,7 @@ export default function Home() {
     const next = [...projects, project];
     setProjects(next);
     setActiveProjectId(project.id);
+    setDesktopFilePath("");
     setCode(importedCode);
     setOutput("Python-filen er importert som et lokalt prosjekt.");
     window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
@@ -857,7 +894,6 @@ export default function Home() {
                 <button type="button" onClick={() => updateCode('def areal(lengde, bredde):\n    return lengde * bredde\n\nprint(areal(8, 5))')}>Lag en funksjon</button>
                 <button type="button" onClick={() => updateCode('import numpy as np\nimport matplotlib.pyplot as plt\n\nx = np.linspace(-5, 5, 100)\ny = x ** 2\n\nplt.plot(x, y)\nplt.title("Grafen til y = x²")\nplt.grid()\nplt.show()')}>Tegn en graf</button>
                 <button type="button" onClick={() => updateCode('import pandas as pd\n\ndata = {"navn": ["Ada", "Bo", "Celine"], "poeng": [8, 12, 10]}\ntabell = pd.DataFrame(data)\nprint(tabell.to_string(index=False))')}>Lag en tabell</button>
-                <button type="button" onClick={() => updateCode('import micropip\nawait micropip.install("snowballstemmer")\n\nimport snowballstemmer\nstemmer = snowballstemmer.stemmer("norwegian")\nprint(stemmer.stemWords(["lærer", "lærere", "læring"]))')}>Installer en ren Python-pakke</button>
                 <button type="button" onClick={() => updateCode(playgroundCode)}>Tilbake til startkoden</button>
               </div>
             </section>
@@ -881,6 +917,9 @@ export default function Home() {
                 <button type="button" onClick={renameProject}>Gi nytt navn</button>
                 <button type="button" onClick={downloadProject}>Last ned .py</button>
                 <label className="import-button">Importer .py<input type="file" accept=".py,text/x-python" onChange={importProject} /></label>
+                {window.bjornsveenDesktop?.isDesktop && <button type="button" onClick={openDesktopProject}>Åpne fra Mac</button>}
+                {window.bjornsveenDesktop?.isDesktop && <button type="button" onClick={() => saveDesktopProject(false)}>Lagre</button>}
+                {window.bjornsveenDesktop?.isDesktop && <button type="button" onClick={() => saveDesktopProject(true)}>Lagre som …</button>}
                 <button type="button" className="delete-project-button" onClick={deleteProject}>Slett</button>
               </div>
             </section>
@@ -933,7 +972,7 @@ export default function Home() {
               <div className="package-guide">
                 <div>
                   <strong>Datapakker som fungerer her</strong>
-                  <p>NumPy, pandas, Matplotlib, SciPy, scikit-learn og mange flere Pyodide-pakker lastes automatisk. Rene Python-pakker kan også installeres med <code>micropip</code>.</p>
+                  <p>NumPy, pandas, Matplotlib, SciPy, SymPy, scikit-learn, Pillow og NetworkX er med i den kuraterte skolepakken og lastes automatisk når de importeres.</p>
                 </div>
                 <div>
                   <strong>Ikke helt som installert Python</strong>

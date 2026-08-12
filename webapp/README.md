@@ -40,3 +40,17 @@ npm run build:github
 Den statiske appen bygges i `github-dist`. Arbeidsflyten i `.github/workflows/deploy-pages.yml` publiserer automatisk når `main` blir oppdatert.
 
 Første Python-kjøring laster Pyodide fra jsDelivr. Deretter kjøres elevens kode i en webarbeider i nettleseren. Appen sender ikke kode eller progresjon til en egen server.
+
+## Offline Mac-utgave
+
+Mac-utgaven bygges for Apple Silicon/ARM64 og inneholder Python-motoren og den
+kuraterte skolepakken lokalt. Den blokkerer eksterne nettverksforespørsler og
+lager `.app`, `.dmg` og `.pkg` i `../release/macos-arm64`.
+
+```bash
+npm run desktop:build
+```
+
+Første bygg laster ned de låste Pyodide-filene og kontrollerer pakkefilenes
+SHA-256-kontrollsummer. Produksjonsbygg kan signeres ved å sette
+`MAC_APP_IDENTITY` og `MAC_INSTALLER_IDENTITY`. Se `desktop/IT-README.txt`.

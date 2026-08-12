@@ -99,6 +99,7 @@ En førsteversjon av **Bjørnsveen Pythonverksted** ligger i mappen [`webapp`](w
 - lokal progresjon uten elevkonto eller innsending av elevdata
 - utskriftsvennlig visning av hefteteksten
 - automatisk publiseringsoppsett for GitHub Pages
+- en offline ARM64 Mac-utgave med `.dmg` og MDM-vennlig `.pkg`
 
 Lokalt kan appen startes fra `webapp` med `npm run dev`. Den statiske GitHub Pages-versjonen bygges med `npm run build:github`.
 
