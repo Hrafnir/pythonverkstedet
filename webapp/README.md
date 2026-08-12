@@ -57,5 +57,5 @@ SHA-256-kontrollsummer. Produksjonsbygg kan signeres ved å sette
 
 Hver læringsmodul har to editorfaner: en tom «Skriv selv»-lab med konkrete
 skriveinstruksjoner og en redigerbar «Fasit». Kode og resultat kan kopieres
-samlet som formatert tekst eller bilde. Kodeormen i `public/brand` brukes som
-favicon, merke i nettsiden og `.icns`-ikon i Mac-pakken.
+samlet som formatert tekst eller bilde. Det felles kode- og grafikonet i
+`public/brand` brukes som favicon, merke i nettsiden og `.icns`-ikon i Mac-pakken.
