@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 
 type Module = {
   id: number;
@@ -17,6 +17,14 @@ type Module = {
   };
   theory: { title: string; body: string; code?: string; steps: string[] }[];
   starterCode: string;
+  typingSteps: string[];
+  polish: {
+    title: string;
+    body: string;
+    before: string;
+    after: string;
+    explanation: string;
+  };
   observe: string[];
   task: string;
   taskHint: string;
@@ -76,6 +84,20 @@ const modules: Module[] = [
       },
     ],
     starterCode: `pris = 800\nrabatt = 0.25\nny_pris = pris * (1 - rabatt)\nprint(ny_pris)`,
+    typingSteps: [
+      "Skriv pris = 800 og trykk Enter.",
+      "Skriv rabatt = 0.25. Husk punktum i desimaltall.",
+      "Skriv ny_pris = pris * (1 - rabatt).",
+      "Skriv print(ny_pris) på siste linje.",
+      "Les gjennom tegn for tegn, og trykk Kjør kode.",
+    ],
+    polish: {
+      title: "Gjør 600.0 om til en ordentlig beskjed",
+      body: "Python kan sette tekst og en verdi sammen i én utskrift. Bokstaven f foran teksten betyr at det som står i krøllparenteser, skal byttes ut med en verdi.",
+      before: "print(ny_pris)",
+      after: 'print(f"Den nye prisen på produktet er {ny_pris:.0f} kr.")',
+      explanation: ":.0f betyr «vis tallet med null desimaler». Derfor vises 600 i stedet for 600.0.",
+    },
     observe: [
       "Hva er verdien til hver variabel etter linje 3?",
       "Hvor i koden finner du vekstfaktoren 0,75?",
@@ -142,6 +164,20 @@ const modules: Module[] = [
       },
     ],
     starterCode: `tall = 18\nrest = tall % 2\n\nif rest == 0:\n    print("partall")\nelse:\n    print("oddetall")`,
+    typingSteps: [
+      "Skriv tall = 18.",
+      "Skriv rest = tall % 2.",
+      "Skriv if rest == 0: og trykk Enter.",
+      "Rykk inn fire mellomrom og skriv print(\"partall\").",
+      "Skriv else: uten innrykk, og skriv deretter den innrykkede oddetall-linjen.",
+    ],
+    polish: {
+      title: "Fortell hvilket tall programmet undersøkte",
+      body: "En f-tekst gjør resultatet lettere å forstå når vi ser på det senere.",
+      before: 'print("partall")',
+      after: 'print(f"Tallet {tall} er et partall.")',
+      explanation: "Alt inni {tall} erstattes med verdien som ligger i variabelen tall.",
+    },
     observe: [
       "Hva er verdien til rest når tall er 18?",
       "Hvilken print-linje blir hoppet over?",
@@ -208,6 +244,20 @@ const modules: Module[] = [
       },
     ],
     starterCode: `for n in range(1, 6):\n    print(2 * n)`,
+    typingSteps: [
+      "Skriv for n in range(1, 6): og trykk Enter.",
+      "Legg merke til kolon helt til slutt.",
+      "Rykk inn fire mellomrom på neste linje.",
+      "Skriv print(2 * n).",
+      "Kjør og tell hvor mange svar du får.",
+    ],
+    polish: {
+      title: "Vis regnestykket sammen med svaret",
+      body: "I stedet for bare 2, 4, 6 … kan hver linje forklare hva som ble regnet ut.",
+      before: "print(2 * n)",
+      after: 'print(f"2 · {n} = {2 * n}")',
+      explanation: "Du kan ha flere krøllparenteser i samme f-tekst. Python regner ut uttrykket {2 * n} før teksten skrives ut.",
+    },
     observe: [
       "Hvilke fem verdier får n?",
       "Hvor mange ganger utføres print-linjen?",
@@ -274,6 +324,20 @@ const modules: Module[] = [
       },
     ],
     starterCode: `def f(x):\n    return 2 * x + 3\n\nresultat = f(6)\nprint(resultat)`,
+    typingSteps: [
+      "Skriv def f(x): og trykk Enter.",
+      "Rykk inn fire mellomrom og skriv return 2 * x + 3.",
+      "Lag en tom linje og gå helt tilbake til venstre.",
+      "Skriv resultat = f(6).",
+      "Skriv print(resultat), og kjør koden.",
+    ],
+    polish: {
+      title: "Skriv funksjonsverdien som matematikk",
+      body: "En tydelig utskrift gjør det lettere å koble koden til matematikkfaget.",
+      before: "print(resultat)",
+      after: 'print(f"f(6) = {resultat}")',
+      explanation: "Teksten f(6) står fast, mens {resultat} henter svaret fra variabelen.",
+    },
     observe: [
       "Hvilken verdi får parameteren x?",
       "Hva er funksjonsuttrykket i matematisk skrivemåte?",
@@ -340,6 +404,20 @@ const modules: Module[] = [
       },
     ],
     starterCode: `import random\n\nantall_kast = 600\nantall_seksere = 0\n\nfor _ in range(antall_kast):\n    kast = random.randint(1, 6)\n    if kast == 6:\n        antall_seksere += 1\n\nandel = antall_seksere / antall_kast\nprint(round(andel, 3))`,
+    typingSteps: [
+      "Skriv import random. Da får programmet tilgang til tilfeldige tall.",
+      "Skriv variablene antall_kast = 600 og antall_seksere = 0.",
+      "Skriv for-løkken. Rykk inn linjene som hører til løkken.",
+      "Skriv if-linjen inni løkken, og rykk telleren enda ett nivå inn.",
+      "Etter løkken skriver du utregningen av andel og print-linjen.",
+    ],
+    polish: {
+      title: "Vis svaret som prosent",
+      body: "Formatkoden :.1% gjør desimaltallet om til prosent og viser én desimal.",
+      before: "print(round(andel, 3))",
+      after: 'print(f"Andelen seksere ble {andel:.1%}.")',
+      explanation: "Hvis andel er 0.167, vises den som 16.7 %. Python ganger med 100 og legger til prosenttegnet for oss.",
+    },
     observe: [
       "Hvorfor får du ikke nøyaktig samme svar hver gang?",
       "Ligger resultatet rimelig nær 1/6?",
@@ -406,6 +484,20 @@ const modules: Module[] = [
       },
     ],
     starterCode: `start = 1000\nvekstfaktor = 1.10\ntid = 2\n\nverdi = start * vekstfaktor ** tid\nprint(round(verdi, 2))`,
+    typingSteps: [
+      "Skriv start = 1000.",
+      "Skriv vekstfaktor = 1.10 og tid = 2.",
+      "Lag gjerne en tom linje for å gjøre koden lettere å lese.",
+      "Skriv verdi = start * vekstfaktor ** tid.",
+      "Skriv print(round(verdi, 2)), og kjør programmet.",
+    ],
+    polish: {
+      title: "Lag en pen pengesum med to desimaler",
+      body: "Formatkoden :.2f sørger for at en pengesum alltid får nøyaktig to desimaler.",
+      before: "print(round(verdi, 2))",
+      after: 'print(f"Etter {tid} år er verdien {verdi:.2f} kr.")',
+      explanation: ":.2f betyr «vis tallet som et desimaltall med to desimaler».",
+    },
     observe: [
       "Hvor i koden står antakelsen om konstant vekst?",
       "Hvorfor blir ikke to perioder 1 200 kr?",
@@ -455,11 +547,60 @@ function safeProjectName(name: string) {
   return name.trim().replace(/[\\/:*?"<>|]+/g, "-") || "python-prosjekt";
 }
 
+const pythonTokens = /(#[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:False|None|True|and|as|break|class|continue|def|elif|else|for|from|if|import|in|is|not|or|pass|return|while)\b|\b(?:abs|float|int|len|max|min|print|range|round|str|sum)\b|\b\d+(?:\.\d+)?\b)/g;
+
+function colorPython(source: string): ReactNode[] {
+  return source.split(pythonTokens).map((token, index) => {
+    let kind = "plain";
+    if (token.startsWith("#")) kind = "comment";
+    else if (token.startsWith('"') || token.startsWith("'")) kind = "string";
+    else if (/^(?:False|None|True|and|as|break|class|continue|def|elif|else|for|from|if|import|in|is|not|or|pass|return|while)$/.test(token)) kind = "keyword";
+    else if (/^(?:abs|float|int|len|max|min|print|range|round|str|sum)$/.test(token)) kind = "builtin";
+    else if (/^\d+(?:\.\d+)?$/.test(token)) kind = "number";
+    return <span className={`py-${kind}`} key={`${index}-${token}`}>{token}</span>;
+  });
+}
+
+function PythonEditor({ id, value, onChange, describedBy, tall = false }: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  describedBy: string;
+  tall?: boolean;
+}) {
+  const highlightRef = useRef<HTMLPreElement | null>(null);
+  return (
+    <div className={`python-editor ${tall ? "is-tall" : ""}`}>
+      <pre className="syntax-layer" ref={highlightRef} aria-hidden="true">{colorPython(`${value}\n`)}</pre>
+      <textarea
+        id={id}
+        className="syntax-input"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onScroll={(event) => {
+          if (!highlightRef.current) return;
+          highlightRef.current.scrollTop = event.currentTarget.scrollTop;
+          highlightRef.current.scrollLeft = event.currentTarget.scrollLeft;
+        }}
+        spellCheck={false}
+        autoCapitalize="off"
+        autoCorrect="off"
+        aria-describedby={describedBy}
+      />
+    </div>
+  );
+}
+
 export default function Home() {
   const [activeId, setActiveId] = useState(1);
   const [playground, setPlayground] = useState(false);
   const [teacherMode, setTeacherMode] = useState(false);
-  const [code, setCode] = useState(modules[0].starterCode);
+  const [code, setCode] = useState("");
+  const [labTab, setLabTab] = useState<"practice" | "solution">("practice");
+  const [practiceCodes, setPracticeCodes] = useState<Record<number, string>>({});
+  const [solutionCodes, setSolutionCodes] = useState<Record<number, string>>(
+    Object.fromEntries(modules.map((module) => [module.id, module.starterCode])),
+  );
   const [output, setOutput] = useState("Trykk «Kjør kode» når du er klar.");
   const [runnerStatus, setRunnerStatus] = useState<"idle" | "loading" | "running" | "error">("idle");
   const [feedback, setFeedback] = useState("");
@@ -505,7 +646,8 @@ export default function Home() {
   function chooseModule(module: Module) {
     setPlayground(false);
     setActiveId(module.id);
-    setCode(module.starterCode);
+    setLabTab("practice");
+    setCode(practiceCodes[module.id] ?? "");
     setOutput("Trykk «Kjør kode» når du er klar.");
     setFeedback("");
     setPlotImage("");
@@ -532,7 +674,11 @@ export default function Home() {
 
   function updateCode(nextCode: string) {
     setCode(nextCode);
-    if (!playground) return;
+    if (!playground) {
+      if (labTab === "practice") setPracticeCodes((current) => ({ ...current, [active.id]: nextCode }));
+      else setSolutionCodes((current) => ({ ...current, [active.id]: nextCode }));
+      return;
+    }
     const nextProjects = projects.map((project) =>
       project.id === activeProjectId
         ? { ...project, code: nextCode, updatedAt: new Date().toISOString() }
@@ -540,6 +686,26 @@ export default function Home() {
     );
     setProjects(nextProjects);
     window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(nextProjects));
+  }
+
+  function switchLabTab(nextTab: "practice" | "solution") {
+    if (nextTab === labTab) return;
+    if (labTab === "practice") setPracticeCodes((current) => ({ ...current, [active.id]: code }));
+    else setSolutionCodes((current) => ({ ...current, [active.id]: code }));
+    setLabTab(nextTab);
+    setCode(nextTab === "practice" ? (practiceCodes[active.id] ?? "") : (solutionCodes[active.id] ?? active.starterCode));
+    setOutput("Trykk «Kjør kode» når du er klar.");
+    setFeedback("");
+    setPlotImage("");
+  }
+
+  function resetCurrentEditor() {
+    const nextCode = labTab === "practice" ? "" : active.starterCode;
+    setCode(nextCode);
+    if (labTab === "practice") setPracticeCodes((current) => ({ ...current, [active.id]: nextCode }));
+    else setSolutionCodes((current) => ({ ...current, [active.id]: nextCode }));
+    setFeedback("");
+    setOutput("Trykk «Kjør kode» når du er klar.");
   }
 
   function selectProject(projectId: string) {
@@ -664,24 +830,28 @@ export default function Home() {
   }
 
   async function copyCodeAsText() {
+    const answer = output.trim() || "Ingen utskrift ennå.";
+    const plainText = `Python-kode:\n${code || "(tom editor)"}\n\nSvar / resultat:\n${answer}`;
     try {
       if ("ClipboardItem" in window && navigator.clipboard?.write) {
-        const html = `<pre style="font-family: ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; background: #f4f4f4; padding: 16px; border-radius: 8px;"><code>${code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`;
+        const escape = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const html = `<div style="font-family: ui-monospace, SFMono-Regular, Consolas, monospace;"><h3>Python-kode</h3><pre style="white-space: pre-wrap; background: #102e2b; color: #eef5ef; padding: 16px; border-radius: 8px;"><code>${escape(code || "(tom editor)")}</code></pre><h3>Svar / resultat</h3><pre style="white-space: pre-wrap; background: #f4f4f4; padding: 16px; border-radius: 8px;">${escape(answer)}</pre></div>`;
         await navigator.clipboard.write([new ClipboardItem({
-          "text/plain": new Blob([code], { type: "text/plain" }),
+          "text/plain": new Blob([plainText], { type: "text/plain" }),
           "text/html": new Blob([html], { type: "text/html" }),
         })]);
       } else {
-        await navigator.clipboard.writeText(code);
+        await navigator.clipboard.writeText(plainText);
       }
-      setShareStatus("Koden er kopiert som formatert tekst.");
+      setShareStatus("Koden og svaret er kopiert som formatert tekst.");
     } catch {
       setShareStatus("Nettleseren tillot ikke kopiering. Marker koden og kopier manuelt.");
     }
   }
 
   async function copyCodeAsImage(filename: string) {
-    const lines = code.replace(/\t/g, "    ").split("\n");
+    const lines = (code || "(tom editor)").replace(/\t/g, "    ").split("\n");
+    const answerLines = (output.trim() || "Ingen utskrift ennå.").split("\n");
     const fontSize = 20;
     const lineHeight = 31;
     const padding = 34;
@@ -690,8 +860,18 @@ export default function Home() {
     const measure = canvas.getContext("2d");
     if (!measure) return;
     measure.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
-    const width = Math.min(1800, Math.max(720, ...lines.map((line) => measure.measureText(line).width + padding * 2)));
-    const height = Math.max(260, titleHeight + padding + lines.length * lineHeight + padding);
+    const width = Math.min(1800, Math.max(720, ...[...lines, ...answerLines].map((line) => measure.measureText(line).width + padding * 2)));
+    let plot: HTMLImageElement | null = null;
+    if (plotImage) {
+      plot = new Image();
+      plot.src = `data:image/png;base64,${plotImage}`;
+      await plot.decode();
+    }
+    const codeHeight = padding + lines.length * lineHeight + padding;
+    const answerHeaderHeight = 48;
+    const answerHeight = padding + answerLines.length * lineHeight + padding;
+    const plotHeight = plot ? Math.min(430, (plot.height / plot.width) * (width - padding * 2)) + padding : 0;
+    const height = Math.max(320, titleHeight + codeHeight + answerHeaderHeight + answerHeight + plotHeight);
     canvas.width = width * 2;
     canvas.height = height * 2;
     const context = canvas.getContext("2d");
@@ -713,11 +893,27 @@ export default function Home() {
     context.fillStyle = "#e7eee9";
     context.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
     lines.forEach((line, index) => context.fillText(line, padding, titleHeight + padding + (index + 1) * lineHeight));
+    const answerTop = titleHeight + codeHeight;
+    context.fillStyle = "#234b46";
+    context.fillRect(0, answerTop, width, answerHeaderHeight);
+    context.fillStyle = "#9fe5bd";
+    context.font = "700 15px ui-monospace, SFMono-Regular, Consolas, monospace";
+    context.fillText("SVAR / RESULTAT", padding, answerTop + 31);
+    context.fillStyle = "#0c2421";
+    context.fillRect(0, answerTop + answerHeaderHeight, width, answerHeight + plotHeight);
+    context.fillStyle = "#e7eee9";
+    context.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
+    answerLines.forEach((line, index) => context.fillText(line, padding, answerTop + answerHeaderHeight + padding + (index + 1) * lineHeight));
+    if (plot) {
+      const drawWidth = width - padding * 2;
+      const drawHeight = Math.min(430, (plot.height / plot.width) * drawWidth);
+      context.drawImage(plot, padding, answerTop + answerHeaderHeight + answerHeight, drawWidth, drawHeight);
+    }
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
     if (!blob) return;
     try {
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      setShareStatus("Hele kodeeditoren er kopiert som bilde.");
+      setShareStatus("Hele kodeeditoren og svaret er kopiert som bilde.");
     } catch {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
@@ -799,7 +995,7 @@ export default function Home() {
       );
       return;
     }
-    const correct = active.expected.some((answer) => normalized === answer.toLowerCase());
+    const correct = active.expected.some((answer) => normalized.includes(answer.toLowerCase()));
     setFeedback(
       correct
         ? "Ja! Nå gjenstår den viktigste delen: Forklar med egne ord hvorfor koden gir dette svaret."
@@ -819,7 +1015,7 @@ export default function Home() {
     <main>
       <header className="topbar">
         <a className="brand" href="#top" aria-label="Bjørnsveen Pythonverksted hjem">
-          <span className="brand-mark">BP</span>
+          <span className="brand-mark"><img src="./brand/kodeormen-256.png" alt="" /></span>
           <span>
             <strong>Bjørnsveen Pythonverksted</strong>
             <small>Matematikk · 8.–10. trinn</small>
@@ -938,18 +1134,17 @@ export default function Home() {
                     <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
                     <strong>{safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py</strong>
                     <span className="panel-tools">
-                      <button type="button" onClick={copyCodeAsText}>Kopier tekst</button>
-                      <button type="button" onClick={() => copyCodeAsImage(`${safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py`)}>Kopier bilde</button>
+                      <button type="button" onClick={copyCodeAsText}>Kopier kode + svar</button>
+                      <button type="button" onClick={() => copyCodeAsImage(`${safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py`)}>Bilde av kode + svar</button>
                     </span>
                   </div>
                   <label htmlFor="playground-code" className="sr-only">Skriv fri Python-kode</label>
-                  <textarea
+                  <PythonEditor
                     id="playground-code"
                     value={code}
-                    onChange={(event) => updateCode(event.target.value)}
-                    spellCheck={false}
-                    autoCapitalize="off"
-                    aria-describedby="playground-help"
+                    onChange={updateCode}
+                    describedBy="playground-help"
+                    tall
                   />
                   <div className="editor-footer" id="playground-help">
                     <span>Prøv gjerne noe du ikke vet om virker.</span>
@@ -1061,6 +1256,26 @@ export default function Home() {
             </div>
           </section>
 
+          <section className="content-section polish-section">
+            <details>
+              <summary>
+                <span className="polish-spark">✦</span>
+                <span><small>Valgfritt ekstratriks</small><strong>{active.polish.title}</strong></span>
+                <span className="polish-open">Vis trikset</span>
+              </summary>
+              <div className="polish-content">
+                <div>
+                  <p>{active.polish.body}</p>
+                  <p className="polish-explanation"><strong>Hva betyr det?</strong> {active.polish.explanation}</p>
+                </div>
+                <div className="polish-code-change">
+                  <span>Før</span><code>{active.polish.before}</code>
+                  <span>Etter</span><code>{active.polish.after}</code>
+                </div>
+              </div>
+            </details>
+          </section>
+
           <section className="content-section lab-section">
             <div className="section-heading lab-heading">
               <div>
@@ -1070,28 +1285,46 @@ export default function Home() {
               <div className="live-badge"><span /> Ekte Python i nettleseren</div>
             </div>
 
-            <div className="code-workbench">
+            <div className="lab-tabs" role="tablist" aria-label="Velg arbeidsmåte">
+              <button type="button" role="tab" aria-selected={labTab === "practice"} className={labTab === "practice" ? "is-active" : ""} onClick={() => switchLabTab("practice")}>
+                <span>1</span><strong>Skriv selv</strong><small>Tom editor med hjelp</small>
+              </button>
+              <button type="button" role="tab" aria-selected={labTab === "solution"} className={labTab === "solution" ? "is-active" : ""} onClick={() => switchLabTab("solution")}>
+                <span>2</span><strong>Fasit</strong><small>Ferdig, men redigerbar</small>
+              </button>
+            </div>
+
+            {labTab === "practice" && (
+              <div className="typing-guide">
+                <div><span className="keyboard-icon">⌨</span><h3>Skriv programmet selv</h3><p>Ikke kopier. Ta én linje om gangen, og sammenlign tegnene nøye.</p></div>
+                <ol>{active.typingSteps.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
+              </div>
+            )}
+
+            {labTab === "solution" && (
+              <div className="solution-note"><strong>Fasit er ikke låst.</strong> Endre tall, tekst eller uttrykk, kjør på nytt og se hva som skjer.</div>
+            )}
+
+            <div className="code-workbench module-workbench">
               <div className="editor-panel">
                 <div className="panel-bar">
                   <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
                   <strong>verksted.py</strong>
                   <span className="panel-tools">
-                    <button type="button" onClick={copyCodeAsText}>Kopier tekst</button>
-                    <button type="button" onClick={() => copyCodeAsImage("verksted.py")}>Kopier bilde</button>
-                    <button type="button" onClick={() => { setCode(active.starterCode); setFeedback(""); }}>Tilbakestill</button>
+                    <button type="button" onClick={copyCodeAsText}>Kopier kode + svar</button>
+                    <button type="button" onClick={() => copyCodeAsImage("verksted.py")}>Bilde av kode + svar</button>
+                    <button type="button" onClick={resetCurrentEditor}>{labTab === "practice" ? "Tøm editor" : "Tilbakestill fasit"}</button>
                   </span>
                 </div>
                 <label htmlFor="python-code" className="sr-only">Python-kode</label>
-                <textarea
+                <PythonEditor
                   id="python-code"
                   value={code}
-                  onChange={(event) => setCode(event.target.value)}
-                  spellCheck={false}
-                  autoCapitalize="off"
-                  aria-describedby="editor-help"
+                  onChange={updateCode}
+                  describedBy="editor-help"
                 />
                 <div className="editor-footer" id="editor-help">
-                  <span>Du kan endre alt i kodefeltet.</span>
+                  <span>{labTab === "practice" ? "Skriv én linje om gangen. Feil er en del av øvingen." : "Du kan endre alt i fasiten."}</span>
                   <button type="button" className="run-button" onClick={runCode} disabled={runnerStatus === "loading" || runnerStatus === "running"}>
                     <span>▶</span>{runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : "Kjør kode"}
                   </button>

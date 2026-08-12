@@ -54,3 +54,8 @@ npm run desktop:build
 Første bygg laster ned de låste Pyodide-filene og kontrollerer pakkefilenes
 SHA-256-kontrollsummer. Produksjonsbygg kan signeres ved å sette
 `MAC_APP_IDENTITY` og `MAC_INSTALLER_IDENTITY`. Se `desktop/IT-README.txt`.
+
+Hver læringsmodul har to editorfaner: en tom «Skriv selv»-lab med konkrete
+skriveinstruksjoner og en redigerbar «Fasit». Kode og resultat kan kopieres
+samlet som formatert tekst eller bilde. Kodeormen i `public/brand` brukes som
+favicon, merke i nettsiden og `.icns`-ikon i Mac-pakken.

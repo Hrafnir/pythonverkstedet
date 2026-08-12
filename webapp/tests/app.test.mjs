@@ -26,9 +26,20 @@ test("modulvelgeren har et fritt Python-rom uten sidepanel", () => {
   assert.match(page, /playgroundCode/);
   assert.match(page, /Lokale prosjekter/);
   assert.match(page, /Importer \.py/);
-  assert.match(page, /Kopier bilde/);
-  assert.match(page, /Kopier tekst/);
+  assert.match(page, /Bilde av kode \+ svar/);
+  assert.match(page, /Kopier kode \+ svar/);
   assert.doesNotMatch(page, /<aside/);
+});
+
+test("modulene har tom skrivelab, redigerbar fasit, kodefarger og ekstratriks", () => {
+  assert.match(page, /Skriv selv/);
+  assert.match(page, /Tom editor med hjelp/);
+  assert.match(page, /Fasit er ikke låst/);
+  assert.match(page, /pythonTokens/);
+  assert.match(page, /Valgfritt ekstratriks/);
+  assert.match(page, /Den nye prisen på produktet er/);
+  assert.equal((page.match(/    typingSteps: \[/g) ?? []).length, 6);
+  assert.equal((page.match(/    polish: \{/g) ?? []).length, 6);
 });
 
 test("Python-rommet støtter datapakker, grafer og prosjektlagring", () => {
@@ -85,6 +96,8 @@ test("Mac-utgaven er offline, ARM64 og kan pakkes for IT", () => {
   assert.match(desktopMain, /import numpy as np/);
   assert.match(desktopBuild, /hdiutil/);
   assert.match(desktopBuild, /pkgbuild/);
+  assert.match(desktopBuild, /kodeormen\.icns/);
+  assert.equal(existsSync("public/brand/kodeormen-master.png"), true);
   assert.match(offlinePackages, /"numpy"/);
   assert.match(offlinePackages, /"matplotlib"/);
   assert.match(offlinePackages, /"scikit-learn"/);

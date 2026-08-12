@@ -42,7 +42,19 @@ await mkdir(appDir, { recursive: true });
 run("ditto", ["--noextattr", "--norsrc", path.join(root, "node_modules", "electron", "dist", "Electron.app"), appPath]);
 const resourcesDir = path.join(appPath, "Contents", "Resources");
 await rm(path.join(resourcesDir, "default_app.asar"), { force: true });
-await cp(packageRoot, path.join(resourcesDir, "app"), { recursive: true });
+run("ditto", ["--noextattr", "--norsrc", packageRoot, path.join(resourcesDir, "app")]);
+const iconset = path.join(workRoot, "kodeormen.iconset");
+await mkdir(iconset, { recursive: true });
+const iconMaster = path.join(root, "public", "brand", "kodeormen-master.png");
+for (const [name, pixels] of [
+  ["icon_16x16.png", 16], ["icon_16x16@2x.png", 32],
+  ["icon_32x32.png", 32], ["icon_32x32@2x.png", 64],
+  ["icon_128x128.png", 128], ["icon_128x128@2x.png", 256],
+  ["icon_256x256.png", 256], ["icon_256x256@2x.png", 512],
+  ["icon_512x512.png", 512], ["icon_512x512@2x.png", 1024],
+]) run("sips", ["-z", String(pixels), String(pixels), iconMaster, "--out", path.join(iconset, name)]);
+const iconPath = path.join(resourcesDir, "kodeormen.icns");
+run("iconutil", ["-c", "icns", iconset, "-o", iconPath]);
 const plist = path.join(appPath, "Contents", "Info.plist");
 for (const [key, value] of [
   ["CFBundleDisplayName", productName],
@@ -50,6 +62,7 @@ for (const [key, value] of [
   ["CFBundleIdentifier", "no.bjornsveen.pythonverksted"],
   ["CFBundleShortVersionString", version],
   ["CFBundleVersion", "1"],
+  ["CFBundleIconFile", "kodeormen.icns"],
 ]) {
   try { run("/usr/libexec/PlistBuddy", ["-c", `Set :${key} ${value}`, plist]); }
   catch { run("/usr/libexec/PlistBuddy", ["-c", `Add :${key} string ${value}`, plist]); }

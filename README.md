@@ -100,6 +100,8 @@ En førsteversjon av **Bjørnsveen Pythonverksted** ligger i mappen [`webapp`](w
 - utskriftsvennlig visning av hefteteksten
 - automatisk publiseringsoppsett for GitHub Pages
 - en offline ARM64 Mac-utgave med `.dmg` og MDM-vennlig `.pkg`
+- Kodeormen som eget appikon, tom skrivelab med kodefarger og en redigerbar fasit i hver modul
+- kopiering av kode og svar samlet, både som formatert tekst og bilde
 
 Lokalt kan appen startes fra `webapp` med `npm run dev`. Den statiske GitHub Pages-versjonen bygges med `npm run build:github`.
 
