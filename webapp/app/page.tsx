@@ -56,6 +56,379 @@ type LocalProject = {
   updatedAt: string;
 };
 
+const referenceCategories = ["Alle", "Kom i gang", "Styring", "Byggeklosser", "Utforske data", "Tegne og vise", "Videre"] as const;
+type ReferenceCategory = (typeof referenceCategories)[number];
+
+type PlaygroundReference = {
+  id: string;
+  category: Exclude<ReferenceCategory, "Alle">;
+  level: "Start" | "Grunnmur" | "Utforsk" | "Videre";
+  title: string;
+  purpose: string;
+  commands: { code: string; explanation: string }[];
+  example: string;
+  experiments: string[];
+  tip?: string;
+};
+
+const playgroundReferences: PlaygroundReference[] = [
+  {
+    id: "variabler",
+    category: "Kom i gang",
+    level: "Start",
+    title: "Variabler, regning og print",
+    purpose: "Lagre verdier, regn med dem og vis et forståelig svar.",
+    commands: [
+      { code: "navn = verdi", explanation: "Lagrer en verdi under et navn." },
+      { code: "+  -  *  /", explanation: "Pluss, minus, gange og dele." },
+      { code: "print(...) ", explanation: "Viser tekst og verdier i resultatfeltet." },
+      { code: "+=  -=", explanation: "Legger til eller trekker fra og lagrer den nye verdien." },
+    ],
+    example: `pris = 80
+antall = 3
+total = pris * antall
+
+print("Total:", total, "kr")`,
+    experiments: [
+      "Endre pris og antall. Forutsi svaret før du kjører.",
+      "Legg til frakt = 59 og ta frakten med i totalen.",
+      "Lag rabatt = 20 og bruk total -= rabatt.",
+    ],
+    tip: "Les en tildeling fra høyre: Regn ut høyresiden først, og lagre svaret i navnet til venstre.",
+  },
+  {
+    id: "tekst",
+    category: "Kom i gang",
+    level: "Start",
+    title: "Tekst, tall og pene svar",
+    purpose: "Sett tekst og variabler sammen, og bestem hvordan tall skal vises.",
+    commands: [
+      { code: 'print("Hei", navn)', explanation: "Enkel start: skill delene med komma." },
+      { code: 'f"Hei {navn}"', explanation: "En f-tekst setter verdier inn i en hel setning." },
+      { code: "{pris:.0f}", explanation: "Viser et desimaltall uten desimaler." },
+      { code: "round(tall, 2)", explanation: "Avrunder til to desimaler." },
+    ],
+    example: `produkt = "hettegenser"
+pris = 599.5
+antall = 2
+total = pris * antall
+
+print("Du kjøper", antall, produkt)
+print(f"Totalprisen er {total:.2f} kr.")`,
+    experiments: [
+      "Bytt produkt og pris.",
+      "Prøv :.0f, :.1f og :.2f. Hva endres?",
+      "Lag en setning som også viser pris per produkt.",
+    ],
+  },
+  {
+    id: "vilkar",
+    category: "Styring",
+    level: "Grunnmur",
+    title: "Valg med if, elif og else",
+    purpose: "La programmet velge hva det skal gjøre ut fra et vilkår.",
+    commands: [
+      { code: "==  !=", explanation: "Er lik / er ikke lik. Sammenligning bruker to likhetstegn." },
+      { code: ">  <  >=  <=", explanation: "Sammenligner størrelsen på tall." },
+      { code: "and  or", explanation: "Kombinerer flere vilkår." },
+      { code: "if ...:", explanation: "Koden med innrykk kjøres når vilkåret er sant." },
+    ],
+    example: `poeng = 8
+
+if poeng >= 10:
+    print("Toppnivå")
+elif poeng >= 5:
+    print("Godt i gang")
+else:
+    print("Prøv en gang til")`,
+    experiments: [
+      "Test poeng 4, 5, 9 og 10.",
+      "Legg til navn og gjør svaret personlig med en f-tekst.",
+      "Lag et vilkår som krever både poeng >= 5 and poeng <= 10.",
+    ],
+    tip: "Kolon og innrykk er en del av Python. Bruk Tab for å rykke inn i editoren.",
+  },
+  {
+    id: "tallmonster",
+    category: "Styring",
+    level: "Grunnmur",
+    title: "Løkker og tallmønstre",
+    purpose: "Gjenta kode og undersøk tallfølger uten å skrive samme linje mange ganger.",
+    commands: [
+      { code: "for tall in ...:", explanation: "Gir tall én verdi om gangen." },
+      { code: "range(1, 11)", explanation: "Gir 1 til og med 10. Stoppverdien er ikke med." },
+      { code: "range(2, 21, 2)", explanation: "Start, stopp og steglengde: 2, 4, 6 ... 20." },
+      { code: "break", explanation: "Stopper løkken med en gang." },
+    ],
+    example: `for tall in range(1, 11):
+    kvadrat = tall ** 2
+    print(tall, "gir", kvadrat)`,
+    experiments: [
+      "Bytt ** 2 med ** 3 for å lage kubikktall.",
+      "Lag femgangen ved å skrive print(tall * 5).",
+      "Bruk range(10, 0, -1) til en nedtelling.",
+    ],
+  },
+  {
+    id: "lister",
+    category: "Byggeklosser",
+    level: "Grunnmur",
+    title: "Lister: mange verdier på ett sted",
+    purpose: "Samle flere verdier, hente ut én verdi og behandle hele samlingen.",
+    commands: [
+      { code: "[4, 7, 9]", explanation: "En liste med tre verdier." },
+      { code: "liste[0]", explanation: "Henter første verdi. Python teller fra 0." },
+      { code: "liste.append(12)", explanation: "Legger en ny verdi bakerst." },
+      { code: "len / sum / min / max", explanation: "Antall, sum, minste og største verdi." },
+    ],
+    example: `poeng = [4, 7, 9, 6]
+poeng.append(10)
+
+print("Første:", poeng[0])
+print("Antall:", len(poeng))
+print("Gjennomsnitt:", sum(poeng) / len(poeng))
+
+for verdi in poeng:
+    print("Poeng:", verdi)`,
+    experiments: [
+      "Legg til og fjern tall i listen.",
+      "Finn forskjellen mellom max(poeng) og min(poeng).",
+      "Bruk et if-vilkår i løkken og skriv bare verdier over 6.",
+    ],
+  },
+  {
+    id: "funksjoner",
+    category: "Byggeklosser",
+    level: "Grunnmur",
+    title: "Lag dine egne funksjoner",
+    purpose: "Gi en oppskrift et navn og bruk den med forskjellige verdier.",
+    commands: [
+      { code: "def navn(parameter):", explanation: "Definerer funksjonen og verdien den tar imot." },
+      { code: "return svar", explanation: "Sender et resultat tilbake fra funksjonen." },
+      { code: "navn(verdi)", explanation: "Kaller funksjonen og setter inn en verdi." },
+      { code: "def f(x, a):", explanation: "En funksjon kan ta imot flere parametere." },
+    ],
+    example: `def areal(lengde, bredde):
+    svar = lengde * bredde
+    return svar
+
+rom1 = areal(8, 5)
+rom2 = areal(4, 3)
+
+print("Rom 1:", rom1)
+print("Rom 2:", rom2)`,
+    experiments: [
+      "Lag en funksjon omkrets(lengde, bredde).",
+      "Kall areal-funksjonen med tre nye rektangler.",
+      "Lag en funksjon som returnerer den største av to verdier.",
+    ],
+    tip: "Koden inni funksjonen kjører først når funksjonen blir kalt.",
+  },
+  {
+    id: "tilfeldighet",
+    category: "Utforske data",
+    level: "Utforsk",
+    title: "Tilfeldighet og terningkast",
+    purpose: "Lag tilfeldige forsøk og undersøk hvordan resultatene varierer.",
+    commands: [
+      { code: "import random", explanation: "Gjør random-verktøyene tilgjengelige." },
+      { code: "random.randint(1, 6)", explanation: "Tilfeldig heltall fra 1 til og med 6." },
+      { code: "random.choice(liste)", explanation: "Velger ett tilfeldig element fra en liste." },
+      { code: "random.seed(4)", explanation: "Gir samme tilfeldige serie hver gang – nyttig ved testing." },
+    ],
+    example: `import random
+
+antall_seksere = 0
+
+for kast_nr in range(1, 21):
+    kast = random.randint(1, 6)
+    print(kast_nr, "→", kast)
+
+    if kast == 6:
+        antall_seksere += 1
+
+print("Seksere:", antall_seksere)`,
+    experiments: [
+      "Kjør flere ganger og sammenlign resultatene.",
+      "Øk til 1000 kast og skriv bare antall seksere.",
+      "Beregn andelen seksere og sammenlign med 1/6.",
+    ],
+  },
+  {
+    id: "tabeller",
+    category: "Utforske data",
+    level: "Utforsk",
+    title: "Tabeller med pandas",
+    purpose: "Organiser data i rader og kolonner, og gjør enkle beregninger på en hel kolonne.",
+    commands: [
+      { code: "import pandas as pd", explanation: "Laster pandas og gir det kortnavnet pd." },
+      { code: "pd.DataFrame(data)", explanation: "Lager en tabell fra en ordbok med kolonner." },
+      { code: 'tabell["poeng"]', explanation: "Velger én kolonne." },
+      { code: ".mean() / .max()", explanation: "Finner gjennomsnitt eller største verdi." },
+    ],
+    example: `import pandas as pd
+
+data = {
+    "navn": ["Ada", "Bo", "Celine"],
+    "poeng": [8, 12, 10]
+}
+
+tabell = pd.DataFrame(data)
+print(tabell.to_string(index=False))
+print("Gjennomsnitt:", tabell["poeng"].mean())`,
+    experiments: [
+      "Legg til en elev og en poengsum.",
+      "Lag en ny kolonne som heter klasse.",
+      "Vis bare radene der poeng er større enn 9.",
+    ],
+  },
+  {
+    id: "grafer",
+    category: "Tegne og vise",
+    level: "Utforsk",
+    title: "Tegn en graf med Matplotlib",
+    purpose: "Lag en verditabell digitalt og vis sammenhengen som en graf.",
+    commands: [
+      { code: "import matplotlib.pyplot as plt", explanation: "Laster tegneverktøyet og kaller det plt." },
+      { code: "plt.plot(x, y)", explanation: "Tegner y-verdiene mot x-verdiene." },
+      { code: "plt.title / xlabel / ylabel", explanation: "Gir grafen forklarende tekst." },
+      { code: "plt.grid(); plt.show()", explanation: "Viser rutenett og sender grafen til resultatpanelet." },
+    ],
+    example: `import numpy as np
+import matplotlib.pyplot as plt
+
+x = np.linspace(-5, 5, 101)
+y = x ** 2
+
+plt.plot(x, y, color="#f06f51", linewidth=3)
+plt.axhline(0, color="gray", linewidth=1)
+plt.axvline(0, color="gray", linewidth=1)
+plt.title("Grafen til y = x²")
+plt.xlabel("x")
+plt.ylabel("y")
+plt.grid()
+plt.show()`,
+    experiments: [
+      "Bytt y = x ** 2 med y = 2 * x + 3.",
+      "Tegn også z = x ** 3 med en ny plt.plot-linje.",
+      "Endre farge, linjetykkelse og tittel.",
+    ],
+    tip: "Grafen vises i resultatpanelet. Der kan den åpnes stort eller lagres som PNG-bilde.",
+  },
+  {
+    id: "turtle-figurer",
+    category: "Tegne og vise",
+    level: "Utforsk",
+    title: "Turtle: kvadrat og mangekanter",
+    purpose: "Tegn geometri ved å gå framover og svinge en bestemt vinkel.",
+    commands: [
+      { code: "from turtle import *", explanation: "Gjør Turtle-kommandoene tilgjengelige." },
+      { code: "forward(100)", explanation: "Går 100 piksler framover og tegner." },
+      { code: "left(90) / right(90)", explanation: "Svinger et antall grader." },
+      { code: "color / pensize / begin_fill", explanation: "Bestemmer farge, strek og fyll." },
+    ],
+    example: `from turtle import *
+
+color("#f06f51", "#f4c95d")
+pensize(5)
+
+begin_fill()
+for side in range(4):
+    forward(120)
+    left(90)
+end_fill()
+
+done()`,
+    experiments: [
+      "Endre sidelengden fra 120 til 70.",
+      "Lag en trekant: gjenta 3 ganger og sving 120 grader.",
+      "Lag en sekskant: gjenta 6 ganger og sving 60 grader.",
+    ],
+    tip: "For en regelmessig mangekant er utvendig vinkel 360 / antall sider.",
+  },
+  {
+    id: "turtle-spiral",
+    category: "Tegne og vise",
+    level: "Utforsk",
+    title: "Turtle: geometrisk spiral",
+    purpose: "Kombiner en løkke, voksende lengde og en nesten rett vinkel til et mønster.",
+    commands: [
+      { code: "range(10, 190, 6)", explanation: "Lengden øker med 6 for hver runde." },
+      { code: "forward(lengde)", explanation: "Tegner med den nye lengden." },
+      { code: "left(91)", explanation: "En liten endring fra 90 grader vrir mønsteret." },
+      { code: "bgcolor(...) ", explanation: "Bestemmer bakgrunnsfargen." },
+    ],
+    example: `from turtle import *
+
+bgcolor("#fffdf8")
+color("#2f6b5f")
+pensize(3)
+
+for lengde in range(10, 190, 6):
+    forward(lengde)
+    left(91)
+
+done()`,
+    experiments: [
+      "Prøv vinklene 89, 90, 92 og 121 grader.",
+      "Endre hvor raskt lengden vokser.",
+      "Legg color(...) inni løkken og bytt farge underveis.",
+    ],
+  },
+  {
+    id: "numpy",
+    category: "Videre",
+    level: "Videre",
+    title: "Mange tall med NumPy",
+    purpose: "Regn på hele tallserier samtidig og finn statistiske mål.",
+    commands: [
+      { code: "import numpy as np", explanation: "Laster NumPy med kortnavnet np." },
+      { code: "np.array([...])", explanation: "Lager en tallserie som NumPy kan regne på." },
+      { code: "verdier * 2", explanation: "Ganger alle verdiene med 2 på én gang." },
+      { code: "np.mean / median / std", explanation: "Gjennomsnitt, median og standardavvik." },
+    ],
+    example: `import numpy as np
+
+verdier = np.array([4, 7, 9, 6, 10])
+
+print("Alle ganger 2:", verdier * 2)
+print("Gjennomsnitt:", np.mean(verdier))
+print("Median:", np.median(verdier))
+print("Standardavvik:", np.std(verdier))`,
+    experiments: [
+      "Legg til en svært stor verdi. Hva skjer med gjennomsnitt og median?",
+      "Lag np.arange(1, 11) og regn ut kvadratet av alle tallene.",
+      "Kombiner NumPy-serien med Matplotlib og tegn verdiene.",
+    ],
+  },
+  {
+    id: "symbolsk",
+    category: "Videre",
+    level: "Videre",
+    title: "Løs og undersøk uttrykk med SymPy",
+    purpose: "Arbeid med bokstaver og algebraiske uttrykk i stedet for bare desimaltall.",
+    commands: [
+      { code: "import sympy as sp", explanation: "Laster SymPy med kortnavnet sp." },
+      { code: 'x = sp.symbols("x")', explanation: "Gjør x til et matematisk symbol." },
+      { code: "sp.expand(...) ", explanation: "Ganger ut parenteser." },
+      { code: "sp.solve(ligning, x)", explanation: "Løser en ligning med hensyn på x." },
+    ],
+    example: `import sympy as sp
+
+x = sp.symbols("x")
+uttrykk = (x + 2) * (x - 3)
+ligning = sp.Eq(2 * x + 3, 11)
+
+print("Ganget ut:", sp.expand(uttrykk))
+print("Løsning:", sp.solve(ligning, x))`,
+    experiments: [
+      "Endre tallene i parentesene og gang ut på nytt.",
+      "Løs ligningen 3 * x - 5 = 16.",
+      "Bruk sp.factor(...) på et uttrykk som er ganget ut.",
+    ],
+  },
+];
+
 const modules: Module[] = [
   {
     id: 1,
@@ -870,6 +1243,9 @@ export default function Home() {
   const [editorFontSize, setEditorFontSize] = useState(19);
   const [editorFullscreen, setEditorFullscreen] = useState(false);
   const [desktopFilePath, setDesktopFilePath] = useState("");
+  const [referenceQuery, setReferenceQuery] = useState("");
+  const [referenceCategory, setReferenceCategory] = useState<ReferenceCategory>("Alle");
+  const [referenceStatus, setReferenceStatus] = useState("");
   const workbenchRef = useRef<HTMLDivElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -878,6 +1254,25 @@ export default function Home() {
     () => modules.find((item) => item.id === activeId) ?? modules[0],
     [activeId],
   );
+
+  const filteredReferences = useMemo(() => {
+    const query = referenceQuery.trim().toLocaleLowerCase("nb");
+    return playgroundReferences.filter((reference) => {
+      if (referenceCategory !== "Alle" && reference.category !== referenceCategory) return false;
+      if (!query) return true;
+      const searchable = [
+        reference.title,
+        reference.purpose,
+        reference.category,
+        reference.level,
+        reference.example,
+        reference.tip ?? "",
+        ...reference.commands.flatMap((command) => [command.code, command.explanation]),
+        ...reference.experiments,
+      ].join(" ").toLocaleLowerCase("nb");
+      return searchable.includes(query);
+    });
+  }, [referenceCategory, referenceQuery]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("pythonverkstedet-progress");
@@ -981,6 +1376,36 @@ export default function Home() {
     );
     setProjects(nextProjects);
     window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(nextProjects));
+  }
+
+  function openReferenceProject(reference: PlaygroundReference) {
+    const project: LocalProject = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: safeProjectName(`Eksempel ${reference.title}`),
+      code: reference.example,
+      updatedAt: new Date().toISOString(),
+    };
+    const nextProjects = [...projects, project];
+    setProjects(nextProjects);
+    setActiveProjectId(project.id);
+    setDesktopFilePath("");
+    setCode(project.code);
+    setOutput(`«${reference.title}» er åpnet som et nytt prosjekt. Forutsi resultatet før du kjører.`);
+    setPlotImages([]);
+    setExpandedPlotIndex(null);
+    setReferenceStatus(`Eksemplet «${reference.title}» ble åpnet som et nytt prosjekt. Det gamle prosjektet er bevart.`);
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(nextProjects));
+    window.localStorage.setItem("bjornsveen-python-active-project", project.id);
+    requestAnimationFrame(() => workbenchRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  async function copyReferenceCode(reference: PlaygroundReference) {
+    try {
+      await navigator.clipboard.writeText(reference.example);
+      setReferenceStatus(`Koden til «${reference.title}» er kopiert.`);
+    } catch {
+      setReferenceStatus("Nettleseren tillot ikke kopiering. Åpne kortet og marker koden manuelt.");
+    }
   }
 
   function switchLabTab(nextTab: "practice" | "solution") {
@@ -1439,6 +1864,119 @@ export default function Home() {
                 <button type="button" onClick={() => updateCode('from turtle import *\n\nbgcolor("#fffdf8")\ncolor("#2f6b5f")\npensize(3)\n\nfor lengde in range(10, 190, 6):\n    forward(lengde)\n    left(91)\n\ndone()')}>Lag en geometrisk spiral</button>
                 <button type="button" onClick={() => updateCode('import pandas as pd\n\ndata = {"navn": ["Ada", "Bo", "Celine"], "poeng": [8, 12, 10]}\ntabell = pd.DataFrame(data)\nprint(tabell.to_string(index=False))')}>Lag en tabell</button>
                 <button type="button" onClick={() => updateCode("")}>Tøm kodefeltet</button>
+              </div>
+              <a className="reference-jump" href="#python-handbok">Trenger du en oppskrift? Åpne Python-håndboken ↓</a>
+            </section>
+
+            <section className="content-section playground-reference" id="python-handbok">
+              <div className="reference-heading">
+                <div>
+                  <p className="section-label"><span>⌘</span> Python-håndbok</p>
+                  <h2>Finn det du trenger – og prøv med én gang</h2>
+                  <p>Dette er oppslagsverket for det frie rommet. Finn en kommando, se et komplett eksempel og åpne det som et nytt prosjekt. Det du allerede arbeider med, blir bevart.</p>
+                </div>
+                <div className="reference-method" aria-label="Arbeidsmåte">
+                  <span><b>1</b> Finn</span>
+                  <span><b>2</b> Forutsi</span>
+                  <span><b>3</b> Prøv</span>
+                  <span><b>4</b> Endre</span>
+                </div>
+              </div>
+
+              <div className="reference-controls">
+                <label className="reference-search" htmlFor="reference-search">
+                  <span>Søk i håndboken</span>
+                  <div>
+                    <span aria-hidden="true">⌕</span>
+                    <input
+                      id="reference-search"
+                      type="search"
+                      value={referenceQuery}
+                      onChange={(event) => setReferenceQuery(event.target.value)}
+                      placeholder="Prøv: løkke, graf, tilfeldig, gjennomsnitt …"
+                    />
+                    {referenceQuery && <button type="button" onClick={() => setReferenceQuery("")}>Tøm</button>}
+                  </div>
+                </label>
+                <div className="reference-categories" aria-label="Filtrer håndboken etter emne">
+                  {referenceCategories.map((category) => (
+                    <button
+                      type="button"
+                      key={category}
+                      className={referenceCategory === category ? "is-active" : ""}
+                      aria-pressed={referenceCategory === category}
+                      onClick={() => setReferenceCategory(category)}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+                <p className="reference-count" aria-live="polite">
+                  Viser {filteredReferences.length} av {playgroundReferences.length} emner
+                </p>
+              </div>
+
+              {filteredReferences.length > 0 ? (
+                <div className="reference-grid">
+                  {filteredReferences.map((reference) => (
+                    <details className="reference-card" key={reference.id}>
+                      <summary>
+                        <span className={`reference-level level-${reference.level.toLocaleLowerCase("nb")}`}>{reference.level}</span>
+                        <span className="reference-category">{reference.category}</span>
+                        <h3>{reference.title}</h3>
+                        <p>{reference.purpose}</p>
+                        <span className="reference-open">Åpne forklaring og kode</span>
+                      </summary>
+                      <div className="reference-card-content">
+                        <h4>Viktige koder og kommandoer</h4>
+                        <dl className="command-list">
+                          {reference.commands.map((command) => (
+                            <div key={command.code}>
+                              <dt><code>{command.code}</code></dt>
+                              <dd>{command.explanation}</dd>
+                            </div>
+                          ))}
+                        </dl>
+
+                        <div className="reference-example-heading">
+                          <div><small>Kjørbart eksempel</small><strong>Skriv det selv, eller åpne en kopi</strong></div>
+                          <button type="button" onClick={() => copyReferenceCode(reference)}>Kopier kode</button>
+                        </div>
+                        <pre className="reference-code"><code>{reference.example}</code></pre>
+
+                        <div className="reference-experiments">
+                          <h4>Eksperimenter videre</h4>
+                          <ul>{reference.experiments.map((experiment) => <li key={experiment}>{experiment}</li>)}</ul>
+                        </div>
+                        {reference.tip && <p className="reference-tip"><strong>Husk:</strong> {reference.tip}</p>}
+                        <button className="reference-open-project" type="button" onClick={() => openReferenceProject(reference)}>
+                          Åpne som nytt prosjekt <span aria-hidden="true">→</span>
+                        </button>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              ) : (
+                <div className="reference-empty">
+                  <strong>Ingen emner traff søket.</strong>
+                  <p>Prøv et kortere ord, eller velg «Alle».</p>
+                  <button type="button" onClick={() => { setReferenceQuery(""); setReferenceCategory("Alle"); }}>Vis hele håndboken</button>
+                </div>
+              )}
+              {referenceStatus && <p className="reference-status" role="status">{referenceStatus}</p>}
+
+              <div className="debug-guide">
+                <div>
+                  <p className="section-label"><span>!</span> Når koden ikke virker</p>
+                  <h3>Les feilmeldingen nedenfra</h3>
+                  <p>Den siste linjen forteller vanligvis hva Python reagerte på. Finn linjenummeret, og kontroller én ting om gangen.</p>
+                </div>
+                <ul>
+                  <li><code>SyntaxError</code><span>Se etter manglende kolon, parentes eller anførselstegn.</span></li>
+                  <li><code>IndentationError</code><span>Kontroller innrykket etter if, for, else og def.</span></li>
+                  <li><code>NameError</code><span>Er navnet skrevet likt – og laget før det brukes?</span></li>
+                  <li><code>TypeError</code><span>Blander du tekst og tall på en måte Python ikke forstår?</span></li>
+                </ul>
               </div>
             </section>
 
