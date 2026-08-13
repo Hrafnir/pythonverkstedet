@@ -108,6 +108,22 @@ test("Turtle tegner geometriske figurer lokalt i resultatpanelet", () => {
   assert.match(worker, /_sys\.modules\["turtle"\]/);
 });
 
+test("Turtle kan spilles av stegvis uten komprimerte mellombilder", () => {
+  assert.match(worker, /_turtle_events/);
+  assert.match(worker, /"line" if self\._down else "move"/);
+  assert.match(worker, /canvasWidth/);
+  assert.match(worker, /self\.postMessage\(\{ type: "result", output: `\$\{stdout\}\$\{stderr\}`, plots, turtle \}\)/);
+  assert.match(page, /function renderTurtleFrame/);
+  assert.match(page, /function TurtlePlayer/);
+  assert.match(page, /Steg \$\{frame\} av \$\{lastFrame\}/);
+  assert.match(page, /0,25×/);
+  assert.match(page, /4×/);
+  assert.match(page, /Vis ferdig/);
+  assert.match(page, /Åpne stort/);
+  assert.match(page, /canvas\.toDataURL\("image\/png"\)/);
+  assert.doesNotMatch(worker, /_turtle_frames/);
+});
+
 test("elev- og lærermodus finnes", () => {
   assert.match(page, /Elevmodus/);
   assert.match(page, /Lærermodus/);

@@ -17,7 +17,7 @@ Digitalt hefte og Python-laboratorium for matematikk på 8.–10. trinn.
 - import og eksport av `.py`-filer
 - kopiering av kode som formatert tekst eller bilde
 - støtte for Pyodide-pakker som NumPy, pandas og Matplotlib
-- lokal Turtle-tegning for geometri, mønstre, farger og fyll
+- lokal Turtle-tegning for geometri, mønstre, farger og fyll, med stegvis avspilling, variabel hastighet og høyoppløselig canvas
 - kodeeditor med Tab-innrykk, justerbar skriftstørrelse og fullskjerm
 
 ## Lokal utvikling

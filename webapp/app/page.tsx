@@ -56,6 +56,33 @@ type LocalProject = {
   updatedAt: string;
 };
 
+type TurtleEvent = {
+  kind: "line" | "move" | "turn" | "fill" | "dot" | "text" | "visibility" | "clear" | "background" | "title" | "screen";
+  x?: number;
+  y?: number;
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2?: number;
+  heading?: number;
+  visible?: boolean;
+  color?: string;
+  width?: number;
+  size?: number;
+  text?: string;
+  align?: CanvasTextAlign;
+  points?: [number, number][];
+};
+
+type TurtleDrawing = {
+  events: TurtleEvent[];
+  canvasWidth: number;
+  canvasHeight: number;
+  background: string;
+  title: string;
+  truncated?: boolean;
+};
+
 const referenceCategories = ["Alle", "Kom i gang", "Styring", "Byggeklosser", "Utforske data", "Tegne og vise", "Videre"] as const;
 type ReferenceCategory = (typeof referenceCategories)[number];
 
@@ -1221,6 +1248,216 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
   );
 }
 
+function renderTurtleFrame(canvas: HTMLCanvasElement, drawing: TurtleDrawing, frame: number) {
+  const outputWidth = 1400;
+  const requestedWidth = Math.max(400, drawing.canvasWidth || 1000);
+  const requestedHeight = Math.max(300, drawing.canvasHeight || 700);
+  const outputHeight = Math.round(outputWidth * requestedHeight / requestedWidth);
+  canvas.width = outputWidth;
+  canvas.height = outputHeight;
+
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  const layer = document.createElement("canvas");
+  layer.width = outputWidth;
+  layer.height = outputHeight;
+  const layerContext = layer.getContext("2d");
+  if (!layerContext) return;
+
+  const events = drawing.events.slice(0, Math.max(0, frame));
+  const hasExplicitScreen = drawing.events.some((event) => event.kind === "screen");
+  const coordinates: [number, number][] = hasExplicitScreen
+    ? [[-requestedWidth / 2, -requestedHeight / 2], [requestedWidth / 2, requestedHeight / 2]]
+    : [[0, 0]];
+  for (const event of drawing.events) {
+    if (event.x1 !== undefined && event.y1 !== undefined) coordinates.push([event.x1, event.y1]);
+    if (event.x2 !== undefined && event.y2 !== undefined) coordinates.push([event.x2, event.y2]);
+    if (event.x !== undefined && event.y !== undefined) coordinates.push([event.x, event.y]);
+    if (event.points) coordinates.push(...event.points);
+  }
+  const xs = coordinates.map(([x]) => x);
+  const ys = coordinates.map(([, y]) => y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const minimumAutoWidth = 300;
+  const minimumAutoHeight = minimumAutoWidth * requestedHeight / requestedWidth;
+  const spanX = Math.max(hasExplicitScreen ? requestedWidth : minimumAutoWidth, maxX - minX);
+  const spanY = Math.max(hasExplicitScreen ? requestedHeight : minimumAutoHeight, maxY - minY);
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  const scale = Math.min(outputWidth * 0.92 / spanX, outputHeight * 0.92 / spanY);
+  const point = (x = 0, y = 0) => ({
+    x: outputWidth / 2 + (x - centerX) * scale,
+    y: outputHeight / 2 - (y - centerY) * scale,
+  });
+
+  let background = "white";
+  let title = drawing.title || "Turtle-tegning";
+  let cursor = { x: 0, y: 0, heading: 0, visible: true };
+
+  for (const event of events) {
+    if (event.kind === "background") {
+      background = event.color || background;
+      continue;
+    }
+    if (event.kind === "title") {
+      title = event.text || title;
+      continue;
+    }
+    if (event.kind === "clear") {
+      layerContext.clearRect(0, 0, outputWidth, outputHeight);
+    }
+    if (event.kind === "line") {
+      const start = point(event.x1, event.y1);
+      const end = point(event.x2, event.y2);
+      layerContext.beginPath();
+      layerContext.moveTo(start.x, start.y);
+      layerContext.lineTo(end.x, end.y);
+      layerContext.strokeStyle = event.color || "#173f3a";
+      layerContext.lineWidth = Math.max(1, (event.width || 2.5) * Math.min(2.2, Math.max(1, scale / 8)));
+      layerContext.lineCap = "round";
+      layerContext.lineJoin = "round";
+      layerContext.stroke();
+    }
+    if (event.kind === "fill" && event.points && event.points.length >= 3) {
+      layerContext.save();
+      layerContext.globalCompositeOperation = "destination-over";
+      layerContext.beginPath();
+      event.points.forEach(([x, y], index) => {
+        const next = point(x, y);
+        if (index === 0) layerContext.moveTo(next.x, next.y);
+        else layerContext.lineTo(next.x, next.y);
+      });
+      layerContext.closePath();
+      layerContext.fillStyle = event.color || "#f4c95d";
+      layerContext.fill();
+      layerContext.restore();
+    }
+    if (event.kind === "dot") {
+      const center = point(event.x, event.y);
+      layerContext.beginPath();
+      layerContext.arc(center.x, center.y, Math.max(2, (event.size || 6) * scale / 2), 0, Math.PI * 2);
+      layerContext.fillStyle = event.color || "#173f3a";
+      layerContext.fill();
+    }
+    if (event.kind === "text") {
+      const textPoint = point(event.x, event.y);
+      layerContext.fillStyle = event.color || "#173f3a";
+      layerContext.font = `${Math.max(13, (event.size || 12) * Math.min(2, Math.max(1, scale / 8)))}px Arial, sans-serif`;
+      layerContext.textAlign = event.align || "left";
+      layerContext.textBaseline = "bottom";
+      layerContext.fillText(event.text || "", textPoint.x, textPoint.y);
+    }
+    if (event.x2 !== undefined && event.y2 !== undefined) cursor = { x: event.x2, y: event.y2, heading: event.heading ?? cursor.heading, visible: event.visible ?? cursor.visible };
+    else if (event.x !== undefined && event.y !== undefined) cursor = { x: event.x, y: event.y, heading: event.heading ?? cursor.heading, visible: event.visible ?? cursor.visible };
+  }
+
+  context.fillStyle = background;
+  context.fillRect(0, 0, outputWidth, outputHeight);
+  context.drawImage(layer, 0, 0);
+
+  if (cursor.visible && frame > 0) {
+    const cursorPoint = point(cursor.x, cursor.y);
+    const angle = -cursor.heading * Math.PI / 180;
+    context.save();
+    context.translate(cursorPoint.x, cursorPoint.y);
+    context.rotate(angle);
+    context.beginPath();
+    context.moveTo(15, 0);
+    context.lineTo(-10, -9);
+    context.lineTo(-6, 0);
+    context.lineTo(-10, 9);
+    context.closePath();
+    context.fillStyle = "#f06f51";
+    context.strokeStyle = "white";
+    context.lineWidth = 2;
+    context.fill();
+    context.stroke();
+    context.restore();
+  }
+  canvas.dataset.turtleTitle = title;
+}
+
+function TurtlePlayer({ drawing, onDownload, onExpand, large = false }: {
+  drawing: TurtleDrawing;
+  onDownload: () => void;
+  onExpand?: () => void;
+  large?: boolean;
+}) {
+  const [frame, setFrame] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const [speed, setSpeed] = useState(1);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lastFrame = drawing.events.length;
+
+  useEffect(() => {
+    setFrame(0);
+    setPlaying(true);
+  }, [drawing]);
+
+  useEffect(() => {
+    if (canvasRef.current) renderTurtleFrame(canvasRef.current, drawing, frame);
+  }, [drawing, frame]);
+
+  useEffect(() => {
+    if (!playing || frame >= lastFrame) {
+      if (frame >= lastFrame) setPlaying(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setFrame((current) => Math.min(lastFrame, current + 1)), 150 / speed);
+    return () => window.clearTimeout(timer);
+  }, [frame, lastFrame, playing, speed]);
+
+  return (
+    <figure className={`turtle-player ${large ? "is-large" : ""}`}>
+      <div className="turtle-heading">
+        <div><span>Turtle-canvas</span><strong>{drawing.title || "Turtle-tegning"}</strong></div>
+        <span>{frame === lastFrame ? "Ferdig" : `Steg ${frame} av ${lastFrame}`}</span>
+      </div>
+      <div className="turtle-canvas-wrap">
+        <canvas ref={canvasRef} aria-label={`${drawing.title || "Turtle-tegning"}, steg ${frame} av ${lastFrame}`} />
+      </div>
+      <div className="turtle-timeline">
+        <input
+          type="range"
+          min="0"
+          max={Math.max(1, lastFrame)}
+          value={frame}
+          onChange={(event) => { setPlaying(false); setFrame(Number(event.target.value)); }}
+          aria-label="Velg steg i Turtle-tegningen"
+        />
+      </div>
+      <figcaption className="turtle-controls">
+        <div className="turtle-playback" aria-label="Avspillingsknapper">
+          <button type="button" onClick={() => { setPlaying(false); setFrame(0); }} aria-label="Start på nytt">↺</button>
+          <button type="button" onClick={() => { setPlaying(false); setFrame((current) => Math.max(0, current - 1)); }} disabled={frame === 0} aria-label="Ett steg tilbake">←</button>
+          <button className="turtle-play" type="button" onClick={() => { if (frame >= lastFrame) setFrame(0); setPlaying((current) => !current); }} disabled={lastFrame === 0}>
+            {playing ? "Pause" : "Spill"}
+          </button>
+          <button type="button" onClick={() => { setPlaying(false); setFrame((current) => Math.min(lastFrame, current + 1)); }} disabled={frame >= lastFrame} aria-label="Ett steg fram">→</button>
+          <button type="button" onClick={() => { setPlaying(false); setFrame(lastFrame); }}>Vis ferdig</button>
+        </div>
+        <label className="turtle-speed">Hastighet
+          <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))}>
+            <option value="0.25">0,25×</option>
+            <option value="0.5">0,5×</option>
+            <option value="1">1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+          </select>
+        </label>
+        <div className="turtle-actions">
+          {onExpand && <button type="button" onClick={onExpand}>Åpne stort</button>}
+          <button type="button" onClick={onDownload}>Lagre PNG</button>
+        </div>
+      </figcaption>
+      {drawing.truncated && <p className="turtle-warning">Tegningen har over 5000 steg. De første 5000 vises for å holde appen rask.</p>}
+    </figure>
+  );
+}
+
 export default function Home() {
   const [activeId, setActiveId] = useState(1);
   const [playground, setPlayground] = useState(false);
@@ -1240,6 +1477,8 @@ export default function Home() {
   const [shareStatus, setShareStatus] = useState("");
   const [plotImages, setPlotImages] = useState<string[]>([]);
   const [expandedPlotIndex, setExpandedPlotIndex] = useState<number | null>(null);
+  const [turtleDrawing, setTurtleDrawing] = useState<TurtleDrawing | null>(null);
+  const [turtleExpanded, setTurtleExpanded] = useState(false);
   const [editorFontSize, setEditorFontSize] = useState(19);
   const [editorFullscreen, setEditorFullscreen] = useState(false);
   const [desktopFilePath, setDesktopFilePath] = useState("");
@@ -1340,6 +1579,8 @@ export default function Home() {
     setFeedback("");
     setPlotImages([]);
     setExpandedPlotIndex(null);
+    setTurtleDrawing(null);
+    setTurtleExpanded(false);
     setShareStatus("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -1352,6 +1593,8 @@ export default function Home() {
     setFeedback("");
     setPlotImages([]);
     setExpandedPlotIndex(null);
+    setTurtleDrawing(null);
+    setTurtleExpanded(false);
     setShareStatus("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -1393,6 +1636,8 @@ export default function Home() {
     setOutput(`«${reference.title}» er åpnet som et nytt prosjekt. Forutsi resultatet før du kjører.`);
     setPlotImages([]);
     setExpandedPlotIndex(null);
+    setTurtleDrawing(null);
+    setTurtleExpanded(false);
     setReferenceStatus(`Eksemplet «${reference.title}» ble åpnet som et nytt prosjekt. Det gamle prosjektet er bevart.`);
     window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(nextProjects));
     window.localStorage.setItem("bjornsveen-python-active-project", project.id);
@@ -1418,6 +1663,8 @@ export default function Home() {
     setFeedback("");
     setPlotImages([]);
     setExpandedPlotIndex(null);
+    setTurtleDrawing(null);
+    setTurtleExpanded(false);
   }
 
   function resetCurrentEditor() {
@@ -1437,6 +1684,8 @@ export default function Home() {
     setFeedback("");
     setPlotImages([]);
     setExpandedPlotIndex(null);
+    setTurtleDrawing(null);
+    setTurtleExpanded(false);
     requestAnimationFrame(() => document.getElementById("module-lab")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
@@ -1449,6 +1698,8 @@ export default function Home() {
     setOutput("Prosjektet er åpnet. Trykk «Kjør kode» når du er klar.");
     setPlotImages([]);
     setExpandedPlotIndex(null);
+    setTurtleDrawing(null);
+    setTurtleExpanded(false);
     setShareStatus("");
     window.localStorage.setItem("bjornsveen-python-active-project", projectId);
   }
@@ -1594,9 +1845,15 @@ export default function Home() {
     if (!measure) return;
     measure.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
     const width = Math.min(1800, Math.max(720, ...[...lines, ...answerLines].map((line) => measure.measureText(line).width + padding * 2)));
-    const plots = await Promise.all(plotImages.map(async (plotImage) => {
+    const visualSources = plotImages.map((plotImage) => `data:image/png;base64,${plotImage}`);
+    if (turtleDrawing) {
+      const turtleCanvas = document.createElement("canvas");
+      renderTurtleFrame(turtleCanvas, turtleDrawing, turtleDrawing.events.length);
+      visualSources.unshift(turtleCanvas.toDataURL("image/png"));
+    }
+    const plots = await Promise.all(visualSources.map(async (plotSource) => {
       const plot = new Image();
-      plot.src = `data:image/png;base64,${plotImage}`;
+      plot.src = plotSource;
       await plot.decode();
       return plot;
     }));
@@ -1673,10 +1930,30 @@ export default function Home() {
     setShareStatus("Grafen er lagret som PNG-bilde.");
   }
 
+  function downloadTurtle() {
+    if (!turtleDrawing) return;
+    const canvas = document.createElement("canvas");
+    renderTurtleFrame(canvas, turtleDrawing, turtleDrawing.events.length);
+    const activeProject = projects.find((item) => item.id === activeProjectId);
+    const baseName = playground ? safeProjectName(activeProject?.name ?? "turtle-tegning") : `modul-${active.id}-turtle`;
+    const anchor = document.createElement("a");
+    anchor.href = canvas.toDataURL("image/png");
+    anchor.download = `${baseName}.png`;
+    anchor.click();
+    setShareStatus("Turtle-tegningen er lagret som et skarpt PNG-bilde.");
+  }
+
   function plotGallery() {
-    if (!plotImages.length) return null;
+    if (!plotImages.length && !turtleDrawing) return null;
     return (
-      <div className="plot-gallery" aria-label={plotImages.length === 1 ? "Graf" : `${plotImages.length} grafer`}>
+      <div className={`plot-gallery ${turtleDrawing ? "has-turtle" : ""}`} aria-label={turtleDrawing ? "Turtle-tegning og grafer" : plotImages.length === 1 ? "Graf" : `${plotImages.length} grafer`}>
+        {turtleDrawing && (
+          <TurtlePlayer
+            drawing={turtleDrawing}
+            onDownload={downloadTurtle}
+            onExpand={() => setTurtleExpanded(true)}
+          />
+        )}
         {plotImages.map((plotImage, index) => (
           <figure className="plot-card" key={`${index}-${plotImage.slice(0, 18)}`}>
             <img className="plot-output" src={`data:image/png;base64,${plotImage}`} alt={`Graf ${index + 1} laget av Python-koden`} />
@@ -1708,12 +1985,14 @@ export default function Home() {
     setFeedback("");
     setPlotImages([]);
     setExpandedPlotIndex(null);
+    setTurtleDrawing(null);
+    setTurtleExpanded(false);
 
     const worker = makeWorker();
     let executionStarted = false;
 
     worker.onmessage = (event) => {
-      const data = event.data as { type: string; output?: string; error?: string; plots?: string[] };
+      const data = event.data as { type: string; output?: string; error?: string; plots?: string[]; turtle?: TurtleDrawing | null };
       if (data.type === "ready") {
         executionStarted = true;
         setRunnerStatus("running");
@@ -1730,8 +2009,10 @@ export default function Home() {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         setRunnerStatus("idle");
         const nextPlots = data.plots ?? [];
-        setOutput(data.output?.trim() || (nextPlots.length ? `${nextPlots.length === 1 ? "Grafen" : `${nextPlots.length} grafer`} vises under.` : "Koden kjørte ferdig uten utskrift."));
+        const nextTurtle = data.turtle ?? null;
+        setOutput(data.output?.trim() || (nextTurtle ? "Turtle-tegningen kan spilles av steg for steg under." : nextPlots.length ? `${nextPlots.length === 1 ? "Grafen" : `${nextPlots.length} grafer`} vises under.` : "Koden kjørte ferdig uten utskrift."));
         setPlotImages(nextPlots);
+        setTurtleDrawing(nextTurtle);
         worker.terminate();
       }
 
@@ -2014,7 +2295,7 @@ export default function Home() {
                 </div>
                 <div className="live-badge"><span /> Ekte Python i nettleseren</div>
               </div>
-              <div className="code-workbench" ref={workbenchRef}>
+              <div className={`code-workbench ${turtleDrawing ? "has-turtle" : ""}`} ref={workbenchRef}>
                 <div className="editor-panel">
                   <div className="panel-bar">
                     <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
@@ -2064,7 +2345,7 @@ export default function Home() {
                 </div>
                 <div>
                   <strong>Turtle for geometri og mønstre</strong>
-                  <p>Bruk <code>from turtle import *</code>. Tegn med blant annet <code>forward()</code>, <code>left()</code>, <code>right()</code>, <code>goto()</code>, <code>circle()</code>, farger og fyll. Tegningen vises som et bilde i resultatpanelet.</p>
+                  <p>Bruk <code>from turtle import *</code>. Tegn med blant annet <code>forward()</code>, <code>left()</code>, <code>right()</code>, <code>goto()</code>, <code>circle()</code>, farger og fyll. Canvaset kan spilles av steg for steg, pauses, åpnes stort og lagres som PNG.</p>
                 </div>
                 <div>
                   <strong>Ikke helt som installert Python</strong>
@@ -2233,7 +2514,7 @@ export default function Home() {
               <div className="solution-note"><strong>Fasit er ikke låst.</strong> Endre tall, tekst eller uttrykk, kjør på nytt og se hva som skjer.</div>
             )}
 
-            <div className="code-workbench module-workbench" ref={workbenchRef}>
+            <div className={`code-workbench module-workbench ${turtleDrawing ? "has-turtle" : ""}`} ref={workbenchRef}>
               <div className="editor-panel">
                 <div className="panel-bar">
                   <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
@@ -2364,6 +2645,17 @@ export default function Home() {
         </article>
         )}
       </div>
+      {turtleExpanded && turtleDrawing && (
+        <div className="plot-modal turtle-modal" role="dialog" aria-modal="true" aria-label="Turtle-tegning i stor visning" onClick={() => setTurtleExpanded(false)}>
+          <div className="plot-modal-card turtle-modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="plot-modal-bar">
+              <strong>Stegvis Turtle-tegning</strong>
+              <button type="button" className="plot-close" onClick={() => setTurtleExpanded(false)} aria-label="Lukk stor Turtle-visning">Lukk</button>
+            </div>
+            <TurtlePlayer drawing={turtleDrawing} onDownload={downloadTurtle} large />
+          </div>
+        </div>
+      )}
       {expandedPlotIndex !== null && plotImages[expandedPlotIndex] && (
         <div className="plot-modal" role="dialog" aria-modal="true" aria-label={`Graf ${expandedPlotIndex + 1} i stor visning`} onClick={() => setExpandedPlotIndex(null)}>
           <div className="plot-modal-card" onClick={(event) => event.stopPropagation()}>

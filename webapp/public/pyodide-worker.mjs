@@ -63,24 +63,51 @@ import matplotlib.pyplot as _plt
 from matplotlib.patches import Polygon as _Polygon
 
 _turtle_module = _types.ModuleType("turtle")
-_turtle_figure, _turtle_axes = _plt.subplots(figsize=(7, 7))
+_turtle_figure, _turtle_axes = _plt.subplots(figsize=(10, 7))
 _turtle_axes.set_aspect("equal", adjustable="datalim")
 _turtle_axes.axis("off")
+_turtle_events = []
+_turtle_canvas_width = 1000
+_turtle_canvas_height = 700
+_turtle_background = "white"
+_turtle_title = "Turtle-tegning"
+
+def _record(kind, **values):
+    if len(_turtle_events) < 5000:
+        _turtle_events.append({"kind": kind, **values})
 
 class _Screen:
     def bgcolor(self, color=None):
+        global _turtle_background
         if color is None:
             return _turtle_figure.get_facecolor()
+        _turtle_background = str(color)
         _turtle_figure.set_facecolor(color)
         _turtle_axes.set_facecolor(color)
+        _record("background", color=str(color))
     def title(self, text):
+        global _turtle_title
+        _turtle_title = str(text)
         _turtle_axes.set_title(str(text))
+        _record("title", text=str(text))
     def setup(self, width=None, height=None, startx=None, starty=None):
-        return None
+        global _turtle_canvas_width, _turtle_canvas_height
+        if isinstance(width, (int, float)) and width > 0:
+            _turtle_canvas_width = int(width)
+        if isinstance(height, (int, float)) and height > 0:
+            _turtle_canvas_height = int(height)
+        _record("screen", width=_turtle_canvas_width, height=_turtle_canvas_height)
+        return (_turtle_canvas_width, _turtle_canvas_height)
     def screensize(self, canvwidth=None, canvheight=None, bg=None):
+        global _turtle_canvas_width, _turtle_canvas_height
+        if isinstance(canvwidth, (int, float)) and canvwidth > 0:
+            _turtle_canvas_width = int(canvwidth)
+        if isinstance(canvheight, (int, float)) and canvheight > 0:
+            _turtle_canvas_height = int(canvheight)
         if bg is not None:
             self.bgcolor(bg)
-        return (canvwidth or 600, canvheight or 600)
+        _record("screen", width=_turtle_canvas_width, height=_turtle_canvas_height)
+        return (_turtle_canvas_width, _turtle_canvas_height)
     def tracer(self, *args, **kwargs):
         return None
     def update(self):
@@ -110,10 +137,17 @@ class Turtle:
             self._fill_points.append((x, y))
 
     def _move_to(self, x, y):
+        start_x, start_y = self._x, self._y
         if self._down:
             _turtle_axes.plot([self._x, x], [self._y, y], color=self._pen_color, linewidth=self._width, solid_capstyle="round")
         self._x, self._y = float(x), float(y)
         self._remember(self._x, self._y)
+        _record(
+            "line" if self._down else "move",
+            x1=start_x, y1=start_y, x2=self._x, y2=self._y,
+            color=str(self._pen_color), width=self._width,
+            heading=self._heading, visible=self._visible,
+        )
 
     def forward(self, distance):
         angle = _math.radians(self._heading)
@@ -127,10 +161,12 @@ class Turtle:
 
     def right(self, angle):
         self._heading = (self._heading - float(angle)) % 360
+        _record("turn", x=self._x, y=self._y, heading=self._heading, visible=self._visible)
     rt = right
 
     def left(self, angle):
         self._heading = (self._heading + float(angle)) % 360
+        _record("turn", x=self._x, y=self._y, heading=self._heading, visible=self._visible)
     lt = left
 
     def goto(self, x, y=None):
@@ -208,19 +244,29 @@ class Turtle:
     def end_fill(self):
         if len(self._fill_points) >= 3:
             _turtle_axes.add_patch(_Polygon(self._fill_points, closed=True, facecolor=self._fill_color, edgecolor="none"))
+            _record(
+                "fill", points=[[x, y] for x, y in self._fill_points],
+                color=str(self._fill_color), x=self._x, y=self._y,
+                heading=self._heading, visible=self._visible,
+            )
         self._filling = False
         self._fill_points = []
 
     def dot(self, size=None, color=None):
-        _turtle_axes.scatter([self._x], [self._y], s=(float(size or self._width * 3) ** 2), color=color or self._pen_color, zorder=4)
+        dot_size = float(size or self._width * 3)
+        dot_color = color or self._pen_color
+        _turtle_axes.scatter([self._x], [self._y], s=(dot_size ** 2), color=dot_color, zorder=4)
+        _record("dot", x=self._x, y=self._y, size=dot_size, color=str(dot_color), heading=self._heading, visible=self._visible)
 
     def write(self, text, move=False, align="left", font=("Arial", 12, "normal")):
         anchor = {"left": "left", "center": "center", "right": "right"}.get(align, "left")
         size = font[1] if isinstance(font, (tuple, list)) and len(font) > 1 else 12
         _turtle_axes.text(self._x, self._y, str(text), color=self._pen_color, fontsize=size, ha=anchor, va="bottom")
+        _record("text", x=self._x, y=self._y, text=str(text), color=str(self._pen_color), size=float(size), align=anchor, heading=self._heading, visible=self._visible)
 
     def setheading(self, angle):
         self._heading = float(angle) % 360
+        _record("turn", x=self._x, y=self._y, heading=self._heading, visible=self._visible)
     seth = setheading
 
     def heading(self):
@@ -251,10 +297,12 @@ class Turtle:
 
     def hideturtle(self):
         self._visible = False
+        _record("visibility", x=self._x, y=self._y, heading=self._heading, visible=False)
     ht = hideturtle
 
     def showturtle(self):
         self._visible = True
+        _record("visibility", x=self._x, y=self._y, heading=self._heading, visible=True)
     st = showturtle
 
     def shape(self, name=None):
@@ -268,6 +316,7 @@ class Turtle:
         _turtle_axes.clear()
         _turtle_axes.set_aspect("equal", adjustable="datalim")
         _turtle_axes.axis("off")
+        _record("clear", x=self._x, y=self._y, heading=self._heading, visible=self._visible)
 
     def reset(self):
         self.clear()
@@ -317,6 +366,8 @@ _turtle_module.done = _no_op
 _turtle_module.mainloop = _no_op
 _turtle_module.exitonclick = _no_op
 _turtle_module._finish = _turtle_finish
+_turtle_module._events = _turtle_events
+_turtle_module._figure = _turtle_figure
 _turtle_module.__all__ = _method_names + [
     "Turtle", "RawTurtle", "Screen", "bgcolor", "title", "setup", "screensize",
     "tracer", "update", "done", "mainloop", "exitonclick",
@@ -344,6 +395,25 @@ plt.show = _bjornsveen_show
     stdout = "";
     stderr = "";
     await pyodide.runPythonAsync(code, { globals });
+    let turtle = null;
+    if (usesTurtle) try {
+      const encodedTurtle = await pyodide.runPythonAsync(`
+import json
+import turtle as _bjornsveen_turtle
+
+json.dumps({
+    "events": _bjornsveen_turtle._events,
+    "canvasWidth": _turtle_canvas_width,
+    "canvasHeight": _turtle_canvas_height,
+    "background": _turtle_background,
+    "title": _turtle_title,
+    "truncated": len(_bjornsveen_turtle._events) >= 5000,
+})
+`, { globals });
+      turtle = JSON.parse(encodedTurtle);
+    } catch {
+      turtle = null;
+    }
     let plots = [];
     if (usesMatplotlib) try {
       const encodedPlots = await pyodide.runPythonAsync(`
@@ -354,13 +424,18 @@ import json
 _bjornsveen_plots = []
 try:
     import matplotlib.pyplot as plt
+    _bjornsveen_turtle_figure_number = None
     try:
         import turtle as _bjornsveen_turtle
         if hasattr(_bjornsveen_turtle, "_finish"):
             _bjornsveen_turtle._finish()
+        if hasattr(_bjornsveen_turtle, "_figure"):
+            _bjornsveen_turtle_figure_number = _bjornsveen_turtle._figure.number
     except ImportError:
         pass
     for _bjornsveen_figure_number in plt.get_fignums():
+        if _bjornsveen_figure_number == _bjornsveen_turtle_figure_number:
+            continue
         _bjornsveen_figure = plt.figure(_bjornsveen_figure_number)
         _bjornsveen_buffer = io.BytesIO()
         _bjornsveen_figure.savefig(
@@ -382,7 +457,7 @@ json.dumps(_bjornsveen_plots)
       plots = [];
     }
     globals.destroy();
-    self.postMessage({ type: "result", output: `${stdout}${stderr}`, plots });
+    self.postMessage({ type: "result", output: `${stdout}${stderr}`, plots, turtle });
   } catch (error) {
     self.postMessage({ type: "error", error: error.message });
   }
