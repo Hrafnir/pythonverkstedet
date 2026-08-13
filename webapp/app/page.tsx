@@ -28,7 +28,11 @@ type Module = {
     }[];
   };
   starterCode: string;
-  typingSteps: string[];
+  typingSteps: {
+    kind: "write" | "do";
+    code?: string;
+    explanation: string;
+  }[];
   polish: {
     title: string;
     body: string;
@@ -571,11 +575,11 @@ const modules: Module[] = [
     },
     starterCode: `pris = 800\nrabatt = 0.25\nny_pris = pris * (1 - rabatt)\nprint(ny_pris)`,
     typingSteps: [
-      "Skriv pris = 800 og trykk Enter.",
-      "Skriv rabatt = 0.25. Husk punktum i desimaltall.",
-      "Skriv ny_pris = pris * (1 - rabatt).",
-      "Skriv print(ny_pris) på siste linje.",
-      "Les gjennom tegn for tegn, og trykk Kjør kode.",
+      { kind: "write", code: "pris = 800", explanation: "Trykk Enter etter linjen." },
+      { kind: "write", code: "rabatt = 0.25", explanation: "Python bruker punktum i desimaltall." },
+      { kind: "write", code: "ny_pris = pris * (1 - rabatt)", explanation: "Parentesen regnes ut før multiplikasjonen." },
+      { kind: "write", code: "print(ny_pris)", explanation: "Denne linjen viser svaret i resultatfeltet." },
+      { kind: "do", explanation: "Les koden tegn for tegn. Trykk deretter «Kjør kode»." },
     ],
     polish: {
       title: "Gjør 600.0 om til en ordentlig beskjed",
@@ -682,11 +686,11 @@ const modules: Module[] = [
     },
     starterCode: `tall = 18\nrest = tall % 2\n\nif rest == 0:\n    print("partall")\nelse:\n    print("oddetall")`,
     typingSteps: [
-      "Skriv tall = 18.",
-      "Skriv rest = tall % 2.",
-      "Skriv if rest == 0: og trykk Enter.",
-      "Rykk inn fire mellomrom og skriv print(\"partall\").",
-      "Skriv else: uten innrykk, og skriv deretter den innrykkede oddetall-linjen.",
+      { kind: "write", code: "tall = 18", explanation: "Variabelen tall får verdien 18." },
+      { kind: "write", code: "rest = tall % 2", explanation: "% finner resten etter divisjon med 2." },
+      { kind: "write", code: "if rest == 0:", explanation: "Trykk Enter. Legg merke til kolon helt til slutt." },
+      { kind: "write", code: "    print(\"partall\")", explanation: "Linjen starter med fire mellomrom. Du kan bruke Tab." },
+      { kind: "write", code: "else:\n    print(\"oddetall\")", explanation: "else står helt til venstre. print-linjen under har fire mellomrom." },
     ],
     polish: {
       title: "Fortell hvilket tall programmet undersøkte",
@@ -793,11 +797,11 @@ const modules: Module[] = [
     },
     starterCode: `for n in range(1, 6):\n    print(2 * n)`,
     typingSteps: [
-      "Skriv for n in range(1, 6): og trykk Enter.",
-      "Legg merke til kolon helt til slutt.",
-      "Rykk inn fire mellomrom på neste linje.",
-      "Skriv print(2 * n).",
-      "Kjør og tell hvor mange svar du får.",
+      { kind: "write", code: "for n in range(1, 6):", explanation: "Trykk Enter etter kolon." },
+      { kind: "do", explanation: "Kontroller at løkkelinjen slutter med kolon (:)." },
+      { kind: "do", explanation: "Lag innrykk på neste linje med Tab eller fire mellomrom." },
+      { kind: "write", code: "    print(2 * n)", explanation: "Mellomrommene først på linjen viser at print hører til løkken." },
+      { kind: "do", explanation: "Trykk «Kjør kode», og tell hvor mange svar du får." },
     ],
     polish: {
       title: "Vis regnestykket sammen med svaret",
@@ -904,11 +908,11 @@ const modules: Module[] = [
     },
     starterCode: `def f(x):\n    return 2 * x + 3\n\nresultat = f(6)\nprint(resultat)`,
     typingSteps: [
-      "Skriv def f(x): og trykk Enter.",
-      "Rykk inn fire mellomrom og skriv return 2 * x + 3.",
-      "Lag en tom linje og gå helt tilbake til venstre.",
-      "Skriv resultat = f(6).",
-      "Skriv print(resultat), og kjør koden.",
+      { kind: "write", code: "def f(x):", explanation: "Trykk Enter etter kolon." },
+      { kind: "write", code: "    return 2 * x + 3", explanation: "Linjen starter med fire mellomrom fordi den hører til funksjonen." },
+      { kind: "do", explanation: "Lag en tom linje. Gå deretter helt tilbake til venstre uten innrykk." },
+      { kind: "write", code: "resultat = f(6)", explanation: "Her brukes funksjonen med x = 6." },
+      { kind: "write", code: "print(resultat)", explanation: "Trykk deretter «Kjør kode»." },
     ],
     polish: {
       title: "Skriv funksjonsverdien som matematikk",
@@ -1015,11 +1019,11 @@ const modules: Module[] = [
     },
     starterCode: `import random\n\nantall_kast = 600\nantall_seksere = 0\n\nfor _ in range(antall_kast):\n    kast = random.randint(1, 6)\n    if kast == 6:\n        antall_seksere += 1\n\nandel = antall_seksere / antall_kast\nprint(round(andel, 3))`,
     typingSteps: [
-      "Skriv import random. Da får programmet tilgang til tilfeldige tall.",
-      "Skriv variablene antall_kast = 600 og antall_seksere = 0.",
-      "Skriv for-løkken. Rykk inn linjene som hører til løkken.",
-      "Skriv if-linjen inni løkken, og rykk telleren enda ett nivå inn.",
-      "Etter løkken skriver du utregningen av andel og print-linjen.",
+      { kind: "write", code: "import random", explanation: "Dette gir programmet tilgang til tilfeldige tall." },
+      { kind: "write", code: "antall_kast = 600\nantall_seksere = 0", explanation: "Den første variabelen bestemmer antall forsøk. Telleren starter på 0." },
+      { kind: "write", code: "for _ in range(antall_kast):\n    kast = random.randint(1, 6)", explanation: "kast-linjen har fire mellomrom fordi den hører til løkken." },
+      { kind: "write", code: "    if kast == 6:\n        antall_seksere += 1", explanation: "if har fire mellomrom. Telleren under har åtte mellomrom." },
+      { kind: "write", code: "andel = antall_seksere / antall_kast\nprint(round(andel, 3))", explanation: "Disse linjene står helt til venstre fordi de kjøres etter løkken." },
     ],
     polish: {
       title: "Vis svaret som prosent",
@@ -1126,11 +1130,11 @@ const modules: Module[] = [
     },
     starterCode: `start = 1000\nvekstfaktor = 1.10\ntid = 2\n\nverdi = start * vekstfaktor ** tid\nprint(round(verdi, 2))`,
     typingSteps: [
-      "Skriv start = 1000.",
-      "Skriv vekstfaktor = 1.10 og tid = 2.",
-      "Lag gjerne en tom linje for å gjøre koden lettere å lese.",
-      "Skriv verdi = start * vekstfaktor ** tid.",
-      "Skriv print(round(verdi, 2)), og kjør programmet.",
+      { kind: "write", code: "start = 1000", explanation: "Startverdien lagres i variabelen start." },
+      { kind: "write", code: "vekstfaktor = 1.10\ntid = 2", explanation: "Dette er to separate kodelinjer. Trykk Enter mellom dem." },
+      { kind: "do", explanation: "Lag en tom linje. Den gjør koden lettere å lese, men endrer ikke svaret." },
+      { kind: "write", code: "verdi = start * vekstfaktor ** tid", explanation: "** betyr potens. Her opphøyes vekstfaktoren i tid." },
+      { kind: "write", code: "print(round(verdi, 2))", explanation: "Denne linjen viser svaret avrundet til to desimaler. Trykk deretter «Kjør kode»." },
     ],
     polish: {
       title: "Lag en pen pengesum med to desimaler",
@@ -2810,8 +2814,27 @@ export default function Home() {
 
             {labTab === "practice" && (
               <div className="typing-guide">
-                <div><span className="keyboard-icon">⌨</span><h3>Skriv programmet selv</h3><p>Ikke kopier. Ta én linje om gangen, og sammenlign tegnene nøye.</p></div>
-                <ol>{active.typingSteps.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
+                <div className="typing-guide-intro">
+                  <span className="keyboard-icon">⌨</span>
+                  <h3>Skriv programmet selv</h3>
+                  <p>Ta én rad om gangen. Det som står i kodefeltet, skal skrives. Teksten under forklarer hva koden gjør.</p>
+                  <div className="typing-legend" aria-label="Forklaring av merkingen">
+                    <span><i className="legend-code" /> Skriv i editoren</span>
+                    <span><i className="legend-explanation" /> Forklaring eller handling</span>
+                  </div>
+                </div>
+                <ol className="typing-steps">
+                  {active.typingSteps.map((instruction, index) => (
+                    <li className={instruction.kind === "write" ? "is-code-step" : "is-action-step"} key={`${index}-${instruction.code ?? instruction.explanation}`}>
+                      <span className="typing-step-number">{String(index + 1).padStart(2, "0")}</span>
+                      <div>
+                        <span className="typing-step-kind">{instruction.kind === "write" ? "Skriv dette i kodefeltet" : "Gjør dette"}</span>
+                        {instruction.code && <code>{instruction.code}</code>}
+                        <div className="typing-explanation"><strong>{instruction.kind === "write" ? "Forklaring" : "Neste handling"}</strong><p>{instruction.explanation}</p></div>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
 

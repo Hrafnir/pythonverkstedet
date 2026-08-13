@@ -40,6 +40,10 @@ test("modulene har tom skrivelab, redigerbar fasit, kodefarger og ekstratriks", 
   assert.match(page, /Valgfritt ekstratriks/);
   assert.match(page, /Den nye prisen på produktet er/);
   assert.equal((page.match(/    typingSteps: \[/g) ?? []).length, 6);
+  assert.match(page, /Skriv dette i kodefeltet/);
+  assert.match(page, /Forklaring/);
+  assert.match(page, /Gjør dette/);
+  assert.match(page, /typing-explanation/);
   assert.equal((page.match(/    polish: \{/g) ?? []).length, 6);
 });
 
