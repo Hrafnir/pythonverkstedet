@@ -363,6 +363,84 @@ a { color: inherit; text-decoration: none; }
 .idea-chips { display: flex; flex-wrap: wrap; gap: 12px; }
 .idea-chips button { padding: 12px 16px; border: 1px solid #c8cbc4; border-radius: 9px; background: white; font-size: 15px; font-weight: 750; cursor: pointer; }
 .idea-chips button:hover { border-color: var(--coral); color: var(--coral-dark); }
+.reference-jump { display: inline-flex; margin-top: 22px; color: var(--green); font-size: 15px; font-weight: 800; text-decoration: underline; text-decoration-color: #2f6b5f55; text-underline-offset: 5px; }
+.reference-jump:hover { color: var(--coral-dark); text-decoration-color: currentColor; }
+.playground-reference { scroll-margin-top: 120px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #faf8f2; }
+.reference-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 36px; }
+.reference-heading h2 { max-width: 760px; margin: 0; font-size: clamp(34px, 4vw, 51px); line-height: 1.08; letter-spacing: -.045em; }
+.reference-heading > div:first-child > p:last-child { max-width: 800px; margin: 20px 0 0; color: #53635f; font-size: 18px; line-height: 1.7; }
+.reference-method { display: grid; gap: 7px; min-width: 170px; padding: 16px; border: 1px solid #cad4ce; border-radius: 12px; background: white; }
+.reference-method span { display: flex; align-items: center; gap: 9px; color: #50605c; font-size: 13px; font-weight: 800; }
+.reference-method b { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 50%; background: var(--mint); color: var(--green-dark); font-family: var(--mono); font-size: 10px; }
+.reference-controls { margin-top: 36px; padding: 22px; border: 1px solid #d3d7d0; border-radius: 15px; background: white; }
+.reference-search { display: grid; gap: 7px; }
+.reference-search > span { color: #53615e; font-size: 12px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.reference-search > div { position: relative; display: flex; align-items: center; }
+.reference-search > div > span { position: absolute; left: 15px; color: #61716c; font-family: var(--mono); font-size: 21px; pointer-events: none; }
+.reference-search input { width: 100%; min-height: 54px; padding: 11px 74px 11px 48px; border: 1px solid #bfc8c2; border-radius: 10px; background: #fffdf8; color: var(--ink); font-size: 17px; }
+.reference-search input:focus { outline: 3px solid #f06f5138; border-color: var(--coral); }
+.reference-search button { position: absolute; right: 9px; padding: 7px 10px; border: 0; border-radius: 7px; background: #edf2ee; color: #52615d; font-size: 12px; font-weight: 800; cursor: pointer; }
+.reference-categories { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+.reference-categories button { padding: 8px 12px; border: 1px solid #c9cec8; border-radius: 99px; background: white; color: #56645f; font-size: 13px; font-weight: 800; cursor: pointer; }
+.reference-categories button:hover { border-color: var(--coral); color: var(--coral-dark); }
+.reference-categories button.is-active { border-color: var(--green); background: var(--green); color: white; }
+.reference-count { margin: 14px 0 0; color: #71807b; font-size: 13px; }
+.reference-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; margin-top: 20px; }
+.reference-card { min-width: 0; border: 1px solid #cbd3cd; border-radius: 15px; background: white; overflow: hidden; box-shadow: 0 10px 24px #173f3a08; }
+.reference-card summary { position: relative; display: block; min-height: 215px; padding: 24px 24px 54px; cursor: pointer; list-style: none; }
+.reference-card summary::-webkit-details-marker { display: none; }
+.reference-card summary:focus-visible { outline: 3px solid #f06f5166; outline-offset: -4px; }
+.reference-card summary:hover { background: #fdfbf6; }
+.reference-card[open] { border-color: #95ada5; box-shadow: 0 16px 34px #173f3a12; }
+.reference-card[open] summary { min-height: 0; border-bottom: 1px solid #dbe0dc; background: #edf5f0; }
+.reference-level, .reference-category { display: inline-flex; align-items: center; min-height: 25px; padding: 4px 8px; border-radius: 99px; font-size: 10px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+.reference-level { margin-right: 5px; background: #f5e1da; color: #a34431; }
+.reference-level.level-grunnmur { background: #fff0bf; color: #71550f; }
+.reference-level.level-utforsk { background: var(--mint); color: var(--green-dark); }
+.reference-level.level-videre { background: #e6e2f4; color: #504176; }
+.reference-category { border: 1px solid #d8d9d3; color: #6c7773; }
+.reference-card h3 { margin: 15px 0 7px; font-size: 25px; line-height: 1.22; letter-spacing: -.025em; }
+.reference-card summary p { margin: 0; color: #596763; font-size: 16px; line-height: 1.55; }
+.reference-open { position: absolute; left: 24px; bottom: 21px; display: flex; align-items: center; gap: 8px; color: var(--green); font-size: 13px; font-weight: 850; }
+.reference-open::after { content: "+"; display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid #a9bab4; border-radius: 50%; font-family: var(--mono); }
+.reference-card[open] .reference-open { position: static; margin-top: 15px; }
+.reference-card[open] .reference-open { font-size: 0; }
+.reference-card[open] .reference-open::before { content: "Skjul forklaring"; font-size: 13px; }
+.reference-card[open] .reference-open::after { content: "−"; font-size: 13px; }
+.reference-card-content { padding: 24px; }
+.reference-card-content h4 { margin: 0 0 12px; font-size: 16px; }
+.command-list { display: grid; gap: 8px; margin: 0 0 25px; }
+.command-list > div { display: grid; grid-template-columns: minmax(125px, .75fr) minmax(0, 1.25fr); gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid #e1e2dc; border-radius: 8px; background: #faf9f4; }
+.command-list dt, .command-list dd { min-width: 0; margin: 0; }
+.command-list code { color: #214f46; font-family: var(--mono); font-size: 13px; font-weight: 750; white-space: pre-wrap; overflow-wrap: anywhere; }
+.command-list dd { color: #5b6864; font-size: 13px; line-height: 1.45; }
+.reference-example-heading { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 10px; }
+.reference-example-heading > div { display: grid; }
+.reference-example-heading small { color: #71807b; font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.reference-example-heading strong { margin-top: 2px; font-size: 15px; }
+.reference-example-heading button { flex: 0 0 auto; padding: 7px 10px; border: 1px solid #b9c5bf; border-radius: 7px; background: white; color: var(--green-dark); font-size: 12px; font-weight: 800; cursor: pointer; }
+.reference-example-heading button:hover { border-color: var(--coral); color: var(--coral-dark); }
+.reference-code { max-height: 390px; margin: 0; padding: 18px; overflow: auto; border-radius: 10px; background: #102e2b; color: #eaf2ed; white-space: pre; tab-size: 4; }
+.reference-code code { font-family: var(--mono); font-size: 14px; line-height: 1.65; }
+.reference-experiments { margin-top: 20px; padding: 17px 18px; border-left: 4px solid var(--yellow); border-radius: 0 9px 9px 0; background: #fff9df; }
+.reference-experiments h4 { color: #6e571c; }
+.reference-experiments ul { display: grid; gap: 7px; margin: 0; padding-left: 20px; color: #59645f; font-size: 14px; line-height: 1.5; }
+.reference-tip { margin: 16px 0 0; color: #52645f; font-size: 14px; line-height: 1.55; }
+.reference-tip strong { color: var(--green-dark); }
+.reference-open-project { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding: 13px 15px; border: 0; border-radius: 9px; background: var(--green); color: white; font-size: 14px; font-weight: 850; cursor: pointer; }
+.reference-open-project:hover { background: var(--green-dark); }
+.reference-open-project span { font-size: 19px; }
+.reference-empty { margin-top: 20px; padding: 38px; border: 1px dashed #bbc6bf; border-radius: 14px; background: white; text-align: center; }
+.reference-empty p { margin: 4px 0 15px; color: #697671; }
+.reference-empty button { padding: 9px 13px; border: 1px solid var(--green); border-radius: 8px; background: white; color: var(--green); font-weight: 800; cursor: pointer; }
+.reference-status { margin: 16px 0 0; padding: 11px 14px; border: 1px solid #a9c5b7; border-radius: 8px; background: #eaf5ed; color: #285449; font-size: 14px; }
+.debug-guide { display: grid; grid-template-columns: minmax(0, .8fr) minmax(440px, 1.2fr); gap: 34px; margin-top: 34px; padding: 27px; border-radius: 15px; background: var(--green-dark); color: white; }
+.debug-guide h3 { margin: 5px 0 8px; font-size: 25px; }
+.debug-guide > div > p:last-child { margin: 0; color: #b8cbc5; font-size: 15px; line-height: 1.6; }
+.debug-guide ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.debug-guide li { display: grid; grid-template-columns: 140px 1fr; gap: 13px; padding: 9px 11px; border: 1px solid #ffffff1f; border-radius: 8px; background: #ffffff08; }
+.debug-guide code { color: var(--yellow); font-family: var(--mono); font-size: 12px; font-weight: 800; }
+.debug-guide li span { color: #c8d8d3; font-size: 13px; line-height: 1.45; }
 .python-editor.is-tall, .python-editor.is-tall .syntax-layer, .python-editor.is-tall .syntax-input { min-height: 500px; }
 .playground-reflection { padding-top: 76px; padding-bottom: 90px; }
 .project-section { padding-top: 38px; padding-bottom: 54px; border-top: 1px solid var(--line); background: #faf8f2; }
@@ -402,6 +480,12 @@ a { color: inherit; text-decoration: none; }
   .task-actions { flex-direction: row; }
   .feedback { grid-column: auto; }
   .project-heading { align-items: start; }
+  .reference-heading { grid-template-columns: 1fr; align-items: start; }
+  .reference-method { grid-template-columns: repeat(4, 1fr); min-width: 0; }
+  .reference-method span { justify-content: center; }
+  .reference-grid { grid-template-columns: 1fr; }
+  .reference-card summary { min-height: 0; }
+  .debug-guide { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 600px) {
@@ -454,6 +538,26 @@ a { color: inherit; text-decoration: none; }
   .project-toolbar label:first-child { flex-basis: 100%; }
   .project-toolbar button, .import-button { justify-content: center; flex: 1 1 130px; }
   .package-guide { grid-template-columns: 1fr; }
+  .playground-reference { scroll-margin-top: 20px; }
+  .reference-heading h2 { font-size: 36px; }
+  .reference-heading > div:first-child > p:last-child { font-size: 17px; }
+  .reference-method { grid-template-columns: repeat(2, 1fr); padding: 13px; }
+  .reference-method span { justify-content: flex-start; }
+  .reference-controls { margin-left: -9px; margin-right: -9px; padding: 15px; }
+  .reference-search input { min-height: 50px; padding-left: 43px; font-size: 15px; }
+  .reference-categories { gap: 6px; }
+  .reference-categories button { padding: 7px 10px; font-size: 12px; }
+  .reference-card summary, .reference-card-content { padding: 20px; }
+  .reference-card summary { padding-bottom: 54px; }
+  .reference-card[open] summary { padding-bottom: 20px; }
+  .reference-card h3 { font-size: 22px; }
+  .reference-open { left: 20px; }
+  .command-list > div { grid-template-columns: 1fr; gap: 4px; }
+  .reference-example-heading { align-items: start; }
+  .reference-example-heading strong { max-width: 180px; }
+  .reference-code code { font-size: 13px; }
+  .debug-guide { margin-left: -9px; margin-right: -9px; padding: 21px; }
+  .debug-guide li { grid-template-columns: 1fr; gap: 3px; }
   .task-actions { flex-direction: column; }
   .teacher-heading { display: block; }
   .teacher-only { display: inline-block; margin-top: 13px; }

@@ -81,6 +81,21 @@ test("Python-rommet støtter datapakker, grafer og prosjektlagring", () => {
   assert.match(page, /plotImages/);
 });
 
+test("Python-rommet har et komplett, søkbart oppslagsverk", () => {
+  assert.match(page, /Python-håndbok/);
+  assert.match(page, /Søk i håndboken/);
+  assert.match(page, /playgroundReferences/);
+  assert.equal((page.match(/    id: "(?:variabler|tekst|vilkar|tallmonster|lister|funksjoner|tilfeldighet|tabeller|grafer|turtle-figurer|turtle-spiral|numpy|symbolsk)",/g) ?? []).length, 13);
+  assert.match(page, /Viktige koder og kommandoer/);
+  assert.match(page, /Eksperimenter videre/);
+  assert.match(page, /Åpne som nytt prosjekt/);
+  assert.match(page, /Det gamle prosjektet er bevart/);
+  assert.match(page, /Når koden ikke virker/);
+  for (const errorName of ["SyntaxError", "IndentationError", "NameError", "TypeError"]) {
+    assert.match(page, new RegExp(errorName));
+  }
+});
+
 test("Turtle tegner geometriske figurer lokalt i resultatpanelet", () => {
   assert.match(page, /from turtle import \*/);
   assert.match(page, /Tegn et Turtle-kvadrat/);

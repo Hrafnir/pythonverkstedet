@@ -7,6 +7,7 @@ Digitalt hefte og Python-laboratorium for matematikk på 8.–10. trinn.
 - seks moduler: variabler, vilkår, løkker, funksjoner, simulering og modellering
 - arbeidsflyten problemstilling → teori → prøv → observer → oppgave
 - progresjonsstiger med små, kjørbare steg fra enkel forståelse til valgfri elegant kode
+- søkbar Python-håndbok i Fritt Python-rom med kommandoer, kjørbare eksempler, eksperimenter og feilsøking
 - ekte Python i nettleseren ved hjelp av Pyodide
 - elevmodus og lærermodus
 - lærertips, typiske misforståelser, vurderingsstøtte og utvidelser
