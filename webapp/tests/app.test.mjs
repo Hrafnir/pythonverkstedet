@@ -43,6 +43,29 @@ test("modulene har tom skrivelab, redigerbar fasit, kodefarger og ekstratriks", 
   assert.equal((page.match(/    polish: \{/g) ?? []).length, 6);
 });
 
+test("alle moduler bygger kompetanse i små, kjørbare steg", () => {
+  assert.equal((page.match(/    progression: \{/g) ?? []).length, 6);
+  assert.match(page, /Små steg som bygger på hverandre/);
+  assert.match(page, /Prøv koden i laboratoriet/);
+  assert.match(page, /Legg sammen variabler/);
+  assert.match(page, /poeng = poeng \+ 3/);
+  assert.match(page, /poeng \+= 3/);
+  assert.match(page, /poeng -= 2/);
+  assert.match(page, /Den enkleste løsningen er å gi print flere deler/);
+  assert.match(page, /Elegant senere: f-tekst/);
+  assert.match(page, /tryProgressionCode/);
+});
+
+test("kodeeditoren støtter innrykk, lesbar tekst og fullskjerm", () => {
+  assert.match(page, /event\.key !== "Tab"/);
+  assert.match(page, /event\.shiftKey/);
+  assert.match(page, /bjornsveen-editor-font-size/);
+  assert.match(page, /requestFullscreen/);
+  assert.match(page, /Fullskjerm/);
+  assert.match(page, /const playgroundCode = ""/);
+  assert.match(page, /code: ""/);
+});
+
 test("Python-rommet støtter datapakker, grafer og prosjektlagring", () => {
   assert.match(page, /import numpy as np/);
   assert.match(page, /import matplotlib\.pyplot as plt/);
@@ -56,6 +79,18 @@ test("Python-rommet støtter datapakker, grafer og prosjektlagring", () => {
   assert.match(page, /Åpne stort/);
   assert.match(page, /Lagre bilde/);
   assert.match(page, /plotImages/);
+});
+
+test("Turtle tegner geometriske figurer lokalt i resultatpanelet", () => {
+  assert.match(page, /from turtle import \*/);
+  assert.match(page, /Tegn et Turtle-kvadrat/);
+  assert.match(page, /geometrisk spiral/);
+  assert.match(worker, /usesTurtle/);
+  assert.match(worker, /class Turtle/);
+  assert.match(worker, /def forward/);
+  assert.match(worker, /def circle/);
+  assert.match(worker, /def begin_fill/);
+  assert.match(worker, /_sys\.modules\["turtle"\]/);
 });
 
 test("elev- og lærermodus finnes", () => {
