@@ -141,6 +141,12 @@ test("Turtle har SVG-verktøy for vinylkutter og laser", () => {
   assert.match(page, /Behold tykkelser fra Python-koden/);
   assert.match(page, /Last ned SVG/);
   assert.match(page, /offsetTurtlePath/);
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.turtle-maker-menu\[open\] \{ bottom:/);
+  assert.match(css, /\.turtle-maker-menu\[open\] \.turtle-maker-panel \{ position: absolute; inset: 38px 0 0;/);
+  assert.match(css, /overflow-y: auto/);
+  assert.match(css, /overscroll-behavior: contain/);
+  assert.match(css, /position: sticky/);
 });
 
 test("elev- og lærermodus finnes", () => {
