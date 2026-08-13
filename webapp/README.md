@@ -6,6 +6,7 @@ Digitalt hefte og Python-laboratorium for matematikk på 8.–10. trinn.
 
 - seks moduler: variabler, vilkår, løkker, funksjoner, simulering og modellering
 - arbeidsflyten problemstilling → teori → prøv → observer → oppgave
+- progresjonsstiger med små, kjørbare steg fra enkel forståelse til valgfri elegant kode
 - ekte Python i nettleseren ved hjelp av Pyodide
 - elevmodus og lærermodus
 - lærertips, typiske misforståelser, vurderingsstøtte og utvidelser
@@ -15,6 +16,8 @@ Digitalt hefte og Python-laboratorium for matematikk på 8.–10. trinn.
 - import og eksport av `.py`-filer
 - kopiering av kode som formatert tekst eller bilde
 - støtte for Pyodide-pakker som NumPy, pandas og Matplotlib
+- lokal Turtle-tegning for geometri, mønstre, farger og fyll
+- kodeeditor med Tab-innrykk, justerbar skriftstørrelse og fullskjerm
 
 ## Lokal utvikling
 

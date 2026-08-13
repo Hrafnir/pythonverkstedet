@@ -108,6 +108,7 @@ productArgs.push(workPkgPath);
 run("productbuild", productArgs);
 const finalAppDir = path.join(outRoot, path.basename(appDir));
 run("ditto", ["--noextattr", "--norsrc", appDir, finalAppDir]);
+run("xattr", ["-cr", finalAppDir]);
 await cp(workDmgPath, dmgPath);
 await cp(workPkgPath, pkgPath);
 await rm(packageRoot, { recursive: true, force: true });

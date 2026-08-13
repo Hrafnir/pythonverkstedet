@@ -191,6 +191,26 @@ a { color: inherit; text-decoration: none; }
 .how-to-list { display: grid; gap: 8px; margin: 20px 0 0; padding-left: 24px; color: #3f514d; font-size: 16px; line-height: 1.55; }
 .how-to-list li::marker { color: var(--coral-dark); font-family: var(--mono); font-weight: 800; }
 
+.progression-section { padding-top: 0; padding-bottom: 76px; }
+.progression-section .section-heading > p { max-width: 430px; }
+.progression-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.progression-card { display: flex; flex-direction: column; min-width: 0; padding: 25px; border: 1px solid #cbd8d1; border-radius: 16px; background: #f7fbf8; box-shadow: 0 12px 30px #173f3a0b; }
+.progression-card-heading { display: flex; align-items: center; gap: 13px; }
+.progression-card-heading > span { flex: 0 0 38px; display: grid; place-items: center; height: 38px; border-radius: 50%; background: var(--green); color: white; font-family: var(--mono); font-size: 13px; font-weight: 850; }
+.progression-card-heading small { display: block; color: #71827d; font-size: 10px; font-weight: 850; letter-spacing: .11em; text-transform: uppercase; }
+.progression-card h3 { margin: 2px 0 0; font-size: 22px; line-height: 1.25; }
+.progression-card > p { margin: 16px 0; color: #53645f; font-size: 16px; line-height: 1.6; }
+.progression-card pre { margin: 0; padding: 17px; overflow-x: auto; border-radius: 9px; background: #173f3a; color: #eef5ef; white-space: pre; }
+.progression-card code { font-family: var(--mono); font-size: 15px; line-height: 1.65; }
+.progression-task { margin: 16px 0; padding: 13px 14px; border-left: 4px solid var(--yellow); background: #fff9df; color: #56615d; font-size: 14px; line-height: 1.55; }
+.progression-task strong { color: #6e5618; }
+.progression-upgrade { margin: 0 0 17px; padding: 12px 14px; border: 1px solid #e0ca7e; border-radius: 9px; background: #fffdf5; }
+.progression-upgrade summary { color: #755b14; font-size: 14px; font-weight: 800; cursor: pointer; }
+.progression-upgrade p { margin: 10px 0; color: #616a66; font-size: 14px; line-height: 1.55; }
+.progression-upgrade pre { background: #244b45; }
+.progression-card > button { align-self: flex-start; margin-top: auto; padding: 10px 13px; border: 1px solid #8aa49c; border-radius: 8px; background: white; color: var(--green-dark); font-size: 14px; font-weight: 800; cursor: pointer; }
+.progression-card > button:hover { border-color: var(--coral); color: var(--coral-dark); }
+
 .polish-section { padding-top: 0; padding-bottom: 76px; }
 .polish-section details { border: 1px solid #e0c76e; border-radius: 16px; background: #fff9df; overflow: hidden; }
 .polish-section summary { display: flex; align-items: center; gap: 16px; padding: 22px 24px; cursor: pointer; list-style: none; }
@@ -236,11 +256,14 @@ a { color: inherit; text-decoration: none; }
 .code-workbench { max-width: 1060px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, .8fr); border: 1px solid #49665f; border-radius: 15px; overflow: hidden; box-shadow: 0 24px 50px #071f1c55; }
 .editor-panel, .output-panel { min-width: 0; background: #102e2b; }
 .editor-panel { border-right: 1px solid #49665f; }
-.panel-bar { height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid #34514b; background: #183a36; color: #b7cbc4; font-size: 13px; }
+.panel-bar { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 18px; border-bottom: 1px solid #34514b; background: #183a36; color: #b7cbc4; font-size: 13px; }
 .panel-bar > span:first-child { display: flex; gap: 5px; }
-.panel-tools { display: flex; align-items: center; gap: 4px; }
+.panel-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; }
 .panel-tools button { padding: 6px 8px; border-radius: 5px; }
 .panel-tools button:hover { background: #ffffff12; }
+.panel-tools button:disabled { cursor: not-allowed; opacity: .4; }
+.editor-size-controls { display: inline-flex; align-items: center; gap: 1px; padding: 2px; border: 1px solid #ffffff1f; border-radius: 7px; }
+.editor-size-controls output { min-width: 43px; color: #d9e5e0; font-family: var(--mono); font-size: 11px; text-align: center; }
 .panel-bar button { border: 0; background: transparent; color: #b9cbc5; font-size: 13px; cursor: pointer; }
 .panel-bar button:hover { color: white; }
 .dot { width: 8px; height: 8px; border-radius: 50%; }
@@ -248,16 +271,16 @@ a { color: inherit; text-decoration: none; }
 .dot.cream { background: var(--yellow); }
 .dot.green { background: #6fd79f; }
 .python-editor { position: relative; min-height: 390px; background: #102e2b; }
-.syntax-layer, .syntax-input { width: 100%; min-height: 390px; margin: 0; padding: 28px; border: 0; font-family: var(--mono); font-size: 17px; line-height: 1.75; tab-size: 4; white-space: pre; overflow: auto; }
-.syntax-layer { position: absolute; inset: 0; pointer-events: none; background: #102e2b; color: #e7eee9; }
-.syntax-input { position: relative; display: block; resize: vertical; outline: 0; background: transparent; color: transparent; caret-color: var(--coral); -webkit-text-fill-color: transparent; }
+.syntax-layer, .syntax-input { width: 100%; min-height: 390px; margin: 0; padding: 28px; border: 0; font-family: var(--mono); font-size: var(--editor-font-size, 19px); font-weight: 500; font-style: normal; font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; letter-spacing: 0; line-height: 1.7; tab-size: 4; white-space: pre; overflow-wrap: normal; word-break: normal; }
+.syntax-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: #102e2b; color: #e7eee9; }
+.syntax-input { position: relative; display: block; overflow: auto; resize: vertical; outline: 0; background: transparent; color: transparent; caret-color: #ff8a6e; }
 .syntax-input::selection { background: #6fd79f45; }
 .python-editor:focus-within { box-shadow: inset 0 0 0 2px #f06f5180; }
-.py-keyword { color: #f28b72; font-weight: 750; }
+.py-keyword { color: #f28b72; }
 .py-builtin { color: #78d5e3; }
 .py-string { color: #f4c95d; }
 .py-number { color: #b8a1f5; }
-.py-comment { color: #829d95; font-style: italic; }
+.py-comment { color: #829d95; }
 .py-plain { color: #e7eee9; }
 .editor-footer { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 10px 14px 10px 22px; border-top: 1px solid #34514b; color: #9bb0aa; font-size: 13px; }
 .run-button { display: flex; align-items: center; gap: 8px; border: 0; border-radius: 8px; padding: 13px 19px; background: var(--coral); color: white; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px #0003; }
@@ -273,6 +296,12 @@ a { color: inherit; text-decoration: none; }
 .output-panel pre { flex: 1; min-height: 320px; margin: 0; padding: 28px; white-space: pre-wrap; overflow-wrap: anywhere; color: #b9efcb; font-family: var(--mono); font-size: 16px; line-height: 1.7; }
 .output-tip { padding: 18px 22px; border-top: 1px solid #34514b; color: #a6bab4; font-size: 13px; line-height: 1.55; }
 .output-tip strong { color: #d5dfdb; }
+.code-workbench:fullscreen { width: 100vw; max-width: none; height: 100vh; grid-template-columns: minmax(0, 1.65fr) minmax(320px, .85fr); border: 0; border-radius: 0; background: #102e2b; }
+.code-workbench:fullscreen .editor-panel { min-height: 0; display: flex; flex-direction: column; }
+.code-workbench:fullscreen .python-editor { flex: 1; min-height: 0; }
+.code-workbench:fullscreen .syntax-layer,
+.code-workbench:fullscreen .syntax-input { min-height: 0; height: 100%; resize: none; }
+.code-workbench:fullscreen .output-panel { min-height: 0; overflow: auto; }
 .plot-gallery { display: grid; gap: 14px; padding: 0 18px 20px; }
 .plot-card { margin: 0; overflow: hidden; border: 1px solid #45635c; border-radius: 10px; background: white; }
 .plot-output { display: block; width: 100%; height: auto; margin: 0; background: white; }
@@ -364,6 +393,7 @@ a { color: inherit; text-decoration: none; }
   .lesson-hero, .content-section { padding-left: 34px; padding-right: 34px; }
   .hero-stamp { display: none; }
   .refresh-section { grid-template-columns: 1fr; gap: 30px; margin-left: 24px; margin-right: 24px; }
+  .progression-grid { grid-template-columns: 1fr; }
   .polish-content, .typing-guide { grid-template-columns: 1fr; }
   .lab-section { padding-left: 34px; padding-right: 34px; }
   .code-workbench { grid-template-columns: 1fr; }
@@ -403,10 +433,11 @@ a { color: inherit; text-decoration: none; }
   .theory-card h3 { font-size: 23px; }
   .theory-card p { font-size: 17px; }
   .theory-card code { font-size: 15px; }
+  .progression-card { padding: 21px; }
   .lab-heading { display: flex; align-items: start; }
   .live-badge { display: none; }
   .python-editor, .syntax-layer, .syntax-input, .python-editor.is-tall, .python-editor.is-tall .syntax-layer, .python-editor.is-tall .syntax-input { min-height: 340px; }
-  .syntax-layer, .syntax-input { padding: 20px 17px; font-size: 15px; }
+  .syntax-layer, .syntax-input { padding: 20px 17px; font-size: var(--editor-font-size, 19px); }
   .lab-tabs { grid-template-columns: 1fr; }
   .polish-section summary { align-items: flex-start; padding: 18px; }
   .polish-open { display: none; }

@@ -7,6 +7,8 @@ Denne prototypen:
 - inneholder Python/Pyodide lokalt
 - inneholder en kuratert skolepakke med NumPy, pandas, Matplotlib, SciPy,
   SymPy, scikit-learn, Pillow, NetworkX og avhengigheter
+- har en lokal Turtle-variant for geometriske figurer og mønstre; tegningene
+  gjengis i appens resultatpanel uten egne vinduer eller nettverk
 - blokkerer alle nettverksforespørsler fra appen
 - bruker lokale prosjektfiler og lokale nettleserdata
 - har ingen automatisk oppdatering, innlogging, KI eller kommunikasjon

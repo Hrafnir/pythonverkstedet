@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent, ReactNode } from "react";
+import type { ChangeEvent, CSSProperties, KeyboardEvent, ReactNode } from "react";
 
 type Module = {
   id: number;
@@ -16,6 +16,17 @@ type Module = {
     examples: { code: string; explanation: string }[];
   };
   theory: { title: string; body: string; code?: string; steps: string[] }[];
+  progression: {
+    intro: string;
+    steps: {
+      label: string;
+      title: string;
+      body: string;
+      code: string;
+      tryThis: string;
+      upgrade?: { title: string; body: string; code: string };
+    }[];
+  };
   starterCode: string;
   typingSteps: string[];
   polish: {
@@ -83,6 +94,49 @@ const modules: Module[] = [
         steps: ["Skriv print og parenteser.", "Sett variabelen du vil se, inni parentesene.", "Kjør koden og sammenlign med overslaget ditt."],
       },
     ],
+    progression: {
+      intro: "Start med én operasjon. Endre deretter verdier, sett sammen flere variabler og gjør utskriften tydeligere.",
+      steps: [
+        {
+          label: "Start",
+          title: "Legg sammen variabler",
+          body: "Python henter tallene som er lagret i pris og frakt. Summen kan lagres i en ny variabel.",
+          code: `pris = 40\nfrakt = 59\ntotal = pris + frakt\nprint(total)`,
+          tryThis: "Endre frakt til 79. Forutsi totalen før du kjører.",
+        },
+        {
+          label: "Forstå først",
+          title: "Gi en variabel en ny verdi",
+          body: "Høyresiden regnes ut med den gamle verdien. Deretter lagres svaret som den nye verdien til poeng.",
+          code: `poeng = 10\npoeng = poeng + 3\npoeng = poeng - 2\nprint(poeng)`,
+          tryThis: "Tegn en sportabell: 10 → 13 → 11. Endre så tallene.",
+          upgrade: {
+            title: "Kortere med += og -=",
+            body: "+= betyr «legg til og lagre den nye verdien». -= betyr «trekk fra og lagre». Den lange og korte skrivemåten gjør det samme.",
+            code: `poeng = 10\npoeng += 3\npoeng -= 2\nprint(poeng)`,
+          },
+        },
+        {
+          label: "Bygg videre",
+          title: "Endre en saldo med += og -=",
+          body: "Når verdien skal justeres flere ganger, gjør de korte operatorene programmet lettere å lese.",
+          code: `saldo = 200\nsaldo += 50\nsaldo -= 30\nprint(saldo)`,
+          tryThis: "Legg til enda en innbetaling på 100 kr og et kjøp på 45 kr.",
+        },
+        {
+          label: "Tekst + tall",
+          title: "Lag en forståelig beskjed",
+          body: "Den enkleste løsningen er å gi print flere deler, skilt med komma. Python setter inn mellomrom for deg.",
+          code: `navn = "Ada"\nalder = 15\nprint("Hei", navn)\nprint("Du er", alder, "år.")`,
+          tryThis: "Lag en variabel som heter skole, og skriv navn, alder og skole i en hel beskjed.",
+          upgrade: {
+            title: "Elegant senere: f-tekst",
+            body: "Når komma-versjonen gir mening, kan samme beskjed skrives mer samlet. Variablene står i krøllparenteser.",
+            code: `navn = "Ada"\nalder = 15\nprint(f"Hei {navn}! Du er {alder} år.")`,
+          },
+        },
+      ],
+    },
     starterCode: `pris = 800\nrabatt = 0.25\nny_pris = pris * (1 - rabatt)\nprint(ny_pris)`,
     typingSteps: [
       "Skriv pris = 800 og trykk Enter.",
@@ -163,6 +217,37 @@ const modules: Module[] = [
         steps: ["Skriv if, vilkåret og kolon.", "Rykk inn koden som skal kjøres når vilkåret er sant.", "Bruk else for det som skal skje ellers."],
       },
     ],
+    progression: {
+      intro: "Begynn med et spørsmål som blir sant eller usant. La programmet ta ett valg først, og bygg deretter to mulige veier.",
+      steps: [
+        {
+          label: "Start",
+          title: "Se et sant/usant-svar",
+          body: "En sammenligning kan skrives rett ut. Python svarer True eller False.",
+          code: `tall = 12\nprint(tall > 10)\nprint(tall == 12)`,
+          tryThis: "Endre tall til 8. Hvilken av sammenligningene endrer svar?",
+        },
+        {
+          label: "Ett valg",
+          title: "Gjør noe bare når vilkåret er sant",
+          body: "Koden med innrykk kjøres bare dersom temperaturen er mindre enn null.",
+          code: `temperatur = -4\n\nif temperatur < 0:\n    print("Det er frost.")`,
+          tryThis: "Prøv temperatur 3. Legg til en ny print-linje uten innrykk og observer forskjellen.",
+        },
+        {
+          label: "To veier",
+          title: "Velg med if og else",
+          body: "Nå får programmet én beskjed når vilkåret er sant, og en annen ellers.",
+          code: `poeng = 7\n\nif poeng >= 5:\n    print("Målet er nådd.")\nelse:\n    print("Prøv én gang til.")`,
+          tryThis: "Test poeng 4, 5 og 6. Forklar hvorfor grensen 5 hører til den første veien.",
+          upgrade: {
+            title: "Gjør beskjeden personlig",
+            body: "Bruk en variabel i en f-tekst når selve valget er forstått.",
+            code: `navn = "Ada"\npoeng = 7\n\nif poeng >= 5:\n    print(f"Bra jobbet, {navn}!")\nelse:\n    print(f"Prøv igjen, {navn}.")`,
+          },
+        },
+      ],
+    },
     starterCode: `tall = 18\nrest = tall % 2\n\nif rest == 0:\n    print("partall")\nelse:\n    print("oddetall")`,
     typingSteps: [
       "Skriv tall = 18.",
@@ -243,6 +328,37 @@ const modules: Module[] = [
         steps: ["Sett inn første verdi av n i uttrykket.", "Regn ut og skriv resultatet.", "Gjenta med neste n-verdi til løkken er ferdig."],
       },
     ],
+    progression: {
+      intro: "Se først hva som gjentas. Erstatt så gjentatte linjer med en løkke, og bruk til slutt løkken til å bygge opp en verdi.",
+      steps: [
+        {
+          label: "Se mønsteret",
+          title: "Gjenta på den lange måten",
+          body: "Dette virker, men vi må skrive nesten samme linje flere ganger. Nettopp slike mønstre passer for en løkke.",
+          code: `print("Hei")\nprint("Hei")\nprint("Hei")`,
+          tryThis: "Legg til to linjer til. Tell hvor mange ganger teksten skrives.",
+        },
+        {
+          label: "Bygg videre",
+          title: "La en løkke gjenta",
+          body: "range(3) gir verdiene 0, 1 og 2. Den innrykkede linjen kjøres tre ganger.",
+          code: `for runde in range(3):\n    print("Hei", runde)`,
+          tryThis: "Endre 3 til 5. Hva blir første og siste verdi til runde?",
+          upgrade: {
+            title: "Start tellingen på 1",
+            body: "To tall i range lar deg velge start og stopp. Stoppverdien er fortsatt ikke med.",
+            code: `for runde in range(1, 6):\n    print("Runde", runde)`,
+          },
+        },
+        {
+          label: "Samle resultat",
+          title: "Lag en løpende sum",
+          body: "Variabelen sum_tall husker det vi har samlet så langt. Hver runde legger til en ny verdi.",
+          code: `sum_tall = 0\n\nfor tall in range(1, 6):\n    sum_tall += tall\n    print("Så langt:", sum_tall)`,
+          tryThis: "Forutsi utskriftene 1, 3, 6, 10 og 15. Endre stoppverdien til 11.",
+        },
+      ],
+    },
     starterCode: `for n in range(1, 6):\n    print(2 * n)`,
     typingSteps: [
       "Skriv for n in range(1, 6): og trykk Enter.",
@@ -323,6 +439,37 @@ const modules: Module[] = [
         steps: ["Skriv funksjonsnavnet.", "Sett inn ønsket verdi i parentes.", "Lagre svaret i en variabel eller skriv det ut med print."],
       },
     ],
+    progression: {
+      intro: "Regn ut én verdi på vanlig måte. Gi deretter regelen et navn, og bruk den samme funksjonen med flere inndata.",
+      steps: [
+        {
+          label: "Start",
+          title: "Regn ut direkte",
+          body: "Før funksjoner kan vi lagre en x-verdi og regne ut uttrykket linje for linje.",
+          code: `x = 4\nresultat = 2 * x + 3\nprint(resultat)`,
+          tryThis: "Endre x til 0 og deretter −2. Regn ut for hånd før du kjører.",
+        },
+        {
+          label: "Lag en maskin",
+          title: "Gi regelen et navn",
+          body: "Funksjonen samler regelen på ett sted. return sender funksjonsverdien tilbake.",
+          code: `def f(x):\n    return 2 * x + 3\n\nsvar = f(4)\nprint(svar)`,
+          tryThis: "Endre tallet i f(4), uten å endre selve regelen.",
+        },
+        {
+          label: "Bruk flere ganger",
+          title: "Samme funksjon, flere verdier",
+          body: "Én definisjon kan brukes så mange ganger vi vil. Her lager vi tre punkter i en verditabell.",
+          code: `def f(x):\n    return 2 * x + 3\n\nprint(-1, f(-1))\nprint(0, f(0))\nprint(1, f(1))`,
+          tryThis: "Legg til radene for x = 2 og x = 3. Finn mønsteret i funksjonsverdiene.",
+          upgrade: {
+            title: "Elegant senere: kombiner med løkke",
+            body: "Når både funksjoner og løkker er kjent, kan en hel verditabell lages med få linjer.",
+            code: `def f(x):\n    return 2 * x + 3\n\nfor x in range(-3, 4):\n    print(x, f(x))`,
+          },
+        },
+      ],
+    },
     starterCode: `def f(x):\n    return 2 * x + 3\n\nresultat = f(6)\nprint(resultat)`,
     typingSteps: [
       "Skriv def f(x): og trykk Enter.",
@@ -403,6 +550,37 @@ const modules: Module[] = [
         steps: ["Tell hvor mange ganger hendelsen skjedde.", "Del på totalt antall forsøk.", "Sammenlign resultatet med teoretisk sannsynlighet."],
       },
     ],
+    progression: {
+      intro: "Lag ett tilfeldig forsøk først. Gjenta forsøket, og legg til slutt inn en teller som samler data fra alle rundene.",
+      steps: [
+        {
+          label: "Ett forsøk",
+          title: "Kast terningen én gang",
+          body: "random.randint(1, 6) velger ett av heltallene fra 1 til og med 6.",
+          code: `import random\n\nkast = random.randint(1, 6)\nprint(kast)`,
+          tryThis: "Kjør fem ganger. Hvorfor får du ikke nødvendigvis fem ulike tall?",
+        },
+        {
+          label: "Gjenta",
+          title: "Kast flere ganger",
+          body: "Løkken gjentar samme tilfeldige forsøk. Variabelen kast får en ny verdi i hver runde.",
+          code: `import random\n\nfor runde in range(5):\n    kast = random.randint(1, 6)\n    print(kast)`,
+          tryThis: "Endre til 20 kast. Legg merke til om alle terningverdiene dukker opp.",
+        },
+        {
+          label: "Tell treff",
+          title: "Øk telleren med +=",
+          body: "Telleren starter på null og økes bare når kastet er en sekser.",
+          code: `import random\n\nantall_seksere = 0\n\nfor runde in range(20):\n    kast = random.randint(1, 6)\n    if kast == 6:\n        antall_seksere += 1\n\nprint(antall_seksere)`,
+          tryThis: "Tell enere i stedet. Utvid deretter til å telle både 1 og 2.",
+          upgrade: {
+            title: "Fra antall til andel",
+            body: "En andel gjør resultater fra ulike antall forsøk lettere å sammenligne.",
+            code: `import random\n\nantall_kast = 600\nantall_seksere = 0\n\nfor runde in range(antall_kast):\n    kast = random.randint(1, 6)\n    if kast == 6:\n        antall_seksere += 1\n\nandel = antall_seksere / antall_kast\nprint(f"Andel: {andel:.1%}")`,
+          },
+        },
+      ],
+    },
     starterCode: `import random\n\nantall_kast = 600\nantall_seksere = 0\n\nfor _ in range(antall_kast):\n    kast = random.randint(1, 6)\n    if kast == 6:\n        antall_seksere += 1\n\nandel = antall_seksere / antall_kast\nprint(round(andel, 3))`,
     typingSteps: [
       "Skriv import random. Da får programmet tilgang til tilfeldige tall.",
@@ -483,6 +661,37 @@ const modules: Module[] = [
         steps: ["Finn hva modellen antar er konstant.", "Spør hvor lenge antakelsen er rimelig.", "Skille mellom et beregnet modellsvar og virkeligheten."],
       },
     ],
+    progression: {
+      intro: "Beregn én endring først. Gjenta den samme endringen periode for periode, og gå deretter over til den kompakte potensmodellen.",
+      steps: [
+        {
+          label: "Én periode",
+          title: "Regn ut én vekst",
+          body: "Ti prosent vekst betyr at vi beholder hele verdien og legger til ti prosent.",
+          code: `verdi = 1000\nvekst = verdi * 0.10\nny_verdi = verdi + vekst\nprint(ny_verdi)`,
+          tryThis: "Endre veksten til 5 %. Finn både veksten i kroner og den nye verdien.",
+          upgrade: {
+            title: "Samme regning med vekstfaktor",
+            body: "Når delene er forstått, kan 100 % + 10 % samles i vekstfaktoren 1.10.",
+            code: `verdi = 1000\nny_verdi = verdi * 1.10\nprint(ny_verdi)`,
+          },
+        },
+        {
+          label: "Flere perioder",
+          title: "Oppdater verdien i en løkke",
+          body: "Hver periode tar utgangspunkt i verdien fra perioden før. Derfor lagres den nye verdien tilbake i samme variabel.",
+          code: `verdi = 1000\nvekstfaktor = 1.10\n\nfor ar in range(1, 4):\n    verdi *= vekstfaktor\n    print(ar, round(verdi, 2))`,
+          tryThis: "Utvid til fem år. Hvor mye øker beløpet fra år 4 til år 5?",
+        },
+        {
+          label: "Elegant modell",
+          title: "Bruk potens når regelen er kjent",
+          body: "Potensuttrykket samler gjentatt multiplikasjon. Dette er kompakt, men løkkeversjonen viser tydeligere hva som skjer hvert år.",
+          code: `start = 1000\nvekstfaktor = 1.10\ntid = 3\n\nverdi = start * vekstfaktor ** tid\nprint(round(verdi, 2))`,
+          tryThis: "Sammenlign svaret med løkkeversjonen. Begge skal gi samme sluttverdi.",
+        },
+      ],
+    },
     starterCode: `start = 1000\nvekstfaktor = 1.10\ntid = 2\n\nverdi = start * vekstfaktor ** tid\nprint(round(verdi, 2))`,
     typingSteps: [
       "Skriv start = 1000.",
@@ -529,12 +738,14 @@ const modules: Module[] = [
 ];
 
 const steps = ["Problem", "Oppfriskning", "Lær", "Prøv", "Forklar", "Oppgave"];
-const playgroundCode = `# Dette er deres frie Python-rom.
+const legacyPlaygroundCode = `# Dette er deres frie Python-rom.
 # Slett eksemplet eller bygg videre på det.
 
 navn = "10. trinn"
 for tall in range(1, 6):
     print(navn, "utforsker", tall ** 2)`;
+
+const playgroundCode = "";
 
 const firstProject: LocalProject = {
   id: "mitt-forste-prosjekt",
@@ -561,22 +772,68 @@ function colorPython(source: string): ReactNode[] {
   });
 }
 
-function PythonEditor({ id, value, onChange, describedBy, tall = false }: {
+function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false }: {
   id: string;
   value: string;
   onChange: (value: string) => void;
   describedBy: string;
+  fontSize: number;
   tall?: boolean;
 }) {
   const highlightRef = useRef<HTMLPreElement | null>(null);
+  function changeIndent(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Tab") return;
+    event.preventDefault();
+    const input = event.currentTarget;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+
+    if (event.shiftKey) {
+      const blockEnd = end > start ? end : value.indexOf("\n", start) === -1 ? value.length : value.indexOf("\n", start);
+      const block = value.slice(lineStart, blockEnd);
+      let removedBeforeStart = 0;
+      let removedTotal = 0;
+      const unindented = block.replace(/^(?: {1,4}|\t)/gm, (indent, offset) => {
+        if (lineStart + offset < start) removedBeforeStart += indent.length;
+        removedTotal += indent.length;
+        return "";
+      });
+      onChange(`${value.slice(0, lineStart)}${unindented}${value.slice(blockEnd)}`);
+      requestAnimationFrame(() => {
+        input.selectionStart = Math.max(lineStart, start - removedBeforeStart);
+        input.selectionEnd = Math.max(lineStart, end - removedTotal);
+      });
+      return;
+    }
+
+    if (end > start) {
+      const blockEnd = value[end - 1] === "\n" ? end - 1 : end;
+      const block = value.slice(lineStart, blockEnd);
+      const indented = block.replace(/^/gm, "    ");
+      const lineCount = (block.match(/^/gm) ?? []).length;
+      onChange(`${value.slice(0, lineStart)}${indented}${value.slice(blockEnd)}`);
+      requestAnimationFrame(() => {
+        input.selectionStart = start + 4;
+        input.selectionEnd = end + lineCount * 4;
+      });
+      return;
+    }
+
+    onChange(`${value.slice(0, start)}    ${value.slice(end)}`);
+    requestAnimationFrame(() => {
+      input.selectionStart = input.selectionEnd = start + 4;
+    });
+  }
   return (
-    <div className={`python-editor ${tall ? "is-tall" : ""}`}>
+    <div className={`python-editor ${tall ? "is-tall" : ""}`} style={{ "--editor-font-size": `${fontSize}px` } as CSSProperties}>
       <pre className="syntax-layer" ref={highlightRef} aria-hidden="true">{colorPython(`${value}\n`)}</pre>
       <textarea
         id={id}
         className="syntax-input"
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={changeIndent}
         onScroll={(event) => {
           if (!highlightRef.current) return;
           highlightRef.current.scrollTop = event.currentTarget.scrollTop;
@@ -610,7 +867,10 @@ export default function Home() {
   const [shareStatus, setShareStatus] = useState("");
   const [plotImages, setPlotImages] = useState<string[]>([]);
   const [expandedPlotIndex, setExpandedPlotIndex] = useState<number | null>(null);
+  const [editorFontSize, setEditorFontSize] = useState(19);
+  const [editorFullscreen, setEditorFullscreen] = useState(false);
   const [desktopFilePath, setDesktopFilePath] = useState("");
+  const workbenchRef = useRef<HTMLDivElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -624,25 +884,57 @@ export default function Home() {
     const savedMode = window.localStorage.getItem("pythonverkstedet-mode");
     const savedProjects = window.localStorage.getItem("bjornsveen-python-projects");
     const savedActiveProject = window.localStorage.getItem("bjornsveen-python-active-project");
+    const savedEditorFontSize = Number(window.localStorage.getItem("bjornsveen-editor-font-size"));
     if (saved) setCompleted(JSON.parse(saved));
     if (savedMode === "teacher") setTeacherMode(true);
     if (savedProjects) {
       try {
-        const parsed = JSON.parse(savedProjects) as LocalProject[];
+        const parsed = (JSON.parse(savedProjects) as LocalProject[]).map((project) =>
+          project.id === firstProject.id && project.code === legacyPlaygroundCode
+            ? { ...project, code: "" }
+            : project,
+        );
         if (parsed.length) {
           setProjects(parsed);
           const selected = parsed.find((project) => project.id === savedActiveProject) ?? parsed[0];
           setActiveProjectId(selected.id);
+          window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(parsed));
         }
       } catch {
         window.localStorage.removeItem("bjornsveen-python-projects");
       }
     }
+    if (savedEditorFontSize >= 15 && savedEditorFontSize <= 28) setEditorFontSize(savedEditorFontSize);
+    const handleFullscreenChange = () => setEditorFullscreen(document.fullscreenElement === workbenchRef.current);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
       workerRef.current?.terminate();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
+
+  function changeEditorFontSize(change: number) {
+    const next = Math.min(28, Math.max(15, editorFontSize + change));
+    setEditorFontSize(next);
+    window.localStorage.setItem("bjornsveen-editor-font-size", String(next));
+  }
+
+  async function toggleEditorFullscreen() {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+    if (!workbenchRef.current?.requestFullscreen) {
+      setShareStatus("Fullskjerm støttes ikke av denne nettleseren.");
+      return;
+    }
+    try {
+      await workbenchRef.current.requestFullscreen();
+    } catch {
+      setShareStatus("Nettleseren tillot ikke fullskjerm. Prøv knappen på nytt.");
+    }
+  }
 
   function chooseModule(module: Module) {
     setPlayground(false);
@@ -712,6 +1004,17 @@ export default function Home() {
     setOutput("Trykk «Kjør kode» når du er klar.");
   }
 
+  function tryProgressionCode(nextCode: string) {
+    setLabTab("practice");
+    setCode(nextCode);
+    setPracticeCodes((current) => ({ ...current, [active.id]: nextCode }));
+    setOutput("Forutsi resultatet, og trykk «Kjør kode» når du er klar.");
+    setFeedback("");
+    setPlotImages([]);
+    setExpandedPlotIndex(null);
+    requestAnimationFrame(() => document.getElementById("module-lab")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
   function selectProject(projectId: string) {
     const project = projects.find((item) => item.id === projectId);
     if (!project) return;
@@ -731,7 +1034,7 @@ export default function Home() {
     const project: LocalProject = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: safeProjectName(name),
-      code: "# Skriv Python-koden din her\n",
+      code: "",
       updatedAt: new Date().toISOString(),
     };
     const next = [...projects, project];
@@ -1132,8 +1435,10 @@ export default function Home() {
                 <button type="button" onClick={() => updateCode('import random\n\nfor _ in range(10):\n    print(random.randint(1, 6))')}>Kast en terning</button>
                 <button type="button" onClick={() => updateCode('def areal(lengde, bredde):\n    return lengde * bredde\n\nprint(areal(8, 5))')}>Lag en funksjon</button>
                 <button type="button" onClick={() => updateCode('import numpy as np\nimport matplotlib.pyplot as plt\n\nx = np.linspace(-5, 5, 100)\ny = x ** 2\n\nplt.plot(x, y)\nplt.title("Grafen til y = x²")\nplt.grid()\nplt.show()')}>Tegn en graf</button>
+                <button type="button" onClick={() => updateCode('from turtle import *\n\ncolor("#f06f51", "#f4c95d")\npensize(5)\n\nbegin_fill()\nfor side in range(4):\n    forward(120)\n    left(90)\nend_fill()\n\ndone()')}>Tegn et Turtle-kvadrat</button>
+                <button type="button" onClick={() => updateCode('from turtle import *\n\nbgcolor("#fffdf8")\ncolor("#2f6b5f")\npensize(3)\n\nfor lengde in range(10, 190, 6):\n    forward(lengde)\n    left(91)\n\ndone()')}>Lag en geometrisk spiral</button>
                 <button type="button" onClick={() => updateCode('import pandas as pd\n\ndata = {"navn": ["Ada", "Bo", "Celine"], "poeng": [8, 12, 10]}\ntabell = pd.DataFrame(data)\nprint(tabell.to_string(index=False))')}>Lag en tabell</button>
-                <button type="button" onClick={() => updateCode(playgroundCode)}>Tilbake til startkoden</button>
+                <button type="button" onClick={() => updateCode("")}>Tøm kodefeltet</button>
               </div>
             </section>
 
@@ -1171,7 +1476,7 @@ export default function Home() {
                 </div>
                 <div className="live-badge"><span /> Ekte Python i nettleseren</div>
               </div>
-              <div className="code-workbench">
+              <div className="code-workbench" ref={workbenchRef}>
                 <div className="editor-panel">
                   <div className="panel-bar">
                     <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
@@ -1179,6 +1484,12 @@ export default function Home() {
                     <span className="panel-tools">
                       <button type="button" onClick={copyCodeAsText}>Kopier kode + svar</button>
                       <button type="button" onClick={() => copyCodeAsImage(`${safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py`)}>Bilde av kode + svar</button>
+                      <span className="editor-size-controls" aria-label="Skriftstørrelse i kodefeltet">
+                        <button type="button" onClick={() => changeEditorFontSize(-2)} disabled={editorFontSize <= 15} aria-label="Mindre kodetekst">A−</button>
+                        <output aria-live="polite">{editorFontSize} px</output>
+                        <button type="button" onClick={() => changeEditorFontSize(2)} disabled={editorFontSize >= 28} aria-label="Større kodetekst">A+</button>
+                      </span>
+                      <button type="button" onClick={toggleEditorFullscreen} aria-pressed={editorFullscreen}>{editorFullscreen ? "Avslutt fullskjerm" : "Fullskjerm"}</button>
                     </span>
                   </div>
                   <label htmlFor="playground-code" className="sr-only">Skriv fri Python-kode</label>
@@ -1187,6 +1498,7 @@ export default function Home() {
                     value={code}
                     onChange={updateCode}
                     describedBy="playground-help"
+                    fontSize={editorFontSize}
                     tall
                   />
                   <div className="editor-footer" id="playground-help">
@@ -1211,6 +1523,10 @@ export default function Home() {
                 <div>
                   <strong>Datapakker som fungerer her</strong>
                   <p>NumPy, pandas, Matplotlib, SciPy, SymPy, scikit-learn, Pillow og NetworkX er med i den kuraterte skolepakken og lastes automatisk når de importeres.</p>
+                </div>
+                <div>
+                  <strong>Turtle for geometri og mønstre</strong>
+                  <p>Bruk <code>from turtle import *</code>. Tegn med blant annet <code>forward()</code>, <code>left()</code>, <code>right()</code>, <code>goto()</code>, <code>circle()</code>, farger og fyll. Tegningen vises som et bilde i resultatpanelet.</p>
                 </div>
                 <div>
                   <strong>Ikke helt som installert Python</strong>
@@ -1299,6 +1615,37 @@ export default function Home() {
             </div>
           </section>
 
+          <section className="content-section progression-section">
+            <div className="section-heading">
+              <div>
+                <p className="section-label"><span>+</span> Bygg kompetanse</p>
+                <h2>Små steg som bygger på hverandre</h2>
+              </div>
+              <p>{active.progression.intro}</p>
+            </div>
+            <div className="progression-grid">
+              {active.progression.steps.map((step, index) => (
+                <article className="progression-card" key={step.title}>
+                  <div className="progression-card-heading">
+                    <span>{index + 1}</span>
+                    <div><small>{step.label}</small><h3>{step.title}</h3></div>
+                  </div>
+                  <p>{step.body}</p>
+                  <pre><code>{step.code}</code></pre>
+                  <div className="progression-task"><strong>Prøv selv:</strong> {step.tryThis}</div>
+                  {step.upgrade && (
+                    <details className="progression-upgrade">
+                      <summary>✦ {step.upgrade.title}</summary>
+                      <p>{step.upgrade.body}</p>
+                      <pre><code>{step.upgrade.code}</code></pre>
+                    </details>
+                  )}
+                  <button type="button" onClick={() => tryProgressionCode(step.code)}>Prøv koden i laboratoriet</button>
+                </article>
+              ))}
+            </div>
+          </section>
+
           <section className="content-section polish-section">
             <details>
               <summary>
@@ -1319,7 +1666,7 @@ export default function Home() {
             </details>
           </section>
 
-          <section className="content-section lab-section">
+          <section className="content-section lab-section" id="module-lab">
             <div className="section-heading lab-heading">
               <div>
                 <p className="section-label inverse"><span>4</span> Python-laboratorium</p>
@@ -1348,7 +1695,7 @@ export default function Home() {
               <div className="solution-note"><strong>Fasit er ikke låst.</strong> Endre tall, tekst eller uttrykk, kjør på nytt og se hva som skjer.</div>
             )}
 
-            <div className="code-workbench module-workbench">
+            <div className="code-workbench module-workbench" ref={workbenchRef}>
               <div className="editor-panel">
                 <div className="panel-bar">
                   <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
@@ -1357,6 +1704,12 @@ export default function Home() {
                     <button type="button" onClick={copyCodeAsText}>Kopier kode + svar</button>
                     <button type="button" onClick={() => copyCodeAsImage("verksted.py")}>Bilde av kode + svar</button>
                     <button type="button" onClick={resetCurrentEditor}>{labTab === "practice" ? "Tøm editor" : "Tilbakestill fasit"}</button>
+                    <span className="editor-size-controls" aria-label="Skriftstørrelse i kodefeltet">
+                      <button type="button" onClick={() => changeEditorFontSize(-2)} disabled={editorFontSize <= 15} aria-label="Mindre kodetekst">A−</button>
+                      <output aria-live="polite">{editorFontSize} px</output>
+                      <button type="button" onClick={() => changeEditorFontSize(2)} disabled={editorFontSize >= 28} aria-label="Større kodetekst">A+</button>
+                    </span>
+                    <button type="button" onClick={toggleEditorFullscreen} aria-pressed={editorFullscreen}>{editorFullscreen ? "Avslutt fullskjerm" : "Fullskjerm"}</button>
                   </span>
                 </div>
                 <label htmlFor="python-code" className="sr-only">Python-kode</label>
@@ -1365,6 +1718,7 @@ export default function Home() {
                   value={code}
                   onChange={updateCode}
                   describedBy="editor-help"
+                  fontSize={editorFontSize}
                 />
                 <div className="editor-footer" id="editor-help">
                   <span>{labTab === "practice" ? "Skriv én linje om gangen. Feil er en del av øvingen." : "Du kan endre alt i fasiten."}</span>
