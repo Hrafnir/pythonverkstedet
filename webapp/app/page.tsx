@@ -83,6 +83,38 @@ type TurtleDrawing = {
   truncated?: boolean;
 };
 
+type TurtleVectorMode = "centerline" | "edges" | "outline";
+
+type TurtleWorkshopSettings = {
+  mode: TurtleVectorMode;
+  strokeWidthMm: number;
+  outputWidthMm: number;
+  color: string;
+  useCodeColors: boolean;
+  useCodeWidths: boolean;
+  includeFills: boolean;
+  includeText: boolean;
+  lineCap: "round" | "square";
+};
+
+type TurtlePath = {
+  points: [number, number][];
+  color: string;
+  widthMm: number;
+};
+
+const defaultTurtleWorkshop: TurtleWorkshopSettings = {
+  mode: "centerline",
+  strokeWidthMm: 1,
+  outputWidthMm: 150,
+  color: "#173f3a",
+  useCodeColors: true,
+  useCodeWidths: true,
+  includeFills: true,
+  includeText: false,
+  lineCap: "round",
+};
+
 const referenceCategories = ["Alle", "Kom i gang", "Styring", "Byggeklosser", "Utforske data", "Tegne og vise", "Videre"] as const;
 type ReferenceCategory = (typeof referenceCategories)[number];
 
@@ -1248,23 +1280,9 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
   );
 }
 
-function renderTurtleFrame(canvas: HTMLCanvasElement, drawing: TurtleDrawing, frame: number) {
-  const outputWidth = 1400;
+function turtleViewport(drawing: TurtleDrawing) {
   const requestedWidth = Math.max(400, drawing.canvasWidth || 1000);
   const requestedHeight = Math.max(300, drawing.canvasHeight || 700);
-  const outputHeight = Math.round(outputWidth * requestedHeight / requestedWidth);
-  canvas.width = outputWidth;
-  canvas.height = outputHeight;
-
-  const context = canvas.getContext("2d");
-  if (!context) return;
-  const layer = document.createElement("canvas");
-  layer.width = outputWidth;
-  layer.height = outputHeight;
-  const layerContext = layer.getContext("2d");
-  if (!layerContext) return;
-
-  const events = drawing.events.slice(0, Math.max(0, frame));
   const hasExplicitScreen = drawing.events.some((event) => event.kind === "screen");
   const coordinates: [number, number][] = hasExplicitScreen
     ? [[-requestedWidth / 2, -requestedHeight / 2], [requestedWidth / 2, requestedHeight / 2]]
@@ -1287,7 +1305,163 @@ function renderTurtleFrame(canvas: HTMLCanvasElement, drawing: TurtleDrawing, fr
   const spanY = Math.max(hasExplicitScreen ? requestedHeight : minimumAutoHeight, maxY - minY);
   const centerX = (minX + maxX) / 2;
   const centerY = (minY + maxY) / 2;
-  const scale = Math.min(outputWidth * 0.92 / spanX, outputHeight * 0.92 / spanY);
+  const outputRatio = requestedWidth / requestedHeight;
+  let worldWidth = spanX / 0.92;
+  let worldHeight = spanY / 0.92;
+  if (worldWidth / worldHeight > outputRatio) worldHeight = worldWidth / outputRatio;
+  else worldWidth = worldHeight * outputRatio;
+  return { requestedWidth, requestedHeight, centerX, centerY, worldWidth, worldHeight };
+}
+
+function finalTurtleEvents(events: TurtleEvent[]) {
+  let lastClear = -1;
+  events.forEach((event, index) => { if (event.kind === "clear") lastClear = index; });
+  return events.slice(lastClear + 1);
+}
+
+function samePoint(a: [number, number], b: [number, number]) {
+  return Math.abs(a[0] - b[0]) < 0.0001 && Math.abs(a[1] - b[1]) < 0.0001;
+}
+
+function turtlePaths(events: TurtleEvent[], settings: TurtleWorkshopSettings) {
+  const paths: TurtlePath[] = [];
+  let current: TurtlePath | null = null;
+  for (const event of finalTurtleEvents(events)) {
+    if (event.kind !== "line" || event.x1 === undefined || event.y1 === undefined || event.x2 === undefined || event.y2 === undefined) {
+      if (event.kind === "move") current = null;
+      continue;
+    }
+    const color = settings.useCodeColors ? (event.color || settings.color) : settings.color;
+    const widthMm = settings.useCodeWidths ? Math.max(0.1, (event.width || 2.5) * 0.12) : settings.strokeWidthMm;
+    const start: [number, number] = [event.x1, event.y1];
+    const end: [number, number] = [event.x2, event.y2];
+    if (!current || current.color !== color || current.widthMm !== widthMm || !samePoint(current.points[current.points.length - 1], start)) {
+      current = { points: [start, end], color, widthMm };
+      paths.push(current);
+    } else {
+      current.points.push(end);
+    }
+  }
+  return paths;
+}
+
+function offsetTurtlePath(points: [number, number][], distance: number) {
+  if (points.length < 2) return { left: points, right: points, closed: false };
+  const closed = points.length > 2 && samePoint(points[0], points[points.length - 1]);
+  const source = closed ? points.slice(0, -1) : points;
+  const normal = (start: [number, number], end: [number, number]) => {
+    const dx = end[0] - start[0];
+    const dy = end[1] - start[1];
+    const length = Math.hypot(dx, dy) || 1;
+    return [-dy / length, dx / length] as [number, number];
+  };
+  const offsetPoint = (index: number, side: number) => {
+    const point = source[index];
+    const previousIndex = index === 0 ? (closed ? source.length - 1 : 0) : index - 1;
+    const nextIndex = index === source.length - 1 ? (closed ? 0 : source.length - 1) : index + 1;
+    const previousNormal = normal(source[previousIndex], point);
+    const nextNormal = normal(point, source[nextIndex]);
+    if (!closed && index === 0) return [point[0] + nextNormal[0] * distance * side, point[1] + nextNormal[1] * distance * side] as [number, number];
+    if (!closed && index === source.length - 1) return [point[0] + previousNormal[0] * distance * side, point[1] + previousNormal[1] * distance * side] as [number, number];
+    const sumX = previousNormal[0] + nextNormal[0];
+    const sumY = previousNormal[1] + nextNormal[1];
+    const sumLength = Math.hypot(sumX, sumY);
+    if (sumLength < 0.001) return [point[0] + nextNormal[0] * distance * side, point[1] + nextNormal[1] * distance * side] as [number, number];
+    const miterX = sumX / sumLength;
+    const miterY = sumY / sumLength;
+    const denominator = Math.max(0.25, Math.abs(miterX * nextNormal[0] + miterY * nextNormal[1]));
+    const miterDistance = Math.min(distance * 4, distance / denominator) * side;
+    return [point[0] + miterX * miterDistance, point[1] + miterY * miterDistance] as [number, number];
+  };
+  const left = source.map((_, index) => offsetPoint(index, 1));
+  const right = source.map((_, index) => offsetPoint(index, -1));
+  if (closed) {
+    left.push(left[0]);
+    right.push(right[0]);
+  }
+  return { left, right, closed };
+}
+
+function xmlEscape(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function createTurtleSvg(drawing: TurtleDrawing, settings: TurtleWorkshopSettings) {
+  const viewport = turtleViewport(drawing);
+  const widthMm = Math.max(20, settings.outputWidthMm);
+  const heightMm = widthMm * viewport.worldHeight / viewport.worldWidth;
+  const worldUnitsPerMm = viewport.worldWidth / widthMm;
+  const hairlineWorld = 0.1 * worldUnitsPerMm;
+  const viewLeft = viewport.centerX - viewport.worldWidth / 2;
+  const viewTop = -viewport.centerY - viewport.worldHeight / 2;
+  const coordinate = ([x, y]: [number, number]) => `${Number(x.toFixed(4))},${Number((-y).toFixed(4))}`;
+  const openPath = (points: [number, number][]) => points.map((point, index) => `${index ? "L" : "M"}${coordinate(point)}`).join(" ");
+  const vectorElements: string[] = [];
+  const fillElements: string[] = [];
+  const textElements: string[] = [];
+
+  for (const path of turtlePaths(drawing.events, settings)) {
+    if (path.points.length < 2) continue;
+    const color = xmlEscape(path.color);
+    const strokeWorld = Math.max(0.05, path.widthMm) * worldUnitsPerMm;
+    if (settings.mode === "centerline") {
+      vectorElements.push(`<path d="${openPath(path.points)}" fill="none" stroke="${color}" stroke-width="${strokeWorld}" stroke-linecap="${settings.lineCap}" stroke-linejoin="round"/>`);
+      continue;
+    }
+    const offsets = offsetTurtlePath(path.points, strokeWorld / 2);
+    if (settings.mode === "edges" || offsets.closed) {
+      vectorElements.push(`<path d="${openPath(offsets.left)}" fill="none" stroke="${color}" stroke-width="${hairlineWorld}" stroke-linejoin="round"/>`);
+      vectorElements.push(`<path d="${openPath(offsets.right)}" fill="none" stroke="${color}" stroke-width="${hairlineWorld}" stroke-linejoin="round"/>`);
+    } else {
+      const outline = [...offsets.left, ...offsets.right.slice().reverse()];
+      vectorElements.push(`<path d="${openPath(outline)} Z" fill="none" stroke="${color}" stroke-width="${hairlineWorld}" stroke-linejoin="round"/>`);
+    }
+  }
+
+  if (settings.includeFills) {
+    for (const event of finalTurtleEvents(drawing.events)) {
+      const color = xmlEscape(settings.useCodeColors ? (event.color || settings.color) : settings.color);
+      if (event.kind === "fill" && event.points && event.points.length >= 3) {
+        fillElements.push(`<path d="${openPath(event.points)} Z" fill="${color}" stroke="none"/>`);
+      }
+      if (event.kind === "dot" && event.x !== undefined && event.y !== undefined) {
+        const radius = Math.max(0.05 * worldUnitsPerMm, (event.size || 6) / 2);
+        fillElements.push(`<circle cx="${event.x}" cy="${-event.y}" r="${radius}" fill="${color}"/>`);
+      }
+    }
+  }
+
+  if (settings.includeText) {
+    for (const event of finalTurtleEvents(drawing.events)) {
+      if (event.kind !== "text" || event.x === undefined || event.y === undefined) continue;
+      const color = xmlEscape(settings.useCodeColors ? (event.color || settings.color) : settings.color);
+      const anchor = event.align === "center" ? "middle" : event.align === "right" ? "end" : "start";
+      textElements.push(`<text x="${event.x}" y="${-event.y}" fill="${color}" font-family="Arial, sans-serif" font-size="${event.size || 12}" text-anchor="${anchor}">${xmlEscape(event.text || "")}</text>`);
+    }
+  }
+
+  const modeNames: Record<TurtleVectorMode, string> = { centerline: "senterlinje", edges: "to ytterlinjer", outline: "lukket omriss" };
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${widthMm}mm" height="${Number(heightMm.toFixed(2))}mm" viewBox="${viewLeft} ${viewTop} ${viewport.worldWidth} ${viewport.worldHeight}">\n  <title>${xmlEscape(drawing.title || "Turtle-tegning")}</title>\n  <desc>Laget i Bjørnsveen Pythonverksted. Vektortype: ${modeNames[settings.mode]}. Transparent bakgrunn.</desc>\n  <g id="turtle-vektorer">\n    ${[...fillElements, ...vectorElements, ...textElements].join("\n    ")}\n  </g>\n</svg>\n`;
+}
+
+function renderTurtleFrame(canvas: HTMLCanvasElement, drawing: TurtleDrawing, frame: number, workshop = defaultTurtleWorkshop) {
+  const outputWidth = 1400;
+  const viewport = turtleViewport(drawing);
+  const { requestedWidth, requestedHeight, centerX, centerY } = viewport;
+  const outputHeight = Math.round(outputWidth * requestedHeight / requestedWidth);
+  canvas.width = outputWidth;
+  canvas.height = outputHeight;
+
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  const layer = document.createElement("canvas");
+  layer.width = outputWidth;
+  layer.height = outputHeight;
+  const layerContext = layer.getContext("2d");
+  if (!layerContext) return;
+
+  const events = drawing.events.slice(0, Math.max(0, frame));
+  const scale = outputWidth / viewport.worldWidth;
   const point = (x = 0, y = 0) => ({
     x: outputWidth / 2 + (x - centerX) * scale,
     y: outputHeight / 2 - (y - centerY) * scale,
@@ -1312,16 +1486,40 @@ function renderTurtleFrame(canvas: HTMLCanvasElement, drawing: TurtleDrawing, fr
     if (event.kind === "line") {
       const start = point(event.x1, event.y1);
       const end = point(event.x2, event.y2);
-      layerContext.beginPath();
-      layerContext.moveTo(start.x, start.y);
-      layerContext.lineTo(end.x, end.y);
-      layerContext.strokeStyle = event.color || "#173f3a";
-      layerContext.lineWidth = Math.max(1, (event.width || 2.5) * Math.min(2.2, Math.max(1, scale / 8)));
-      layerContext.lineCap = "round";
-      layerContext.lineJoin = "round";
-      layerContext.stroke();
+      const color = workshop.useCodeColors ? (event.color || workshop.color) : workshop.color;
+      const widthMm = workshop.useCodeWidths ? Math.max(0.1, (event.width || 2.5) * 0.12) : workshop.strokeWidthMm;
+      const strokePixels = Math.max(1, widthMm / Math.max(20, workshop.outputWidthMm) * outputWidth);
+      const drawLine = (x1: number, y1: number, x2: number, y2: number, width: number) => {
+        layerContext.beginPath();
+        layerContext.moveTo(x1, y1);
+        layerContext.lineTo(x2, y2);
+        layerContext.strokeStyle = color;
+        layerContext.lineWidth = width;
+        layerContext.lineCap = workshop.lineCap;
+        layerContext.lineJoin = "round";
+        layerContext.stroke();
+      };
+      if (workshop.mode === "centerline") {
+        drawLine(start.x, start.y, end.x, end.y, strokePixels);
+      } else {
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const length = Math.hypot(dx, dy) || 1;
+        const offsetX = -dy / length * strokePixels / 2;
+        const offsetY = dx / length * strokePixels / 2;
+        if (workshop.mode === "outline") {
+          layerContext.save();
+          layerContext.globalAlpha = 0.12;
+          drawLine(start.x, start.y, end.x, end.y, strokePixels);
+          layerContext.restore();
+        }
+        const edgeWidth = Math.max(1.5, outputWidth / Math.max(20, workshop.outputWidthMm) * 0.1);
+        drawLine(start.x + offsetX, start.y + offsetY, end.x + offsetX, end.y + offsetY, edgeWidth);
+        drawLine(start.x - offsetX, start.y - offsetY, end.x - offsetX, end.y - offsetY, edgeWidth);
+      }
     }
     if (event.kind === "fill" && event.points && event.points.length >= 3) {
+      if (!workshop.includeFills) continue;
       layerContext.save();
       layerContext.globalCompositeOperation = "destination-over";
       layerContext.beginPath();
@@ -1331,20 +1529,22 @@ function renderTurtleFrame(canvas: HTMLCanvasElement, drawing: TurtleDrawing, fr
         else layerContext.lineTo(next.x, next.y);
       });
       layerContext.closePath();
-      layerContext.fillStyle = event.color || "#f4c95d";
+      layerContext.fillStyle = workshop.useCodeColors ? (event.color || workshop.color) : workshop.color;
       layerContext.fill();
       layerContext.restore();
     }
     if (event.kind === "dot") {
+      if (!workshop.includeFills) continue;
       const center = point(event.x, event.y);
       layerContext.beginPath();
       layerContext.arc(center.x, center.y, Math.max(2, (event.size || 6) * scale / 2), 0, Math.PI * 2);
-      layerContext.fillStyle = event.color || "#173f3a";
+      layerContext.fillStyle = workshop.useCodeColors ? (event.color || workshop.color) : workshop.color;
       layerContext.fill();
     }
     if (event.kind === "text") {
+      if (!workshop.includeText) continue;
       const textPoint = point(event.x, event.y);
-      layerContext.fillStyle = event.color || "#173f3a";
+      layerContext.fillStyle = workshop.useCodeColors ? (event.color || workshop.color) : workshop.color;
       layerContext.font = `${Math.max(13, (event.size || 12) * Math.min(2, Math.max(1, scale / 8)))}px Arial, sans-serif`;
       layerContext.textAlign = event.align || "left";
       layerContext.textBaseline = "bottom";
@@ -1380,15 +1580,19 @@ function renderTurtleFrame(canvas: HTMLCanvasElement, drawing: TurtleDrawing, fr
   canvas.dataset.turtleTitle = title;
 }
 
-function TurtlePlayer({ drawing, onDownload, onExpand, large = false }: {
+function TurtlePlayer({ drawing, settings, onSettingsChange, onDownload, onDownloadSvg, onExpand, large = false }: {
   drawing: TurtleDrawing;
-  onDownload: () => void;
+  settings: TurtleWorkshopSettings;
+  onSettingsChange: (settings: TurtleWorkshopSettings) => void;
+  onDownload: (settings: TurtleWorkshopSettings) => void;
+  onDownloadSvg: (settings: TurtleWorkshopSettings) => void;
   onExpand?: () => void;
   large?: boolean;
 }) {
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
+  const [colorDraft, setColorDraft] = useState(settings.color);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastFrame = drawing.events.length;
 
@@ -1397,9 +1601,11 @@ function TurtlePlayer({ drawing, onDownload, onExpand, large = false }: {
     setPlaying(true);
   }, [drawing]);
 
+  useEffect(() => setColorDraft(settings.color), [settings.color]);
+
   useEffect(() => {
-    if (canvasRef.current) renderTurtleFrame(canvasRef.current, drawing, frame);
-  }, [drawing, frame]);
+    if (canvasRef.current) renderTurtleFrame(canvasRef.current, drawing, frame, settings);
+  }, [drawing, frame, settings]);
 
   useEffect(() => {
     if (!playing || frame >= lastFrame) {
@@ -1410,6 +1616,21 @@ function TurtlePlayer({ drawing, onDownload, onExpand, large = false }: {
     return () => window.clearTimeout(timer);
   }, [frame, lastFrame, playing, speed]);
 
+  const svgHeight = settings.outputWidthMm * turtleViewport(drawing).worldHeight / turtleViewport(drawing).worldWidth;
+  const modeHelp: Record<TurtleVectorMode, string> = {
+    centerline: "Én vektor midt i streken. Passer til lasergravering, penn og plotter.",
+    edges: "To åpne vektorer langs hver ytterkant. Nyttig når begge kantene skal bearbeides.",
+    outline: "Et lukket omriss rundt streken. Dette er vanligst til vinylkutting og utskjæring.",
+  };
+  const updateWorkshop = <Key extends keyof TurtleWorkshopSettings,>(key: Key, value: TurtleWorkshopSettings[Key]) => {
+    onSettingsChange({ ...settings, [key]: value });
+  };
+  const applyColorDraft = () => {
+    const normalized = colorDraft.trim();
+    if (/^#[0-9a-f]{6}$/i.test(normalized)) updateWorkshop("color", normalized.toLowerCase());
+    else setColorDraft(settings.color);
+  };
+
   return (
     <figure className={`turtle-player ${large ? "is-large" : ""}`}>
       <div className="turtle-heading">
@@ -1418,6 +1639,68 @@ function TurtlePlayer({ drawing, onDownload, onExpand, large = false }: {
       </div>
       <div className="turtle-canvas-wrap">
         <canvas ref={canvasRef} aria-label={`${drawing.title || "Turtle-tegning"}, steg ${frame} av ${lastFrame}`} />
+        <details className="turtle-maker-menu">
+          <summary><span>◇</span> Skaperverksted</summary>
+          <div className="turtle-maker-panel">
+            <header>
+              <div><small>SVG-VERKTØY</small><strong>Gjør mønsteret klart for maskinen</strong></div>
+              <span>{settings.outputWidthMm.toFixed(0)} × {svgHeight.toFixed(0)} mm</span>
+            </header>
+            <label>Vektortype
+              <select value={settings.mode} onChange={(event) => updateWorkshop("mode", event.target.value as TurtleVectorMode)}>
+                <option value="centerline">Senterlinje</option>
+                <option value="edges">To ytterlinjer</option>
+                <option value="outline">Lukket omriss</option>
+              </select>
+            </label>
+            <p className="maker-mode-help">{modeHelp[settings.mode]}</p>
+            <div className="maker-number-grid">
+              <label>Strektykkelse
+                <span><input type="number" min="0.1" max="50" step="0.1" value={settings.strokeWidthMm} disabled={settings.useCodeWidths} onChange={(event) => updateWorkshop("strokeWidthMm", Math.min(50, Math.max(0.1, Number(event.target.value) || 0.1)))} /> mm</span>
+              </label>
+              <label>Ferdig bredde
+                <span><input type="number" min="20" max="1000" step="5" value={settings.outputWidthMm} onChange={(event) => updateWorkshop("outputWidthMm", Math.min(1000, Math.max(20, Number(event.target.value) || 20)))} /> mm</span>
+              </label>
+            </div>
+            <label className="maker-range"><span>Tykkelse i forhåndsvisningen</span>
+              <input type="range" min="0.1" max="20" step="0.1" value={Math.min(20, settings.strokeWidthMm)} disabled={settings.useCodeWidths} onChange={(event) => updateWorkshop("strokeWidthMm", Number(event.target.value))} />
+            </label>
+            <label className="maker-check"><input type="checkbox" checked={settings.useCodeWidths} onChange={(event) => updateWorkshop("useCodeWidths", event.target.checked)} /> Behold tykkelser fra Python-koden</label>
+            <div className="maker-color-row">
+              <label>Vektorfarge
+                <span className="maker-color-inputs">
+                  <input type="color" value={settings.color} disabled={settings.useCodeColors} onChange={(event) => updateWorkshop("color", event.target.value)} />
+                  <input
+                    type="text"
+                    aria-label="Fargekode"
+                    value={colorDraft}
+                    disabled={settings.useCodeColors}
+                    onChange={(event) => setColorDraft(event.target.value)}
+                    onBlur={applyColorDraft}
+                    onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+                    spellCheck={false}
+                  />
+                </span>
+              </label>
+              <label className="maker-check"><input type="checkbox" checked={settings.useCodeColors} onChange={(event) => updateWorkshop("useCodeColors", event.target.checked)} /> Behold farger fra Python</label>
+            </div>
+            <div className="maker-options">
+              <label className="maker-check"><input type="checkbox" checked={settings.includeFills} onChange={(event) => updateWorkshop("includeFills", event.target.checked)} /> Ta med fyll og prikker</label>
+              <label className="maker-check"><input type="checkbox" checked={settings.includeText} onChange={(event) => updateWorkshop("includeText", event.target.checked)} /> Ta med tekst</label>
+              <label>Strekender på senterlinje
+                <select value={settings.lineCap} onChange={(event) => updateWorkshop("lineCap", event.target.value as "round" | "square")}>
+                  <option value="round">Runde</option>
+                  <option value="square">Rette</option>
+                </select>
+              </label>
+            </div>
+            {settings.includeText && <p className="maker-warning">Tekst lagres som redigerbar SVG-tekst. Gjør teksten om til kurver i vektorprogrammet før kutting.</p>}
+            <footer>
+              <span>Transparent bakgrunn · ekte vektorer</span>
+              <button type="button" onClick={() => onDownloadSvg(settings)}>Last ned SVG</button>
+            </footer>
+          </div>
+        </details>
       </div>
       <div className="turtle-timeline">
         <input
@@ -1450,7 +1733,8 @@ function TurtlePlayer({ drawing, onDownload, onExpand, large = false }: {
         </label>
         <div className="turtle-actions">
           {onExpand && <button type="button" onClick={onExpand}>Åpne stort</button>}
-          <button type="button" onClick={onDownload}>Lagre PNG</button>
+          <button type="button" onClick={() => onDownload(settings)}>Lagre PNG</button>
+          <button className="turtle-svg-button" type="button" onClick={() => onDownloadSvg(settings)}>Lagre SVG</button>
         </div>
       </figcaption>
       {drawing.truncated && <p className="turtle-warning">Tegningen har over 5000 steg. De første 5000 vises for å holde appen rask.</p>}
@@ -1478,6 +1762,7 @@ export default function Home() {
   const [plotImages, setPlotImages] = useState<string[]>([]);
   const [expandedPlotIndex, setExpandedPlotIndex] = useState<number | null>(null);
   const [turtleDrawing, setTurtleDrawing] = useState<TurtleDrawing | null>(null);
+  const [turtleWorkshop, setTurtleWorkshop] = useState<TurtleWorkshopSettings>(defaultTurtleWorkshop);
   const [turtleExpanded, setTurtleExpanded] = useState(false);
   const [editorFontSize, setEditorFontSize] = useState(19);
   const [editorFullscreen, setEditorFullscreen] = useState(false);
@@ -1848,7 +2133,7 @@ export default function Home() {
     const visualSources = plotImages.map((plotImage) => `data:image/png;base64,${plotImage}`);
     if (turtleDrawing) {
       const turtleCanvas = document.createElement("canvas");
-      renderTurtleFrame(turtleCanvas, turtleDrawing, turtleDrawing.events.length);
+      renderTurtleFrame(turtleCanvas, turtleDrawing, turtleDrawing.events.length, turtleWorkshop);
       visualSources.unshift(turtleCanvas.toDataURL("image/png"));
     }
     const plots = await Promise.all(visualSources.map(async (plotSource) => {
@@ -1930,17 +2215,34 @@ export default function Home() {
     setShareStatus("Grafen er lagret som PNG-bilde.");
   }
 
-  function downloadTurtle() {
+  function turtleBaseName() {
+    const activeProject = projects.find((item) => item.id === activeProjectId);
+    return playground ? safeProjectName(activeProject?.name ?? "turtle-tegning") : `modul-${active.id}-turtle`;
+  }
+
+  function downloadTurtle(settings: TurtleWorkshopSettings) {
     if (!turtleDrawing) return;
     const canvas = document.createElement("canvas");
-    renderTurtleFrame(canvas, turtleDrawing, turtleDrawing.events.length);
-    const activeProject = projects.find((item) => item.id === activeProjectId);
-    const baseName = playground ? safeProjectName(activeProject?.name ?? "turtle-tegning") : `modul-${active.id}-turtle`;
+    renderTurtleFrame(canvas, turtleDrawing, turtleDrawing.events.length, settings);
     const anchor = document.createElement("a");
     anchor.href = canvas.toDataURL("image/png");
-    anchor.download = `${baseName}.png`;
+    anchor.download = `${turtleBaseName()}.png`;
     anchor.click();
-    setShareStatus("Turtle-tegningen er lagret som et skarpt PNG-bilde.");
+    setShareStatus("Turtle-forhåndsvisningen er lagret som et skarpt PNG-bilde.");
+  }
+
+  function downloadTurtleSvg(settings: TurtleWorkshopSettings) {
+    if (!turtleDrawing) return;
+    const svg = createTurtleSvg(turtleDrawing, settings);
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${turtleBaseName()}-${settings.mode}.svg`;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const modeNames: Record<TurtleVectorMode, string> = { centerline: "senterlinje", edges: "to ytterlinjer", outline: "lukket omriss" };
+    setShareStatus(`SVG med ${modeNames[settings.mode]} er lagret i riktig millimeterstørrelse.`);
   }
 
   function plotGallery() {
@@ -1950,7 +2252,10 @@ export default function Home() {
         {turtleDrawing && (
           <TurtlePlayer
             drawing={turtleDrawing}
+            settings={turtleWorkshop}
+            onSettingsChange={setTurtleWorkshop}
             onDownload={downloadTurtle}
+            onDownloadSvg={downloadTurtleSvg}
             onExpand={() => setTurtleExpanded(true)}
           />
         )}
@@ -2345,7 +2650,7 @@ export default function Home() {
                 </div>
                 <div>
                   <strong>Turtle for geometri og mønstre</strong>
-                  <p>Bruk <code>from turtle import *</code>. Tegn med blant annet <code>forward()</code>, <code>left()</code>, <code>right()</code>, <code>goto()</code>, <code>circle()</code>, farger og fyll. Canvaset kan spilles av steg for steg, pauses, åpnes stort og lagres som PNG.</p>
+                  <p>Bruk <code>from turtle import *</code>. Tegn med blant annet <code>forward()</code>, <code>left()</code>, <code>right()</code>, <code>goto()</code>, <code>circle()</code>, farger og fyll. Canvaset kan spilles av steg for steg, åpnes stort og lagres som PNG eller ekte SVG-vektorer til skaperverkstedet.</p>
                 </div>
                 <div>
                   <strong>Ikke helt som installert Python</strong>
@@ -2652,7 +2957,14 @@ export default function Home() {
               <strong>Stegvis Turtle-tegning</strong>
               <button type="button" className="plot-close" onClick={() => setTurtleExpanded(false)} aria-label="Lukk stor Turtle-visning">Lukk</button>
             </div>
-            <TurtlePlayer drawing={turtleDrawing} onDownload={downloadTurtle} large />
+            <TurtlePlayer
+              drawing={turtleDrawing}
+              settings={turtleWorkshop}
+              onSettingsChange={setTurtleWorkshop}
+              onDownload={downloadTurtle}
+              onDownloadSvg={downloadTurtleSvg}
+              large
+            />
           </div>
         </div>
       )}

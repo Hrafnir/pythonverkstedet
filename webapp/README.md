@@ -18,6 +18,7 @@ Digitalt hefte og Python-laboratorium for matematikk på 8.–10. trinn.
 - kopiering av kode som formatert tekst eller bilde
 - støtte for Pyodide-pakker som NumPy, pandas og Matplotlib
 - lokal Turtle-tegning for geometri, mønstre, farger og fyll, med stegvis avspilling, variabel hastighet og høyoppløselig canvas
+- Skaperverksted-meny med ekte SVG-eksport i millimeter, farge- og tykkelsesvalg, senterlinje, ytterlinjer og lukket kutteomriss
 - kodeeditor med Tab-innrykk, justerbar skriftstørrelse og fullskjerm
 
 ## Lokal utvikling
