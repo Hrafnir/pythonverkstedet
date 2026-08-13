@@ -244,13 +244,27 @@ a { color: inherit; text-decoration: none; }
 .lab-tabs button.is-active { border-color: var(--yellow); background: #2a5a53; box-shadow: 0 0 0 2px #f4c95d22; }
 .lab-tabs button.is-active > span { background: var(--yellow); color: #21312e; }
 .typing-guide, .solution-note { max-width: 1060px; margin: 0 auto 18px; border: 1px solid #4f6d66; border-radius: 12px; background: #102f2b; }
-.typing-guide { display: grid; grid-template-columns: .8fr 1.2fr; gap: 28px; padding: 24px; }
+.typing-guide { display: grid; grid-template-columns: minmax(220px, .65fr) minmax(0, 1.35fr); gap: 28px; padding: 24px; }
 .typing-guide > div { display: grid; align-content: start; }
 .typing-guide h3 { margin: 9px 0 3px; font-size: 22px; }
 .typing-guide p { margin: 0; color: #9eb5ae; font-size: 14px; line-height: 1.55; }
 .keyboard-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 10px; background: #2c5c54; color: var(--yellow); }
-.typing-guide ol { display: grid; gap: 9px; margin: 0; padding-left: 25px; color: #dbe9e4; font-size: 15px; line-height: 1.5; }
-.typing-guide li::marker { color: var(--yellow); font-family: var(--mono); font-weight: 800; }
+.typing-legend { display: grid; gap: 8px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #ffffff18; color: #baccc6; font-size: 11px; font-weight: 750; }
+.typing-legend span { display: flex; align-items: center; gap: 8px; }
+.typing-legend i { width: 18px; height: 9px; border-radius: 3px; }
+.legend-code { border: 1px solid #f4c95d; background: #071f1c; }
+.legend-explanation { border-left: 3px solid #6fd79f; background: #214a45; }
+.typing-guide .typing-steps { display: grid; gap: 11px; margin: 0; padding: 0; list-style: none; color: #dbe9e4; }
+.typing-steps li { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 11px; padding: 13px; border: 1px solid #42635b; border-radius: 10px; background: #143733; }
+.typing-step-number { display: grid; place-items: center; align-self: start; width: 34px; height: 34px; border-radius: 8px; background: var(--yellow); color: #263a35; font-family: var(--mono); font-size: 11px; font-weight: 900; }
+.typing-step-kind { display: block; margin: 1px 0 7px; color: var(--yellow); font-size: 9px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+.typing-steps code { display: block; margin: 0 0 9px; padding: 10px 12px; border: 1px solid #6d7650; border-left: 4px solid var(--yellow); border-radius: 7px; background: #071f1c; color: #f5f7ed; font-family: var(--mono); font-size: 15px; font-weight: 650; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4; }
+.typing-explanation { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 9px; align-items: start; padding: 8px 10px; border-left: 3px solid #6fd79f; border-radius: 0 6px 6px 0; background: #214a45; }
+.typing-explanation strong { padding-top: 2px; color: #91dcb1; font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.typing-guide .typing-explanation p { color: #cfddd8; font-size: 12px; line-height: 1.45; }
+.typing-steps .is-action-step { border-color: #4f756b; background: #193f3a; }
+.typing-steps .is-action-step .typing-step-number { background: #6fd79f; }
+.typing-steps .is-action-step .typing-step-kind { color: #91dcb1; }
 .solution-note { padding: 15px 18px; color: #bfd2cb; font-size: 14px; }
 .solution-note strong { color: var(--yellow); }
 .code-workbench { max-width: 1060px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, .8fr); border: 1px solid #49665f; border-radius: 15px; overflow: hidden; box-shadow: 0 24px 50px #071f1c55; }
@@ -588,6 +602,10 @@ a { color: inherit; text-decoration: none; }
   .python-editor, .syntax-layer, .syntax-input, .python-editor.is-tall, .python-editor.is-tall .syntax-layer, .python-editor.is-tall .syntax-input { min-height: 340px; }
   .syntax-layer, .syntax-input { padding: 20px 17px; font-size: var(--editor-font-size, 19px); }
   .lab-tabs { grid-template-columns: 1fr; }
+  .typing-guide { padding: 17px; }
+  .typing-steps li { grid-template-columns: 32px minmax(0, 1fr); gap: 8px; padding: 10px; }
+  .typing-step-number { width: 30px; height: 30px; }
+  .typing-explanation { grid-template-columns: 1fr; gap: 3px; }
   .polish-section summary { align-items: flex-start; padding: 18px; }
   .polish-open { display: none; }
   .polish-content { padding: 20px; }
