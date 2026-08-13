@@ -124,6 +124,21 @@ test("Turtle kan spilles av stegvis uten komprimerte mellombilder", () => {
   assert.doesNotMatch(worker, /_turtle_frames/);
 });
 
+test("Turtle har SVG-verktøy for vinylkutter og laser", () => {
+  assert.match(page, /Skaperverksted/);
+  assert.match(page, /function createTurtleSvg/);
+  assert.match(page, /widthMm/);
+  assert.match(page, /image\/svg\+xml/);
+  assert.match(page, /Senterlinje/);
+  assert.match(page, /To ytterlinjer/);
+  assert.match(page, /Lukket omriss/);
+  assert.match(page, /Behold farger fra Python/);
+  assert.match(page, /Fargekode/);
+  assert.match(page, /Behold tykkelser fra Python-koden/);
+  assert.match(page, /Last ned SVG/);
+  assert.match(page, /offsetTurtlePath/);
+});
+
 test("elev- og lærermodus finnes", () => {
   assert.match(page, /Elevmodus/);
   assert.match(page, /Lærermodus/);

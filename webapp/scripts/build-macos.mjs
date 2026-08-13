@@ -25,9 +25,9 @@ await mkdir(packageRoot, { recursive: true });
 run(process.execPath, [path.join(root, "scripts", "download-pyodide.mjs")]);
 run("npm", ["run", "build"]);
 
-run("ditto", ["--noextattr", "--norsrc", path.join(root, "github-dist"), path.join(packageRoot, "github-dist")]);
-run("ditto", ["--noextattr", "--norsrc", path.join(root, "desktop", "pyodide"), path.join(packageRoot, "github-dist", "pyodide")]);
-run("ditto", ["--noextattr", "--norsrc", path.join(root, "desktop"), path.join(packageRoot, "desktop")]);
+await cp(path.join(root, "github-dist"), path.join(packageRoot, "github-dist"), { recursive: true });
+await cp(path.join(root, "desktop", "pyodide"), path.join(packageRoot, "github-dist", "pyodide"), { recursive: true });
+await cp(path.join(root, "desktop"), path.join(packageRoot, "desktop"), { recursive: true });
 await writeFile(path.join(packageRoot, "package.json"), `${JSON.stringify({
   name: "bjornsveen-pythonverksted-desktop",
   version,
@@ -42,7 +42,7 @@ await mkdir(appDir, { recursive: true });
 run("ditto", ["--noextattr", "--norsrc", path.join(root, "node_modules", "electron", "dist", "Electron.app"), appPath]);
 const resourcesDir = path.join(appPath, "Contents", "Resources");
 await rm(path.join(resourcesDir, "default_app.asar"), { force: true });
-run("ditto", ["--noextattr", "--norsrc", packageRoot, path.join(resourcesDir, "app")]);
+await cp(packageRoot, path.join(resourcesDir, "app"), { recursive: true });
 const iconset = path.join(workRoot, "kodeormen.iconset");
 await mkdir(iconset, { recursive: true });
 const iconMaster = path.join(root, "public", "brand", "kodeormen-master.png");
@@ -89,7 +89,7 @@ if (signIdentity) {
 
 const dmgStaging = path.join(workRoot, "dmg-staging");
 await mkdir(dmgStaging, { recursive: true });
-run("ditto", ["--noextattr", "--norsrc", appPath, path.join(dmgStaging, `${productName}.app`)]);
+await cp(appPath, path.join(dmgStaging, `${productName}.app`), { recursive: true });
 await cp(path.join(root, "desktop", "IT-README.txt"), path.join(dmgStaging, "LES-MEG-IT.txt"));
 const workDmgPath = path.join(workRoot, `${productName}-${version}-arm64.dmg`);
 const dmgPath = path.join(outRoot, path.basename(workDmgPath));
@@ -107,7 +107,7 @@ if (process.env.MAC_INSTALLER_IDENTITY) productArgs.push("--sign", process.env.M
 productArgs.push(workPkgPath);
 run("productbuild", productArgs);
 const finalAppDir = path.join(outRoot, path.basename(appDir));
-run("ditto", ["--noextattr", "--norsrc", appDir, finalAppDir]);
+await cp(appDir, finalAppDir, { recursive: true });
 run("xattr", ["-cr", finalAppDir]);
 await cp(workDmgPath, dmgPath);
 await cp(workPkgPath, pkgPath);

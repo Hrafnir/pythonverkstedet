@@ -10,6 +10,8 @@ Denne prototypen:
 - har en lokal Turtle-variant for geometriske figurer og mønstre; tegningene
   gjengis steg for steg i et høyoppløselig canvas med variabel hastighet,
   uten egne vinduer eller nettverk
+- eksporterer Turtle-mønstre som lokal SVG med fysisk millimeterstørrelse,
+  senterlinje, parallelle ytterlinjer eller lukket omriss for skaperverksted
 - blokkerer alle nettverksforespørsler fra appen
 - bruker lokale prosjektfiler og lokale nettleserdata
 - har ingen automatisk oppdatering, innlogging, KI eller kommunikasjon
