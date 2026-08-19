@@ -1448,7 +1448,7 @@ function createTurtleSvg(drawing: TurtleDrawing, settings: TurtleWorkshopSetting
   return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${widthMm}mm" height="${Number(heightMm.toFixed(2))}mm" viewBox="${viewLeft} ${viewTop} ${viewport.worldWidth} ${viewport.worldHeight}">\n  <title>${xmlEscape(drawing.title || "Turtle-tegning")}</title>\n  <desc>Laget i Bjørnsveen Pythonverksted. Vektortype: ${modeNames[settings.mode]}. Transparent bakgrunn.</desc>\n  <g id="turtle-vektorer">\n    ${[...fillElements, ...vectorElements, ...textElements].join("\n    ")}\n  </g>\n</svg>\n`;
 }
 
-function renderTurtleFrame(canvas: HTMLCanvasElement, drawing: TurtleDrawing, frame: number, workshop = defaultTurtleWorkshop) {
+function renderTurtleFrame(canvas: HTMLCanvasElement, drawing: TurtleDrawing, frame: number, workshop = defaultTurtleWorkshop, workshopPreview = false) {
   const outputWidth = 1400;
   const viewport = turtleViewport(drawing);
   const { requestedWidth, requestedHeight, centerX, centerY } = viewport;
@@ -1484,69 +1484,74 @@ function renderTurtleFrame(canvas: HTMLCanvasElement, drawing: TurtleDrawing, fr
       title = event.text || title;
       continue;
     }
-    if (event.kind === "clear") {
-      layerContext.clearRect(0, 0, outputWidth, outputHeight);
-    }
-    if (event.kind === "line") {
-      const start = point(event.x1, event.y1);
-      const end = point(event.x2, event.y2);
-      const color = workshop.useCodeColors ? (event.color || workshop.color) : workshop.color;
-      const widthMm = workshop.useCodeWidths ? Math.max(0.1, (event.width || 2.5) * 0.12) : workshop.strokeWidthMm;
-      const strokePixels = Math.max(1, widthMm / Math.max(20, workshop.outputWidthMm) * outputWidth);
-      const drawLine = (x1: number, y1: number, x2: number, y2: number, width: number) => {
+    if (event.x2 !== undefined && event.y2 !== undefined) cursor = { x: event.x2, y: event.y2, heading: event.heading ?? cursor.heading, visible: event.visible ?? cursor.visible };
+    else if (event.x !== undefined && event.y !== undefined) cursor = { x: event.x, y: event.y, heading: event.heading ?? cursor.heading, visible: event.visible ?? cursor.visible };
+  }
+
+  const visibleEvents = finalTurtleEvents(events);
+  if (workshop.includeFills) {
+    for (const event of visibleEvents) {
+      if (event.kind === "fill" && event.points && event.points.length >= 3) {
+        layerContext.save();
+        layerContext.globalCompositeOperation = "destination-over";
         layerContext.beginPath();
-        layerContext.moveTo(x1, y1);
-        layerContext.lineTo(x2, y2);
-        layerContext.strokeStyle = color;
-        layerContext.lineWidth = width;
-        layerContext.lineCap = workshop.lineCap;
-        layerContext.lineJoin = "round";
-        layerContext.stroke();
-      };
-      if (workshop.mode === "centerline") {
-        drawLine(start.x, start.y, end.x, end.y, strokePixels);
-      } else {
-        const dx = end.x - start.x;
-        const dy = end.y - start.y;
-        const length = Math.hypot(dx, dy) || 1;
-        const offsetX = -dy / length * strokePixels / 2;
-        const offsetY = dx / length * strokePixels / 2;
-        if (workshop.mode === "outline") {
-          layerContext.save();
-          layerContext.globalAlpha = 0.12;
-          drawLine(start.x, start.y, end.x, end.y, strokePixels);
-          layerContext.restore();
-        }
-        const edgeWidth = Math.max(1.5, outputWidth / Math.max(20, workshop.outputWidthMm) * 0.1);
-        drawLine(start.x + offsetX, start.y + offsetY, end.x + offsetX, end.y + offsetY, edgeWidth);
-        drawLine(start.x - offsetX, start.y - offsetY, end.x - offsetX, end.y - offsetY, edgeWidth);
+        event.points.forEach(([x, y], index) => {
+          const next = point(x, y);
+          if (index === 0) layerContext.moveTo(next.x, next.y);
+          else layerContext.lineTo(next.x, next.y);
+        });
+        layerContext.closePath();
+        layerContext.fillStyle = workshop.useCodeColors ? (event.color || workshop.color) : workshop.color;
+        layerContext.fill();
+        layerContext.restore();
+      }
+      if (event.kind === "dot") {
+        const center = point(event.x, event.y);
+        layerContext.beginPath();
+        layerContext.arc(center.x, center.y, Math.max(0.5, Math.max(0.05 * viewport.worldWidth / Math.max(20, workshop.outputWidthMm), (event.size || 6) / 2) * scale), 0, Math.PI * 2);
+        layerContext.fillStyle = workshop.useCodeColors ? (event.color || workshop.color) : workshop.color;
+        layerContext.fill();
       }
     }
-    if (event.kind === "fill" && event.points && event.points.length >= 3) {
-      if (!workshop.includeFills) continue;
-      layerContext.save();
-      layerContext.globalCompositeOperation = "destination-over";
-      layerContext.beginPath();
-      event.points.forEach(([x, y], index) => {
-        const next = point(x, y);
-        if (index === 0) layerContext.moveTo(next.x, next.y);
-        else layerContext.lineTo(next.x, next.y);
-      });
-      layerContext.closePath();
-      layerContext.fillStyle = workshop.useCodeColors ? (event.color || workshop.color) : workshop.color;
-      layerContext.fill();
-      layerContext.restore();
+  }
+
+  const drawVectorPath = (points: [number, number][], color: string, width: number, close = false, lineCap: CanvasLineCap = "butt") => {
+    if (points.length < 2) return;
+    layerContext.beginPath();
+    points.forEach(([x, y], index) => {
+      const next = point(x, y);
+      if (index === 0) layerContext.moveTo(next.x, next.y);
+      else layerContext.lineTo(next.x, next.y);
+    });
+    if (close) layerContext.closePath();
+    layerContext.fillStyle = "transparent";
+    layerContext.strokeStyle = color;
+    layerContext.lineWidth = width;
+    layerContext.lineCap = lineCap;
+    layerContext.lineJoin = "round";
+    layerContext.stroke();
+  };
+
+  for (const path of turtlePaths(events, workshop)) {
+    const strokePixels = Math.max(0.5, path.widthMm / Math.max(20, workshop.outputWidthMm) * outputWidth);
+    if (workshop.mode === "centerline") {
+      drawVectorPath(path.points, path.color, strokePixels, false, workshop.lineCap);
+      continue;
     }
-    if (event.kind === "dot") {
-      if (!workshop.includeFills) continue;
-      const center = point(event.x, event.y);
-      layerContext.beginPath();
-      layerContext.arc(center.x, center.y, Math.max(2, (event.size || 6) * scale / 2), 0, Math.PI * 2);
-      layerContext.fillStyle = workshop.useCodeColors ? (event.color || workshop.color) : workshop.color;
-      layerContext.fill();
+    const worldUnitsPerMm = viewport.worldWidth / Math.max(20, workshop.outputWidthMm);
+    const offsets = offsetTurtlePath(path.points, path.widthMm * worldUnitsPerMm / 2);
+    const hairlinePixels = Math.max(0.5, 0.1 / Math.max(20, workshop.outputWidthMm) * outputWidth);
+    if (workshop.mode === "edges" || offsets.closed) {
+      drawVectorPath(offsets.left, path.color, hairlinePixels);
+      drawVectorPath(offsets.right, path.color, hairlinePixels);
+    } else {
+      drawVectorPath([...offsets.left, ...offsets.right.slice().reverse()], path.color, hairlinePixels, true);
     }
-    if (event.kind === "text") {
-      if (!workshop.includeText) continue;
+  }
+
+  if (workshop.includeText) {
+    for (const event of visibleEvents) {
+      if (event.kind !== "text") continue;
       const textPoint = point(event.x, event.y);
       layerContext.fillStyle = workshop.useCodeColors ? (event.color || workshop.color) : workshop.color;
       layerContext.font = `${Math.max(13, (event.size || 12) * Math.min(2, Math.max(1, scale / 8)))}px Arial, sans-serif`;
@@ -1554,15 +1559,13 @@ function renderTurtleFrame(canvas: HTMLCanvasElement, drawing: TurtleDrawing, fr
       layerContext.textBaseline = "bottom";
       layerContext.fillText(event.text || "", textPoint.x, textPoint.y);
     }
-    if (event.x2 !== undefined && event.y2 !== undefined) cursor = { x: event.x2, y: event.y2, heading: event.heading ?? cursor.heading, visible: event.visible ?? cursor.visible };
-    else if (event.x !== undefined && event.y !== undefined) cursor = { x: event.x, y: event.y, heading: event.heading ?? cursor.heading, visible: event.visible ?? cursor.visible };
   }
 
   context.fillStyle = background;
   context.fillRect(0, 0, outputWidth, outputHeight);
   context.drawImage(layer, 0, 0);
 
-  if (cursor.visible && frame > 0) {
+  if (!workshopPreview && cursor.visible && frame > 0) {
     const cursorPoint = point(cursor.x, cursor.y);
     const angle = -cursor.heading * Math.PI / 180;
     context.save();
@@ -1597,19 +1600,21 @@ function TurtlePlayer({ drawing, settings, onSettingsChange, onDownload, onDownl
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
   const [colorDraft, setColorDraft] = useState(settings.color);
+  const [workshopPreview, setWorkshopPreview] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastFrame = drawing.events.length;
 
   useEffect(() => {
     setFrame(0);
     setPlaying(true);
+    setWorkshopPreview(false);
   }, [drawing]);
 
   useEffect(() => setColorDraft(settings.color), [settings.color]);
 
   useEffect(() => {
-    if (canvasRef.current) renderTurtleFrame(canvasRef.current, drawing, frame, settings);
-  }, [drawing, frame, settings]);
+    if (canvasRef.current) renderTurtleFrame(canvasRef.current, drawing, frame, settings, workshopPreview);
+  }, [drawing, frame, settings, workshopPreview]);
 
   useEffect(() => {
     if (!playing || frame >= lastFrame) {
@@ -1639,11 +1644,18 @@ function TurtlePlayer({ drawing, settings, onSettingsChange, onDownload, onDownl
     <figure className={`turtle-player ${large ? "is-large" : ""}`}>
       <div className="turtle-heading">
         <div><span>Turtle-canvas</span><strong>{drawing.title || "Turtle-tegning"}</strong></div>
-        <span>{frame === lastFrame ? "Ferdig" : `Steg ${frame} av ${lastFrame}`}</span>
+        <span>{workshopPreview ? "SVG-forhåndsvisning" : frame === lastFrame ? "Ferdig" : `Steg ${frame} av ${lastFrame}`}</span>
       </div>
       <div className="turtle-canvas-wrap">
-        <canvas ref={canvasRef} aria-label={`${drawing.title || "Turtle-tegning"}, steg ${frame} av ${lastFrame}`} />
-        <details className="turtle-maker-menu">
+        <canvas ref={canvasRef} aria-label={workshopPreview ? `${drawing.title || "Turtle-tegning"}, forhåndsvisning av eksportert SVG` : `${drawing.title || "Turtle-tegning"}, steg ${frame} av ${lastFrame}`} />
+        <details className="turtle-maker-menu" onToggle={(event) => {
+          const open = event.currentTarget.open;
+          if (open) {
+            setWorkshopPreview(true);
+            setPlaying(false);
+            setFrame(lastFrame);
+          }
+        }}>
           <summary><span>◇</span> Skaperverksted</summary>
           <div className="turtle-maker-panel">
             <header>
@@ -1712,19 +1724,19 @@ function TurtlePlayer({ drawing, settings, onSettingsChange, onDownload, onDownl
           min="0"
           max={Math.max(1, lastFrame)}
           value={frame}
-          onChange={(event) => { setPlaying(false); setFrame(Number(event.target.value)); }}
+          onChange={(event) => { setWorkshopPreview(false); setPlaying(false); setFrame(Number(event.target.value)); }}
           aria-label="Velg steg i Turtle-tegningen"
         />
       </div>
       <figcaption className="turtle-controls">
         <div className="turtle-playback" aria-label="Avspillingsknapper">
-          <button type="button" onClick={() => { setPlaying(false); setFrame(0); }} aria-label="Start på nytt">↺</button>
-          <button type="button" onClick={() => { setPlaying(false); setFrame((current) => Math.max(0, current - 1)); }} disabled={frame === 0} aria-label="Ett steg tilbake">←</button>
-          <button className="turtle-play" type="button" onClick={() => { if (frame >= lastFrame) setFrame(0); setPlaying((current) => !current); }} disabled={lastFrame === 0}>
+          <button type="button" onClick={() => { setWorkshopPreview(false); setPlaying(false); setFrame(0); }} aria-label="Start på nytt">↺</button>
+          <button type="button" onClick={() => { setWorkshopPreview(false); setPlaying(false); setFrame((current) => Math.max(0, current - 1)); }} disabled={frame === 0} aria-label="Ett steg tilbake">←</button>
+          <button className="turtle-play" type="button" onClick={() => { setWorkshopPreview(false); if (frame >= lastFrame) setFrame(0); setPlaying((current) => !current); }} disabled={lastFrame === 0}>
             {playing ? "Pause" : "Spill"}
           </button>
-          <button type="button" onClick={() => { setPlaying(false); setFrame((current) => Math.min(lastFrame, current + 1)); }} disabled={frame >= lastFrame} aria-label="Ett steg fram">→</button>
-          <button type="button" onClick={() => { setPlaying(false); setFrame(lastFrame); }}>Vis ferdig</button>
+          <button type="button" onClick={() => { setWorkshopPreview(false); setPlaying(false); setFrame((current) => Math.min(lastFrame, current + 1)); }} disabled={frame >= lastFrame} aria-label="Ett steg fram">→</button>
+          <button type="button" onClick={() => { setWorkshopPreview(false); setPlaying(false); setFrame(lastFrame); }}>{workshopPreview ? "Vis Turtle" : "Vis ferdig"}</button>
         </div>
         <label className="turtle-speed">Hastighet
           <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))}>
