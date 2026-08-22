@@ -156,6 +156,19 @@ type CodeSnippet = {
   change: string;
 };
 
+type CurriculumFit = "Direkte" | "God støtte" | "Supplerende";
+type CurriculumGrade = "Alle" | "8" | "9" | "10";
+
+type CurriculumGoal = {
+  id: string;
+  grade: "8" | "9" | "10";
+  goal: string;
+  fit: CurriculumFit;
+  activity: string;
+  tools: string[];
+  moduleIds: number[];
+};
+
 const codeSnippets: CodeSnippet[] = [
   {
     id: "variabler",
@@ -594,6 +607,303 @@ print("Løsning:", sp.solve(ligning, x))`,
       "Løs ligningen 3 * x - 5 = 16.",
       "Bruk sp.factor(...) på et uttrykk som er ganget ut.",
     ],
+  },
+];
+
+const curriculumSources = {
+  "8": "https://www.udir.no/lk20/mat01-06/kompetansemaal-og-vurdering/kv1027?lang=nob",
+  "9": "https://www.udir.no/lk20/mat01-06/kompetansemaal-og-vurdering/kv1028?lang=nob",
+  "10": "https://www.udir.no/lk20/mat01-06/kompetansemaal-og-vurdering/kv1029?lang=nob",
+} as const;
+
+const curriculumGoals: CurriculumGoal[] = [
+  {
+    id: "8-potenser",
+    grade: "8",
+    goal: "regne med potenser og kvadratrøtter og forklare framgangsmåter og resultater",
+    fit: "God støtte",
+    activity: "Sammenlign gjentatt multiplikasjon med **, lag en tabell med kvadrattall og kontroller kvadratrøtter med math.sqrt.",
+    tools: ["**", "math.sqrt", "løkker", "tabeller"],
+    moduleIds: [1, 3],
+  },
+  {
+    id: "8-regneegenskaper",
+    grade: "8",
+    goal: "bruke kommutative, assosiative og distributive egenskaper til å utvikle og kommunisere strategier for hoderegning og skriftlig regning",
+    fit: "Supplerende",
+    activity: "La Python kontrollere flere omskrivinger, og forklar hvorfor uttrykkene gir samme svar for ulike verdier.",
+    tools: ["variabler", "uttrykk", "print", "SymPy"],
+    moduleIds: [1],
+  },
+  {
+    id: "8-faktorisering",
+    grade: "8",
+    goal: "beskrive og utforske faktorisering og primtallsfaktorisering og bruke det i brøkregning",
+    fit: "God støtte",
+    activity: "Test divisorer med %, bygg en primtallsalgoritme og bruk SymPy til å kontrollere faktoriseringen.",
+    tools: ["%", "if", "løkker", "SymPy"],
+    moduleIds: [2, 3],
+  },
+  {
+    id: "8-monstre",
+    grade: "8",
+    goal: "utforske og generalisere geometriske mønstre og tallmønstre med egne ord og algebraisk",
+    fit: "Direkte",
+    activity: "Lag tallfølger med løkker og geometriske mønstre med Turtle. Endre regelen og beskriv hva som alltid skjer.",
+    tools: ["range", "løkker", "Turtle", "variabler"],
+    moduleIds: [3, 7],
+  },
+  {
+    id: "8-uttrykk",
+    grade: "8",
+    goal: "lage og forklare regneuttrykk med tall, variabler og konstanter knyttet til praktiske situasjoner",
+    fit: "Direkte",
+    activity: "Oversett pris, rabatt, lengde eller fart til navngitte variabler og forklar uttrykket linje for linje.",
+    tools: ["variabler", "regneoperatorer", "f-tekst"],
+    moduleIds: [1],
+  },
+  {
+    id: "8-ligninger",
+    grade: "8",
+    goal: "lage og løse ligninger knyttet til praktiske situasjoner og kritisk vurdere løsninger",
+    fit: "God støtte",
+    activity: "Søk etter løsninger med en løkke, eller bruk SymPy. Sett svaret tilbake i situasjonen og vurder om det er rimelig.",
+    tools: ["løkker", "if", "SymPy", "kontrollregning"],
+    moduleIds: [1, 2, 3],
+  },
+  {
+    id: "8-ulikheter",
+    grade: "8",
+    goal: "bruke ulike strategier for å løse ulikheter og vurdere om løsninger er gyldige",
+    fit: "God støtte",
+    activity: "Bruk sammenligninger og if til å teste hvilke verdier som oppfyller en ulikhet, og vis løsningene i en tabell.",
+    tools: ["< og >", "if/else", "range", "tabeller"],
+    moduleIds: [2, 3],
+  },
+  {
+    id: "8-funksjoner",
+    grade: "8",
+    goal: "beskrive, sammenligne og utforske funksjoner knyttet til praktiske situasjoner",
+    fit: "Direkte",
+    activity: "Skriv funksjoner for to praktiske modeller, endre parameterne og sammenlign tabeller og grafer.",
+    tools: ["def", "return", "Matplotlib", "tabeller"],
+    moduleIds: [4, 6],
+  },
+  {
+    id: "8-representasjoner",
+    grade: "8",
+    goal: "bruke situasjoner, tabeller, grafer og uttrykk til å representere funksjoner og vise sammenhenger mellom representasjonene",
+    fit: "Direkte",
+    activity: "La samme funksjon vises som tekstsituasjon, uttrykk, verditabell og graf. Pek ut hvor samme informasjon finnes i alle fire.",
+    tools: ["funksjoner", "Pandas", "Matplotlib", "uttrykk"],
+    moduleIds: [4, 6],
+  },
+  {
+    id: "8-algoritmer",
+    grade: "8",
+    goal: "utforske hvordan algoritmer kan skapes, testes og forbedres ved hjelp av programmering",
+    fit: "Direkte",
+    activity: "Lag en første løsning, test den med ulike verdier, finn en svakhet og forbedre algoritmen i små steg.",
+    tools: ["if/else", "løkker", "funksjoner", "Turtle"],
+    moduleIds: [2, 3, 4, 7],
+  },
+  {
+    id: "9-maleenheter",
+    grade: "9",
+    goal: "lage og løse problemer som handler om sammensatte måleenheter",
+    fit: "God støtte",
+    activity: "Lag omregningsfunksjoner for km/t og m/s, pris per kilogram eller energiforbruk per time.",
+    tools: ["variabler", "funksjoner", "enhetstekst"],
+    moduleIds: [1, 4],
+  },
+  {
+    id: "9-figurer",
+    grade: "9",
+    goal: "utforske egenskapene ved ulike todimensjonale figurer og forklare begrepene formlikhet og kongruens",
+    fit: "Direkte",
+    activity: "Tegn figurer med Turtle, kopier dem med samme eller endret målestokk og sammenlign sider og vinkler.",
+    tools: ["Turtle", "løkker", "målestokk", "vinkler"],
+    moduleIds: [7],
+  },
+  {
+    id: "9-pytagoras",
+    grade: "9",
+    goal: "bruke formlikhet og Pytagoras’ læresetning til utforsking av praktiske situasjoner",
+    fit: "Direkte",
+    activity: "Beregn den ukjente siden, tegn trekanten i riktig målestokk og kontroller avstanden mellom koordinatene.",
+    tools: ["Turtle", "math.sqrt", "koordinater", "funksjoner"],
+    moduleIds: [4, 7],
+  },
+  {
+    id: "9-trekanter",
+    grade: "9",
+    goal: "utforske, beskrive og argumentere for sammenhenger mellom sidelengdene i trekanter",
+    fit: "Direkte",
+    activity: "Test trekantulikheten for mange sidelengder, og tegn bare kombinasjonene som faktisk kan danne en trekant.",
+    tools: ["if/else", "løkker", "Turtle"],
+    moduleIds: [2, 3, 7],
+  },
+  {
+    id: "9-forutsetninger",
+    grade: "9",
+    goal: "utforske og argumentere for hvordan det å endre forutsetninger i geometriske problemstillinger påvirker løsninger både praktisk og algebraisk",
+    fit: "Direkte",
+    activity: "Gjør sidelengde, antall sider og vinkel til variabler. Endre én verdi om gangen og forklar virkningen på figuren.",
+    tools: ["Turtle", "variabler", "løkker", "SVG"],
+    moduleIds: [1, 7],
+  },
+  {
+    id: "9-overflate-volum",
+    grade: "9",
+    goal: "bruke og argumentere for formler for overflateareal og volum av tredimensjonale figurer",
+    fit: "God støtte",
+    activity: "Lag funksjoner for overflate og volum, sammenlign figurer i en tabell og undersøk hvordan dobling av mål påvirker resultatet.",
+    tools: ["funksjoner", "potenser", "tabeller"],
+    moduleIds: [1, 4],
+  },
+  {
+    id: "9-statistikk-kritikk",
+    grade: "9",
+    goal: "tolke og kritisk vurdere statistiske framstillinger fra media og lokalsamfunnet",
+    fit: "God støtte",
+    activity: "Gjenskap en graf med Matplotlib, endre aksestart og skala og diskuter hvordan inntrykket forandres.",
+    tools: ["Matplotlib", "Pandas", "akser", "datasett"],
+    moduleIds: [4],
+  },
+  {
+    id: "9-sentral-spredning",
+    grade: "9",
+    goal: "regne på sentralmål og spredningsmål i egne og reelle datasett og bruke resultatene til å beskrive dataene",
+    fit: "Direkte",
+    activity: "Importer eller skriv inn data og beregn gjennomsnitt, median, variasjonsbredde og standardavvik.",
+    tools: ["NumPy", "Pandas", "lister", "tabeller"],
+    moduleIds: [4],
+  },
+  {
+    id: "9-framstillinger",
+    grade: "9",
+    goal: "sammenligne og argumentere for hvordan framstillinger av tall og data kan brukes for å fremme ulike synspunkter",
+    fit: "Direkte",
+    activity: "Lag to korrekte grafer av samme datasett med ulike utsnitt, diagramtyper eller skalaer og vurder budskapet.",
+    tools: ["Matplotlib", "Pandas", "grafer", "akser"],
+    moduleIds: [4],
+  },
+  {
+    id: "9-sannsynlighet",
+    grade: "9",
+    goal: "beregne og vurdere sannsynlighet i statistikk og spill",
+    fit: "Direkte",
+    activity: "Beregn teoretisk sannsynlighet, simuler spillet og vurder om regelen er rettferdig.",
+    tools: ["random", "tellere", "andeler", "if"],
+    moduleIds: [2, 5],
+  },
+  {
+    id: "9-simulering",
+    grade: "9",
+    goal: "simulere utfall i tilfeldige forsøk og beregne sannsynligheten for at noe skal inntreffe, ved å bruke programmering",
+    fit: "Direkte",
+    activity: "Gjenta et tilfeldig forsøk mange ganger, tell ønskede utfall og sammenlign relativ frekvens med teoretisk sannsynlighet.",
+    tools: ["random", "for-løkke", "if", "tellere"],
+    moduleIds: [5],
+  },
+  {
+    id: "10-regneregler",
+    grade: "10",
+    goal: "bruke regneregler og generalisere sammenhenger algebraisk",
+    fit: "God støtte",
+    activity: "Test en påstand for mange tall, beskriv mønsteret og bruk SymPy til å vise den algebraiske sammenhengen.",
+    tools: ["løkker", "SymPy", "variabler", "uttrykk"],
+    moduleIds: [1, 3, 4],
+  },
+  {
+    id: "10-kvadratsetninger",
+    grade: "10",
+    goal: "utforske kvadratsetningene geometrisk og algebraisk og bruke kvadratsetningene som regnestrategier",
+    fit: "Direkte",
+    activity: "Tegn arealdelene med Turtle og sammenlign den geometriske modellen med et uttrykk som utvides i SymPy.",
+    tools: ["Turtle", "areal", "SymPy", "farger"],
+    moduleIds: [4, 7],
+  },
+  {
+    id: "10-ligningssett",
+    grade: "10",
+    goal: "lage, løse og forklare ligningssett knyttet til praktiske situasjoner",
+    fit: "God støtte",
+    activity: "Modeller en praktisk situasjon med to funksjoner, finn skjæringspunktet grafisk og kontroller med SymPy.",
+    tools: ["funksjoner", "Matplotlib", "SymPy", "grafer"],
+    moduleIds: [4, 6],
+  },
+  {
+    id: "10-funksjonstyper",
+    grade: "10",
+    goal: "utforske og sammenligne egenskaper ved lineære funksjoner, eksponentialfunksjoner, brøkfunksjoner og andregradsfunksjoner ved å bruke digitale verktøy",
+    fit: "Direkte",
+    activity: "Tegn flere funksjonstyper i samme koordinatsystem og undersøk nullpunkter, vekst, asymptoter og parameterendringer.",
+    tools: ["NumPy", "Matplotlib", "funksjoner", "grafer"],
+    moduleIds: [4, 6],
+  },
+  {
+    id: "10-stigningstall",
+    grade: "10",
+    goal: "forklare begrepet endring per enhet og regne ut stigningstallet til lineære funksjoner",
+    fit: "Direkte",
+    activity: "Beregn endring i y delt på endring i x, tegn linjen og koble stigningstallet til den praktiske situasjonen.",
+    tools: ["funksjoner", "tabeller", "Matplotlib", "variabler"],
+    moduleIds: [1, 4],
+  },
+  {
+    id: "10-prosentvekst",
+    grade: "10",
+    goal: "utforske og forklare sammenhengen mellom konstant prosentvis endring, vekstfaktor og eksponentialfunksjoner",
+    fit: "Direkte",
+    activity: "Sammenlign prosentvis endring periode for periode med potensmodellen, og vis utviklingen som tabell og graf.",
+    tools: ["vekstfaktor", "**", "løkker", "Matplotlib"],
+    moduleIds: [1, 4, 6],
+  },
+  {
+    id: "10-okonomi-konsekvenser",
+    grade: "10",
+    goal: "hente ut og tolke relevant informasjon og reflektere over mulige konsekvenser ved kjøp og salg, renter på sparing, lån og kredittkjøp",
+    fit: "Direkte",
+    activity: "Lag sammenlignbare modeller for sparing, lån og kreditt. Vis total kostnad og undersøk virkningen av rente og tid.",
+    tools: ["variabler", "vekstfaktor", "tabeller", "grafer"],
+    moduleIds: [1, 6],
+  },
+  {
+    id: "10-okonomi-arbeid",
+    grade: "10",
+    goal: "planlegge, utføre og presentere et utforskende arbeid knyttet til personlig økonomi",
+    fit: "Direkte",
+    activity: "Formuler et økonomisk spørsmål, samle forutsetninger, programmer en modell og presenter funn og begrensninger.",
+    tools: ["Pandas", "Matplotlib", "modeller", "f-tekst"],
+    moduleIds: [1, 6],
+  },
+  {
+    id: "10-modellering",
+    grade: "10",
+    goal: "modellere situasjoner, presentere resultatene og vurdere hvor gyldige modellene er",
+    fit: "Direkte",
+    activity: "Gjør antakelser om til variabler, beregn eller simuler utviklingen, presenter resultatet og test modellens grenser.",
+    tools: ["funksjoner", "tabeller", "grafer", "simulering"],
+    moduleIds: [4, 5, 6],
+  },
+  {
+    id: "10-programmering",
+    grade: "10",
+    goal: "utforske matematiske egenskaper og sammenhenger ved å bruke programmering",
+    fit: "Direkte",
+    activity: "Still et matematisk spørsmål, lag kode som produserer eksempler, og bruk mønsteret til å formulere og begrunne en sammenheng.",
+    tools: ["løkker", "funksjoner", "Turtle", "grafer"],
+    moduleIds: [3, 4, 5, 7],
+  },
+  {
+    id: "10-pythonkode",
+    grade: "10",
+    goal: "lese og forklare tekstbasert programkode i Python",
+    fit: "Direkte",
+    activity: "Følg variabelverdier linje for linje, forutsi resultatet, forklar matematikken og foreslå en begrunnet endring.",
+    tools: ["variabler", "if/else", "løkker", "funksjoner"],
+    moduleIds: [1, 2, 3, 4],
   },
 ];
 
@@ -1312,6 +1622,133 @@ const modules: Module[] = [
         "Sammenlign modellen med månedlig vekst eller en rente som endres underveis.",
     },
   },
+  {
+    id: 7,
+    title: "Turtle og geometriske figurer",
+    shortTitle: "Turtle og geometri",
+    eyebrow: "Tegn matematikk med kode",
+    question: "Hvordan kan én løkke tegne en regulær mangekant med så mange sider vi vil?",
+    intro:
+      "Turtle er en digital penn som flytter seg og snur. Når vi styrer pennen med lengder, vinkler, variabler og løkker, blir geometrien synlig – og koden kan bli til mønstre for vinylkutter og laser.",
+    refresh: {
+      title: "En hel runde er 360 grader",
+      body: "For å tegne en lukket, regulær mangekant må Turtle til sammen snu én hel runde. Derfor deler vi 360° på antall sider for å finne vinkelen pennen skal snu ved hvert hjørne.",
+      examples: [
+        { code: "trekant: 360 / 3 = 120°", explanation: "Tre like svinger på 120° gir til sammen 360°." },
+        { code: "kvadrat: 360 / 4 = 90°", explanation: "Fire like svinger på 90° gir til sammen 360°." },
+        { code: "sekskant: 360 / 6 = 60°", explanation: "Seks mindre svinger gjør at figuren får flere sider." },
+      ],
+    },
+    theory: [
+      {
+        title: "Turtle går fram og snur",
+        body: "forward(80) flytter pennen 80 enheter rett fram og tegner en strek. left(90) flytter ikke pennen; kommandoen vrir bare retningen 90 grader mot venstre. Den neste streken starter derfor i samme punkt, men peker en ny vei.",
+        code: "forward(80)\nleft(90)",
+        steps: ["Turtle starter i et punkt og peker mot høyre.", "forward tegner den første siden.", "left endrer retningen uten å endre plasseringen.", "Neste forward tegner fra hjørnet i den nye retningen."],
+        reflection: "Hva tror du forskjellen blir mellom left(90) og right(90)? Vil sidelengden endre seg?",
+        why: "En figur kan beskrives som en serie bevegelser: gå en bestemt lengde, snu en bestemt vinkel og gjenta. Det er en geometrisk algoritme.",
+      },
+      {
+        title: "Løkken gjentar én side og én sving",
+        body: "Alle sidene i en regulær mangekant er like lange, og alle svingene er like store. Derfor kan vi skrive oppskriften én gang og la en for-løkke gjenta den. Variabelen side teller rundene, men selve tegningen lages av de to innrykkede linjene.",
+        code: "for side in range(4):\n    forward(80)\n    left(90)",
+        steps: ["range(4) gir fire runder.", "I hver runde tegnes én side på 80.", "Deretter snur Turtle 90°.", "Etter fire runder er samlet sving 4 · 90° = 360°, og kvadratet lukkes."],
+        reflection: "Hva skjer hvis range(4) endres til range(3), men vinkelen fortsatt er 90°? Hvorfor lukkes ikke figuren?",
+        why: "Løkken viser hva som er likt i mønsteret. Vi slipper å kopiere de samme linjene, og det blir enklere å endre hele figuren på ett sted.",
+      },
+      {
+        title: "Variabler gjør oppskriften generell",
+        body: "Når antall_sider er en variabel, kan samme program tegne trekant, femkant, åttekant og mye mer. Svingvinkelen må regnes på nytt når antall sider endres. Uttrykket 360 / antall_sider sørger for nettopp det.",
+        code: "vinkel = 360 / antall_sider",
+        steps: ["360 står for én hel omdreining.", "antall_sider forteller hvor mange like svinger omdreiningen skal deles i.", "Med 6 sider blir vinkelen 60°.", "Løkken gjentas 6 ganger, så samlet sving blir 6 · 60° = 360°."],
+        reflection: "Når antall sider øker, blir svingvinkelen større eller mindre? Hvordan vil figuren se ut når antallet blir veldig stort?",
+        why: "Programmet inneholder nå en regel, ikke bare én ferdig figur. Det er generalisering: Vi uttrykker en sammenheng som virker for mange tilfeller.",
+      },
+    ],
+    progression: {
+      intro: "Begynn med å styre pennen direkte. Bruk så en løkke, gjør figuren variabel og bygg til slutt et mønster som kan eksporteres.",
+      steps: [
+        {
+          label: "Første bevegelse",
+          title: "Tegn en vinkel",
+          body: "To streker og én sving gjør det tydelig at forward tegner, mens left bare endrer retningen.",
+          code: `from turtle import *\n\nforward(120)\nleft(90)\nforward(80)\n\ndone()`,
+          tryThis: "Bytt 90 med 60 og deretter 120. Beskriv vinkelen før du kjører koden.",
+        },
+        {
+          label: "Gjenta",
+          title: "Tegn en trekant med løkke",
+          body: "En likesidet trekant har tre like sider. Turtle må snu 120° ved hvert hjørne for å fullføre 360°.",
+          code: `from turtle import *\n\nfor side in range(3):\n    forward(120)\n    left(120)\n\ndone()`,
+          tryThis: "Gjør trekanten mindre. Hvilken verdi kan du endre uten at vinklene forandres?",
+          upgrade: {
+            title: "Legg til farge og fyll",
+            body: "begin_fill og end_fill markerer området som skal fylles. Fargen kan fortsatt endres i koden.",
+            code: `from turtle import *\n\ncolor("#2f6b5f", "#f4c95d")\nbegin_fill()\nfor side in range(3):\n    forward(120)\n    left(120)\nend_fill()\n\ndone()`,
+          },
+        },
+        {
+          label: "Generaliser",
+          title: "Tegn en valgfri mangekant",
+          body: "Antall sider brukes både i range og i beregningen av svingvinkelen. De to delene må passe sammen for at figuren skal lukkes.",
+          code: `from turtle import *\n\nantall_sider = 6\nsidelengde = 80\nvinkel = 360 / antall_sider\n\nfor side in range(antall_sider):\n    forward(sidelengde)\n    left(vinkel)\n\ndone()`,
+          tryThis: "Prøv 5, 8 og 12 sider. Forutsi svingvinkelen hver gang.",
+        },
+        {
+          label: "Skap et mønster",
+          title: "Roter figuren og tegn den på nytt",
+          body: "En løkke kan ligge inni en annen. Den innerste tegner mangekanten; den ytterste roterer hele figuren før den tegnes igjen.",
+          code: `from turtle import *\n\nantall_sider = 4\nsidelengde = 100\nvinkel = 360 / antall_sider\n\nfor figur in range(12):\n    for side in range(antall_sider):\n        forward(sidelengde)\n        left(vinkel)\n    left(30)\n\ndone()`,
+          tryThis: "Hvorfor passer 12 repetisjoner og 30° sammen? Endre begge slik at samlet rotasjon fortsatt blir 360°.",
+        },
+      ],
+    },
+    starterCode: `from turtle import *\n\nantall_sider = 6\nsidelengde = 80\nvinkel = 360 / antall_sider\n\nfor side in range(antall_sider):\n    forward(sidelengde)\n    left(vinkel)\n\ndone()`,
+    typingSteps: [
+      { kind: "write", code: "from turtle import *", explanation: "Denne linjen henter inn Turtle-kommandoene, slik at Python kjenner forward, left og done.", think: "Hvorfor må Python få vite hvilket verktøy vi vil bruke?", breakdown: ["Python har en grunnpakke med kommandoer.", "Turtle er et eget bibliotek.", "import gjør bibliotekets kommandoer tilgjengelige i programmet."], why: "Et bibliotek er en samling ferdige verktøy. Vi kan bruke dem uten å programmere hele tegnemotoren selv." },
+      { kind: "do", explanation: "Lag en tom linje. Deretter skal du lage tre variabler som beskriver figuren." },
+      { kind: "write", code: "antall_sider = 6\nsidelengde = 80", explanation: "Variablene bestemmer formen og størrelsen. Start med en sekskant med sider på 80.", think: "Hvilken variabel endrer formen, og hvilken endrer bare størrelsen?", breakdown: ["antall_sider bestemmer hvor mange streker figuren får.", "sidelengde bestemmer hvor lang hver strek blir.", "Ingen av dem forteller ennå hvor mye Turtle skal snu."], why: "Tydelige variabelnavn gjør den geometriske oppskriften lettere å lese og lettere å endre." },
+      { kind: "write", code: "vinkel = 360 / antall_sider", explanation: "En hel runde deles på antall like svinger.", think: "Hva blir vinkel når antall_sider er 6?", breakdown: ["En hel omdreining er 360°.", "Seks like svinger betyr 360 / 6.", "Vinkelen blir 60°.", "Seks svinger på 60° gir til sammen 360°."], why: "Når samlet sving er én hel runde, ender Turtle med samme retning som den startet og mangekanten kan lukkes." },
+      { kind: "do", explanation: "Lag en ny tom linje. Nå kommer løkken som gjentar side og sving." },
+      { kind: "write", code: "for side in range(antall_sider):\n    forward(sidelengde)\n    left(vinkel)", explanation: "Skriv kolon etter range. Bruk Tab foran de to linjene som skal gjentas.", think: "Hvor mange ganger kjøres de innrykkede linjene når antall_sider er 6?", breakdown: ["range(antall_sider) lager seks runder.", "forward tegner én side i hver runde.", "left snur før neste side.", "Etter seks runder er alle sidene tegnet."], why: "Innrykket viser nøyaktig hvilke kommandoer som hører til løkken. Både bevegelsen og svingen må gjentas." },
+      { kind: "write", code: "done()", explanation: "Denne linjen markerer at Turtle-programmet er ferdig. Trykk så «Kjør kode» og spill av tegningen steg for steg." },
+    ],
+    polish: {
+      title: "Gjør figuren klar for skaperverkstedet",
+      body: "En tydelig tittel, farge og strektykkelse gjør tegningen lettere å kjenne igjen. Etter kjøring kan Skaperverksted-menyen brukes til å velge senterlinje, ytterlinjer eller lukket omriss.",
+      before: "from turtle import *",
+      after: `from turtle import *\ntitle("Min sekskant")\ncolor("#2f6b5f")\npensize(4)`,
+      explanation: "title navngir tegningen, color velger strekfarge og pensize bestemmer tykkelsen. SVG-eksporten kan bearbeide streken videre for vinylkutter og laser.",
+    },
+    observe: [
+      "Hvorfor brukes 360 / antall_sider som svingvinkel?",
+      "Hva endres når sidelengden dobles, og hva forblir likt?",
+      "Hvordan ser du i koden at alle sidene og vinklene skal være like?",
+      "Hva tror du skjer når antall_sider blir 30 eller 60?",
+    ],
+    task:
+      "Endre programmet til en regulær åttekant. Velg en tydelig farge og strektykkelse, spill av tegningen og lagre den som SVG.",
+    taskHint: "Sett antall_sider til 8. Programmet regner ut riktig svingvinkel for deg.",
+    expected: ["turtle"],
+    teacher: {
+      purpose:
+        "Koble vinkler, regulære mangekanter, generalisering, løkker og algoritmisk tenkning i en synlig aktivitet med et fysisk sluttprodukt.",
+      before: [
+        "La en elev være Turtle på gulvet: gå fram, stopp og snu.",
+        "Regn ut svingvinkelen for trekant og kvadrat uten kode først.",
+        "Skill mellom figurens innvendige vinkel og vinkelen Turtle faktisk snur.",
+      ],
+      misconceptions: [
+        "Eleven bruker den innvendige vinkelen som svingvinkel.",
+        "Bare forward-linjen rykkes inn, slik at Turtle ikke snur i hver runde.",
+        "range-verdien endres uten at svingvinkelen beregnes på nytt.",
+      ],
+      assess:
+        "Eleven kan forklare samlet rotasjon på 360°, koble variablene til geometriske egenskaper og forutsi virkningen av en kodeendring.",
+      extension:
+        "La elevene designe et repeterende mønster, begrunne symmetrien og eksportere en senterlinje eller et lukket omriss til skaperverkstedet.",
+    },
+  },
 ];
 
 const steps = ["Problem", "Oppfriskning", "Lær", "Prøv", "Forklar", "Oppgave"];
@@ -1902,6 +2339,9 @@ function TurtlePlayer({ drawing, settings, onSettingsChange, onDownload, onDownl
 export default function Home() {
   const [activeId, setActiveId] = useState(1);
   const [playground, setPlayground] = useState(true);
+  const [curriculumView, setCurriculumView] = useState(false);
+  const [curriculumGrade, setCurriculumGrade] = useState<CurriculumGrade>("Alle");
+  const [curriculumFit, setCurriculumFit] = useState<"Alle" | CurriculumFit>("Alle");
   const [teacherMode, setTeacherMode] = useState(false);
   const [code, setCode] = useState("");
   const [labTab, setLabTab] = useState<"practice" | "solution">("practice");
@@ -1960,6 +2400,13 @@ export default function Home() {
   const filteredSnippets = useMemo(
     () => codeSnippets.filter((snippet) => snippetCategory === "Alle" || snippet.category === snippetCategory),
     [snippetCategory],
+  );
+
+  const filteredCurriculumGoals = useMemo(
+    () => curriculumGoals.filter((goal) =>
+      (curriculumGrade === "Alle" || goal.grade === curriculumGrade)
+      && (curriculumFit === "Alle" || goal.fit === curriculumFit)),
+    [curriculumFit, curriculumGrade],
   );
 
   useEffect(() => {
@@ -2032,6 +2479,7 @@ export default function Home() {
 
   function chooseModule(module: Module) {
     setPlayground(false);
+    setCurriculumView(false);
     setActiveId(module.id);
     setLabTab("practice");
     setCode(practiceCodes[module.id] ?? "");
@@ -2047,6 +2495,7 @@ export default function Home() {
 
   function choosePlayground() {
     setPlayground(true);
+    setCurriculumView(false);
     const project = projects.find((item) => item.id === activeProjectId) ?? projects[0];
     setCode(project?.code ?? playgroundCode);
     setOutput("Skriv eller endre koden, og trykk «Kjør kode».");
@@ -2055,6 +2504,14 @@ export default function Home() {
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
     setTurtleExpanded(false);
+    setShareStatus("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function chooseCurriculum() {
+    setPlayground(false);
+    setCurriculumView(true);
+    setFeedback("");
     setShareStatus("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -2578,20 +3035,22 @@ export default function Home() {
           <label htmlFor="module-select">Velg område</label>
           <select
             id="module-select"
-            value={playground ? "playground" : String(active.id)}
+            value={playground ? "playground" : curriculumView ? "curriculum" : String(active.id)}
             onChange={(event) => {
               if (event.target.value === "playground") choosePlayground();
+              else if (event.target.value === "curriculum") chooseCurriculum();
               else chooseModule(modules[Number(event.target.value) - 1]);
             }}
           >
             <option value="playground">Python</option>
+            <option value="curriculum">Læreplanmål</option>
             {modules.map((module) => (
               <option key={module.id} value={module.id}>
                 {completed.includes(module.id) ? "✓ " : ""}Modul {module.id}: {module.shortTitle}
               </option>
             ))}
           </select>
-          <span className="module-position">{playground ? "Python-editor" : `${completed.length} av ${modules.length} fullført`}</span>
+          <span className="module-position">{playground ? "Python-editor" : curriculumView ? "MAT01-06" : `${completed.length} av ${modules.length} fullført`}</span>
         </div>
         <nav className="top-actions" aria-label="Verktøy">
           <button className="text-button print-button" type="button" onClick={() => window.print()}>
@@ -2892,7 +3351,110 @@ export default function Home() {
           </article>
         )}
 
-        {!playground && (
+        {curriculumView && (
+          <article className="lesson curriculum-page">
+            <section className="curriculum-hero content-section">
+              <div>
+                <p className="section-label inverse"><span>LK</span> Læreplan i matematikk · MAT01-06</p>
+                <h1>Fra læreplanmål til Python-aktivitet</h1>
+                <p>Her finner dere alle kompetansemålene etter 8., 9. og 10. trinn som Python kan brukes direkte i eller gi faglig støtte til. Hvert mål er koblet til en konkret arbeidsmåte, relevante verktøy og modulene som bygger kompetansen.</p>
+              </div>
+              <div className="curriculum-summary" aria-label="Oversikt over læreplankoblingene">
+                <div><strong>{curriculumGoals.length}</strong><span>kompetansemål kartlagt</span></div>
+                <div><strong>{curriculumGoals.filter((goal) => goal.fit === "Direkte").length}</strong><span>direkte Python-koblinger</span></div>
+                <div><strong>8.–10.</strong><span>trinn samlet</span></div>
+              </div>
+            </section>
+
+            <section className="content-section curriculum-explainer">
+              <div>
+                <p className="section-label"><span>?</span> Slik leser du oversikten</p>
+                <h2>Python er et verktøy – matematikken er målet</h2>
+                <p>«Direkte» betyr at programmering eller digitale representasjoner er en naturlig del av måloppnåelsen. «God støtte» betyr at Python egner seg godt til å utforske, kontrollere eller visualisere matematikken. «Supplerende» betyr at koden kan gi nyttige eksempler, men ikke bør erstatte hoderegning, skriftlig arbeid eller matematisk argumentasjon.</p>
+              </div>
+              <div className="fit-legend" aria-label="Forklaring av koblingsstyrke">
+                <span className="fit-direct">Direkte</span>
+                <span className="fit-support">God støtte</span>
+                <span className="fit-supplement">Supplerende</span>
+              </div>
+            </section>
+
+            <section className="content-section curriculum-controls" aria-label="Filtrer kompetansemål">
+              <div>
+                <strong>Trinn</strong>
+                <div className="curriculum-filter" role="group" aria-label="Velg trinn">
+                  {(["Alle", "8", "9", "10"] as CurriculumGrade[]).map((grade) => (
+                    <button type="button" className={curriculumGrade === grade ? "is-active" : ""} aria-pressed={curriculumGrade === grade} onClick={() => setCurriculumGrade(grade)} key={grade}>
+                      {grade === "Alle" ? "Alle trinn" : `${grade}. trinn`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <strong>Kobling til Python</strong>
+                <div className="curriculum-filter" role="group" aria-label="Velg koblingsstyrke">
+                  {(["Alle", "Direkte", "God støtte", "Supplerende"] as const).map((fit) => (
+                    <button type="button" className={curriculumFit === fit ? "is-active" : ""} aria-pressed={curriculumFit === fit} onClick={() => setCurriculumFit(fit)} key={fit}>
+                      {fit}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <output>{filteredCurriculumGoals.length} mål vises</output>
+            </section>
+
+            <div className="curriculum-grades">
+              {(["8", "9", "10"] as const).map((grade) => {
+                const gradeGoals = filteredCurriculumGoals.filter((goal) => goal.grade === grade);
+                if (!gradeGoals.length) return null;
+                return (
+                  <section className="content-section curriculum-grade" key={grade}>
+                    <div className="curriculum-grade-heading">
+                      <div>
+                        <p className="section-label"><span>{grade}</span> Etter {grade}. trinn</p>
+                        <h2>{gradeGoals.length} relevante kompetansemål</h2>
+                      </div>
+                      <a href={curriculumSources[grade]} target="_blank" rel="noreferrer">Se originalen hos Udir ↗</a>
+                    </div>
+                    <div className="curriculum-grid">
+                      {gradeGoals.map((goal) => (
+                        <article className="curriculum-card" key={goal.id}>
+                          <div className="curriculum-card-top">
+                            <span className={goal.fit === "Direkte" ? "fit-direct" : goal.fit === "God støtte" ? "fit-support" : "fit-supplement"}>{goal.fit}</span>
+                            <small>Kompetansemål etter {grade}. trinn</small>
+                          </div>
+                          <blockquote>«{goal.goal}»</blockquote>
+                          <div className="curriculum-activity">
+                            <strong>Slik kan Python brukes</strong>
+                            <p>{goal.activity}</p>
+                          </div>
+                          <div className="curriculum-tools" aria-label="Relevante Python-verktøy">
+                            {goal.tools.map((tool) => <span key={tool}>{tool}</span>)}
+                          </div>
+                          <div className="curriculum-links">
+                            <button type="button" className="curriculum-python-button" onClick={choosePlayground}>Åpne Python</button>
+                            {goal.moduleIds.map((moduleId) => {
+                              const linkedModule = modules.find((module) => module.id === moduleId);
+                              return linkedModule ? <button type="button" onClick={() => chooseModule(linkedModule)} key={moduleId}>Modul {moduleId}: {linkedModule.shortTitle}</button> : null;
+                            })}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+
+            <section className="content-section curriculum-note">
+              <strong>Faglig avgrensning</strong>
+              <p>Koblingene er didaktiske forslag fra Bjørnsveen Pythonverksted, ikke en del av Udirs ordlyd. Læreplanmålene er gjengitt fra MAT01-06, som gjelder fra 1. august 2026.</p>
+              <div>{(["8", "9", "10"] as const).map((grade) => <a href={curriculumSources[grade]} target="_blank" rel="noreferrer" key={grade}>Udir: {grade}. trinn ↗</a>)}</div>
+            </section>
+          </article>
+        )}
+
+        {!playground && !curriculumView && (
         <article className="lesson">
           <section className="lesson-hero">
             <div className="hero-copy">
@@ -2908,7 +3470,7 @@ export default function Home() {
             <div className="hero-stamp" aria-hidden="true">
               <span>Modul</span>
               <strong>{String(active.id).padStart(2, "0")}</strong>
-              <small>av 06</small>
+              <small>av {String(modules.length).padStart(2, "0")}</small>
             </div>
           </section>
 

@@ -10,13 +10,13 @@ const desktopBuild = readFileSync("scripts/build-macos.mjs", "utf8");
 const desktopPrepare = readFileSync("scripts/prepare-desktop-dev.mjs", "utf8");
 const offlinePackages = readFileSync("scripts/download-pyodide.mjs", "utf8");
 
-test("appen inneholder seks komplette læringsmoduler", () => {
-  const moduleIds = page.match(/\n    id: [1-6],/g) ?? [];
-  assert.equal(moduleIds.length, 6);
+test("appen inneholder sju komplette læringsmoduler", () => {
+  const moduleIds = page.match(/\n    id: [1-7],/g) ?? [];
+  assert.equal(moduleIds.length, 7);
   for (const step of ["Problem", "Oppfriskning", "Lær", "Prøv", "Forklar", "Oppgave"]) {
     assert.match(page, new RegExp(`"${step}"`));
   }
-  assert.equal((page.match(/    refresh: \{/g) ?? []).length, 6);
+  assert.equal((page.match(/    refresh: \{/g) ?? []).length, 7);
   assert.match(page, /navn = verdi/);
   assert.match(page, /Slik lager du en variabel/);
 });
@@ -46,17 +46,17 @@ test("modulene har tom skrivelab, redigerbar fasit, kodefarger og ekstratriks", 
   assert.match(page, /pythonTokens/);
   assert.match(page, /Valgfritt ekstratriks/);
   assert.match(page, /Den nye prisen på produktet er/);
-  assert.equal((page.match(/    typingSteps: \[/g) ?? []).length, 6);
+  assert.equal((page.match(/    typingSteps: \[/g) ?? []).length, 7);
   assert.match(page, /Skriv dette i kodefeltet/);
   assert.match(page, /Forklaring/);
   assert.match(page, /Gjør dette/);
   assert.match(page, /typing-explanation/);
-  assert.equal((page.match(/    polish: \{/g) ?? []).length, 6);
+  assert.equal((page.match(/    polish: \{/g) ?? []).length, 7);
 });
 
 test("alle moduler forklarer tankegangen grundig og inviterer til refleksjon", () => {
-  assert.equal((page.match(/^        reflection:/gm) ?? []).length, 18);
-  assert.equal((page.match(/^        why:/gm) ?? []).length, 18);
+  assert.equal((page.match(/^        reflection:/gm) ?? []).length, 21);
+  assert.equal((page.match(/^        why:/gm) ?? []).length, 21);
   assert.ok((page.match(/think:/g) ?? []).length >= 12);
   assert.ok((page.match(/breakdown:/g) ?? []).length >= 12);
   assert.match(page, /1 står for hele den gamle prisen: 100 %/);
@@ -70,7 +70,7 @@ test("alle moduler forklarer tankegangen grundig og inviterer til refleksjon", (
 });
 
 test("alle moduler bygger kompetanse i små, kjørbare steg", () => {
-  assert.equal((page.match(/    progression: \{/g) ?? []).length, 6);
+  assert.equal((page.match(/    progression: \{/g) ?? []).length, 7);
   assert.match(page, /Små steg som bygger på hverandre/);
   assert.match(page, /Prøv koden i laboratoriet/);
   assert.match(page, /Legg sammen variabler/);
@@ -153,6 +153,43 @@ test("Turtle tegner geometriske figurer lokalt i resultatpanelet", () => {
   assert.match(worker, /def circle/);
   assert.match(worker, /def begin_fill/);
   assert.match(worker, /_sys\.modules\["turtle"\]/);
+});
+
+test("Turtle og geometriske figurer er en komplett egen modul", () => {
+  assert.match(page, /id: 7,[\s\S]*title: "Turtle og geometriske figurer"/);
+  assert.match(page, /vinkel = 360 \/ antall_sider/);
+  assert.match(page, /En hel runde er 360 grader/);
+  assert.match(page, /Tegn en valgfri mangekant/);
+  assert.match(page, /Roter figuren og tegn den på nytt/);
+  assert.match(page, /regulær åttekant/);
+  assert.match(page, /lagre den som SVG/);
+  assert.match(page, /Modul \{module\.id\}: \{module\.shortTitle\}/);
+  assert.match(page, /av \{String\(modules\.length\)\.padStart\(2, "0"\)\}/);
+});
+
+test("læreplanfanen kartlegger alle mål på 8.–10. trinn til Python", () => {
+  const curriculumSource = page.slice(page.indexOf("const curriculumGoals"), page.indexOf("const modules"));
+  assert.equal((curriculumSource.match(/    id: "8-/g) ?? []).length, 10);
+  assert.equal((curriculumSource.match(/    id: "9-/g) ?? []).length, 11);
+  assert.equal((curriculumSource.match(/    id: "10-/g) ?? []).length, 11);
+  assert.equal((curriculumSource.match(/    fit: "(?:Direkte|God støtte|Supplerende)"/g) ?? []).length, 32);
+  assert.equal((curriculumSource.match(/    activity:/g) ?? []).length, 32);
+  assert.equal((curriculumSource.match(/    tools:/g) ?? []).length, 32);
+  assert.equal((curriculumSource.match(/    moduleIds:/g) ?? []).length, 32);
+  assert.match(page, /<option value="curriculum">Læreplanmål<\/option>/);
+  assert.match(page, /Fra læreplanmål til Python-aktivitet/);
+  assert.match(page, /Python er et verktøy – matematikken er målet/);
+  assert.match(page, /curriculumGrade/);
+  assert.match(page, /curriculumFit/);
+  assert.match(page, /Åpne Python/);
+  assert.match(page, /Se originalen hos Udir/);
+  assert.match(page, /MAT01-06, som gjelder fra 1\. august 2026/);
+  for (const target of [
+    "utforske hvordan algoritmer kan skapes, testes og forbedres ved hjelp av programmering",
+    "simulere utfall i tilfeldige forsøk og beregne sannsynligheten",
+    "utforske matematiske egenskaper og sammenhenger ved å bruke programmering",
+    "lese og forklare tekstbasert programkode i Python",
+  ]) assert.match(curriculumSource, new RegExp(target));
 });
 
 test("Turtle kan spilles av stegvis uten komprimerte mellombilder", () => {
