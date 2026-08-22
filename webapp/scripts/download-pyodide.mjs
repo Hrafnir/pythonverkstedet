@@ -8,7 +8,7 @@ const root = path.resolve(scriptDir, "..");
 const outputDir = path.join(root, "desktop", "pyodide");
 const version = "314.0.2";
 const baseUrl = `https://cdn.jsdelivr.net/pyodide/v${version}/full/`;
-const roots = ["numpy", "pandas", "matplotlib", "scipy", "sympy", "scikit-learn", "pillow", "networkx", "micropip"];
+const roots = ["numpy", "pandas", "matplotlib", "scipy", "sympy", "scikit-learn", "pillow", "networkx", "shapely", "micropip"];
 const runtimeFiles = [
   "pyodide.mjs",
   "pyodide.asm.mjs",

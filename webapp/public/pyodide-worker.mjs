@@ -46,7 +46,11 @@ self.onmessage = async (event) => {
   pyodide.setStderr({ batched: (text) => { stderr += `${text}\n`; } });
 
   try {
-    await pyodide.loadPackagesFromImports(code);
+    const usesGame = /(?:^|\n)\s*(?:from\s+spill\s+import|import\s+spill\b)/.test(code);
+    const packageCode = usesGame
+      ? code.replace(/^\s*(?:from\s+spill\s+import.*|import\s+spill(?:\s+as\s+\w+)?\s*)$/gm, "")
+      : code;
+    await pyodide.loadPackagesFromImports(packageCode);
     stdout = "";
     stderr = "";
     const globals = pyodide.globals.get("dict")();
@@ -375,6 +379,66 @@ _turtle_module.__all__ = _method_names + [
 _sys.modules["turtle"] = _turtle_module
 `, { globals });
     }
+    if (usesGame) {
+      await pyodide.runPythonAsync(`
+import sys as _sys
+import types as _types
+
+_spill_module = _types.ModuleType("spill")
+_spill_module._game = None
+
+class Snake:
+    """En enkel, lokal Snake-motor for Bjørnsveen Pythonverksted."""
+    def __init__(
+        self,
+        bredde=18,
+        hoyde=12,
+        fart=6,
+        slangefarge="#62b88b",
+        hodefarge="#f4c95d",
+        matfarge="#f06f51",
+        bakgrunn="#102e2b",
+        rutenett="#ffffff18",
+        gjennom_vegg=False,
+        tittel="Mitt Snake-spill",
+    ):
+        self.bredde = max(8, min(30, int(bredde)))
+        self.hoyde = max(8, min(22, int(hoyde)))
+        self.fart = max(2, min(12, float(fart)))
+        self.slangefarge = str(slangefarge)
+        self.hodefarge = str(hodefarge)
+        self.matfarge = str(matfarge)
+        self.bakgrunn = str(bakgrunn)
+        self.rutenett = str(rutenett)
+        self.gjennom_vegg = bool(gjennom_vegg)
+        self.tittel = str(tittel)
+
+    def start(self):
+        _spill_module._game = self
+        return self
+
+    def _as_dict(self):
+        return {
+            "width": self.bredde,
+            "height": self.hoyde,
+            "speed": self.fart,
+            "snakeColor": self.slangefarge,
+            "headColor": self.hodefarge,
+            "foodColor": self.matfarge,
+            "background": self.bakgrunn,
+            "gridColor": self.rutenett,
+            "wrap": self.gjennom_vegg,
+            "title": self.tittel,
+        }
+
+    def __repr__(self):
+        return f"Snake({self.bredde}x{self.hoyde}, fart={self.fart})"
+
+_spill_module.Snake = Snake
+_spill_module.__all__ = ["Snake"]
+_sys.modules["spill"] = _spill_module
+`, { globals });
+    }
     const usesMatplotlib = usesTurtle || /\b(matplotlib|pyplot)\b/.test(code);
     if (usesMatplotlib) {
       await pyodide.runPythonAsync(`
@@ -456,8 +520,20 @@ json.dumps(_bjornsveen_plots)
     } catch {
       plots = [];
     }
+    let game = null;
+    if (usesGame) try {
+      const encodedGame = await pyodide.runPythonAsync(`
+import json
+import spill as _bjornsveen_spill
+
+json.dumps(_bjornsveen_spill._game._as_dict() if _bjornsveen_spill._game is not None else None)
+`, { globals });
+      game = JSON.parse(encodedGame);
+    } catch {
+      game = null;
+    }
     globals.destroy();
-    self.postMessage({ type: "result", output: `${stdout}${stderr}`, plots, turtle });
+    self.postMessage({ type: "result", output: `${stdout}${stderr}`, plots, turtle, game });
   } catch (error) {
     self.postMessage({ type: "error", error: error.message });
   }

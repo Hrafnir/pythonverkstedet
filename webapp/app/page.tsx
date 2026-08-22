@@ -97,6 +97,19 @@ type TurtleDrawing = {
   truncated?: boolean;
 };
 
+type SnakeGameConfig = {
+  width: number;
+  height: number;
+  speed: number;
+  snakeColor: string;
+  headColor: string;
+  foodColor: string;
+  background: string;
+  gridColor: string;
+  wrap: boolean;
+  title: string;
+};
+
 type TurtleVectorMode = "centerline" | "edges" | "outline";
 
 type TurtleWorkshopSettings = {
@@ -129,7 +142,7 @@ const defaultTurtleWorkshop: TurtleWorkshopSettings = {
   lineCap: "round",
 };
 
-const referenceCategories = ["Alle", "Kom i gang", "Styring", "Byggeklosser", "Utforske data", "Tegne og vise", "Videre"] as const;
+const referenceCategories = ["Alle", "Kom i gang", "Styring", "Byggeklosser", "Utforske data", "Tegne og vise", "Spill", "Videre"] as const;
 type ReferenceCategory = (typeof referenceCategories)[number];
 
 type PlaygroundReference = {
@@ -144,7 +157,7 @@ type PlaygroundReference = {
   tip?: string;
 };
 
-const snippetCategories = ["Alle", "Kom i gang", "Styring", "Byggeklosser", "Tilfeldighet", "Tegning"] as const;
+const snippetCategories = ["Alle", "Kom i gang", "Styring", "Byggeklosser", "Tilfeldighet", "Tegning", "Spill"] as const;
 type SnippetCategory = (typeof snippetCategories)[number];
 
 type CodeSnippet = {
@@ -249,6 +262,14 @@ const codeSnippets: CodeSnippet[] = [
     purpose: "Kombiner en løkke med lengde og vinkel.",
     code: 'from turtle import *\n\nfor side in range(4):\n    forward(120)\n    left(90)\n\ndone()',
     change: "Endre antall sider, lengde og vinkel.",
+  },
+  {
+    id: "snake",
+    category: "Spill",
+    title: "Start et Snake-spill",
+    purpose: "Lag et spillbart Snake-brett med det lokale spill-biblioteket.",
+    code: 'from spill import Snake\n\nspill = Snake(bredde=18, hoyde=12, fart=6)\nspill.start()',
+    change: "Endre brettstørrelse og fart, eller åpne spillmodulen for flere regler og farger.",
   },
 ];
 
@@ -608,6 +629,142 @@ print("Løsning:", sp.solve(ligning, x))`,
       "Bruk sp.factor(...) på et uttrykk som er ganget ut.",
     ],
   },
+  {
+    id: "mattebibliotek",
+    category: "Kom i gang",
+    level: "Utforsk",
+    title: "math, statistics og brøker",
+    purpose: "Bruk nyttige verktøy som allerede følger med Python – uten å installere noe.",
+    commands: [
+      { code: "import math", explanation: "Kvadratrøtter, pi, trigonometri og andre matematiske funksjoner." },
+      { code: "import statistics", explanation: "Gjennomsnitt, median, typetall og spredning for vanlige lister." },
+      { code: "from fractions import Fraction", explanation: "Regner med eksakte brøker i stedet for avrundede desimaltall." },
+      { code: "from decimal import Decimal", explanation: "Gir kontrollert desimalregning, blant annet for penger." },
+    ],
+    example: `import math\nimport statistics\nfrom fractions import Fraction\n\nverdier = [4, 7, 7, 9, 13]\n\nprint("Kvadratrot av 81:", math.sqrt(81))\nprint("Median:", statistics.median(verdier))\nprint("Gjennomsnitt:", statistics.mean(verdier))\nprint("Eksakt sum:", Fraction(1, 3) + Fraction(1, 6))`,
+    experiments: [
+      "Legg til en svært stor verdi og sammenlign gjennomsnitt og median.",
+      "Regn ut 2/5 + 3/10 med Fraction.",
+      "Bruk math.pi til å finne omkrets og areal av en sirkel.",
+    ],
+    tip: "Disse er del av standardbiblioteket. De virker derfor også offline uten at pakken blir større.",
+  },
+  {
+    id: "scipy",
+    category: "Utforske data",
+    level: "Videre",
+    title: "SciPy: statistikk og matematiske verktøy",
+    purpose: "Gå videre fra enkle beregninger til regresjon, sannsynlighetsfordelinger og numeriske metoder.",
+    commands: [
+      { code: "from scipy import stats", explanation: "Henter statistikkverktøyene." },
+      { code: "stats.linregress(x, y)", explanation: "Finner en lineær modell og mål på hvor godt den passer." },
+      { code: "stats.binom.pmf(...) ", explanation: "Beregner sannsynlighet i en binomisk modell." },
+      { code: "from scipy.optimize import root_scalar", explanation: "Finner en tilnærmet løsning av en ligning." },
+    ],
+    example: `from scipy import stats\n\nx = [1, 2, 3, 4, 5]\ny = [3, 5, 8, 9, 12]\n\nmodell = stats.linregress(x, y)\nprint("Stigningstall:", round(modell.slope, 2))\nprint("Konstantledd:", round(modell.intercept, 2))\nprint("Forklaringsstyrke:", round(modell.rvalue ** 2, 3))`,
+    experiments: [
+      "Endre én y-verdi og se hvordan modellen påvirkes.",
+      "Bruk modellen til å beregne en forventet y-verdi når x er 8.",
+      "Sammenlign SciPy-resultatet med en graf i Matplotlib.",
+    ],
+  },
+  {
+    id: "maskinlaering",
+    category: "Utforske data",
+    level: "Videre",
+    title: "scikit-learn: la data lage en modell",
+    purpose: "Se grunnideen i maskinlæring gjennom en enkel lineær modell dere kan undersøke kritisk.",
+    commands: [
+      { code: "from sklearn.linear_model import LinearRegression", explanation: "Henter en modell for lineære sammenhenger." },
+      { code: "modell.fit(x, y)", explanation: "Tilpasser modellen til eksemplene." },
+      { code: "modell.predict(...) ", explanation: "Bruker modellen til å lage et anslag." },
+      { code: "modell.score(x, y)", explanation: "Måler hvor mye av variasjonen modellen forklarer." },
+    ],
+    example: `import numpy as np\nfrom sklearn.linear_model import LinearRegression\n\ntimer = np.array([[1], [2], [3], [4], [5]])\npoeng = np.array([3, 5, 8, 9, 12])\n\nmodell = LinearRegression()\nmodell.fit(timer, poeng)\n\nprint("Anslag for 6 timer:", round(modell.predict([[6]])[0], 1))\nprint("Stigningstall:", round(modell.coef_[0], 2))`,
+    experiments: [
+      "Endre datasettet og sammenlign anslaget.",
+      "Lag et datapunkt som ligger langt fra de andre. Hva skjer?",
+      "Diskuter hvorfor en modell ikke beviser at den ene variabelen forårsaker den andre.",
+    ],
+    tip: "Dette er et videre-verktøy. Den viktigste kompetansen er å forstå dataene og vurdere modellens gyldighet.",
+  },
+  {
+    id: "pillow",
+    category: "Tegne og vise",
+    level: "Utforsk",
+    title: "Pillow: lag bilder med kode",
+    purpose: "Tegn former, mønstre og pikselbilder og vis resultatet i appen.",
+    commands: [
+      { code: "from PIL import Image, ImageDraw", explanation: "Henter verktøy for bilder og tegning." },
+      { code: "Image.new(...) ", explanation: "Lager et tomt bilde med bestemt størrelse og bakgrunn." },
+      { code: "ImageDraw.Draw(bilde)", explanation: "Lager en tegneflate knyttet til bildet." },
+      { code: "draw.rectangle / ellipse / line", explanation: "Tegner geometriske elementer med koordinater." },
+    ],
+    example: `from PIL import Image, ImageDraw\nimport matplotlib.pyplot as plt\n\nbilde = Image.new("RGB", (600, 400), "#fffdf8")\ntegn = ImageDraw.Draw(bilde)\n\nfor x in range(50, 550, 50):\n    tegn.ellipse((x - 20, 180, x + 20, 220), fill="#f06f51")\n\nplt.imshow(bilde)\nplt.axis("off")\nplt.show()`,
+    experiments: [
+      "Endre sirklene til rektangler.",
+      "Bruk en løkke til et rutenett eller en fargegradient.",
+      "Kombiner symmetri, koordinater og tilfeldige farger.",
+    ],
+  },
+  {
+    id: "networkx",
+    category: "Tegne og vise",
+    level: "Videre",
+    title: "NetworkX: nettverk og forbindelser",
+    purpose: "Utforsk ruter, forbindelser og grafer – fra veinett til sosiale nettverk.",
+    commands: [
+      { code: "import networkx as nx", explanation: "Henter biblioteket for matematiske grafer og nettverk." },
+      { code: "graf.add_edge(a, b)", explanation: "Lager en forbindelse mellom to punkter." },
+      { code: "nx.shortest_path(...) ", explanation: "Finner en korteste rute i nettverket." },
+      { code: "nx.draw(graf)", explanation: "Tegner nettverket med Matplotlib." },
+    ],
+    example: `import networkx as nx\nimport matplotlib.pyplot as plt\n\ngraf = nx.Graph()\ngraf.add_edges_from([\n    ("Skole", "Bibliotek"),\n    ("Skole", "Idrettshall"),\n    ("Bibliotek", "Sentrum"),\n    ("Idrettshall", "Sentrum"),\n])\n\nprint("Korteste rute:", nx.shortest_path(graf, "Skole", "Sentrum"))\nnx.draw(graf, with_labels=True, node_color="#f4c95d", node_size=1800)\nplt.show()`,
+    experiments: [
+      "Legg til flere steder og forbindelser.",
+      "Gi forbindelser avstander og finn korteste vei med vekt.",
+      "Finn punktet som har flest forbindelser.",
+    ],
+  },
+  {
+    id: "shapely",
+    category: "Tegne og vise",
+    level: "Videre",
+    title: "Shapely: analyser geometriske figurer",
+    purpose: "Arbeid presist med areal, omkrets, avstand, overlapp og soner rundt figurer.",
+    commands: [
+      { code: "from shapely.geometry import Polygon", explanation: "Lager en mangekant fra koordinater." },
+      { code: "figur.area / figur.length", explanation: "Finner areal og omkrets." },
+      { code: "figur.buffer(avstand)", explanation: "Lager en sone rundt eller innenfor figuren." },
+      { code: "a.intersection(b)", explanation: "Finner området der to figurer overlapper." },
+    ],
+    example: `from shapely.geometry import Polygon\nimport matplotlib.pyplot as plt\n\nfigur = Polygon([(0, 0), (6, 0), (5, 4), (1, 5)])\nsone = figur.buffer(0.7)\n\nprint("Areal:", figur.area)\nprint("Omkrets:", round(figur.length, 2))\n\nx, y = sone.exterior.xy\nplt.fill(x, y, color="#d9e8df")\nx, y = figur.exterior.xy\nplt.plot(x, y, color="#2f6b5f", linewidth=3)\nplt.axis("equal")\nplt.grid()\nplt.show()`,
+    experiments: [
+      "Flytt ett hjørne og sammenlign areal og omkrets.",
+      "Prøv negativ buffer for å lage en sone innenfor figuren.",
+      "Lag to figurer og finn arealet av overlappen.",
+    ],
+  },
+  {
+    id: "spill-snake",
+    category: "Spill",
+    level: "Utforsk",
+    title: "Snake med det lokale spill-biblioteket",
+    purpose: "Start et ekte, lokalt spill og lær hvordan koordinater, lister, vilkår og en spill-løkke henger sammen.",
+    commands: [
+      { code: "from spill import Snake", explanation: "Henter den innebygde spillmotoren." },
+      { code: "Snake(bredde=..., hoyde=...)", explanation: "Bestemmer størrelsen på rutenettet." },
+      { code: "fart=6", explanation: "Bestemmer omtrent hvor mange trekk som skjer per sekund." },
+      { code: "spill.start()", explanation: "Viser spillet i resultatpanelet." },
+    ],
+    example: `from spill import Snake\n\nspill = Snake(\n    bredde=18,\n    hoyde=12,\n    fart=6,\n    slangefarge="#62b88b",\n    matfarge="#f06f51",\n    gjennom_vegg=False,\n    tittel="Mitt Snake-spill",\n)\n\nspill.start()`,
+    experiments: [
+      "Sammenlign fart 3, 6 og 10.",
+      "Endre gjennom_vegg fra False til True.",
+      "Velg egne farger og lag en tydelig spillidé.",
+    ],
+    tip: "Åpne Modul 8 for en trinnvis forklaring av hvordan Snake-reglene kan programmeres fra bunnen.",
+  },
 ];
 
 const curriculumSources = {
@@ -705,7 +862,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "Lag en første løsning, test den med ulike verdier, finn en svakhet og forbedre algoritmen i små steg.",
     tools: ["if/else", "løkker", "funksjoner", "Turtle"],
-    moduleIds: [2, 3, 4, 7],
+    moduleIds: [2, 3, 4, 7, 8],
   },
   {
     id: "9-maleenheter",
@@ -894,7 +1051,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "Still et matematisk spørsmål, lag kode som produserer eksempler, og bruk mønsteret til å formulere og begrunne en sammenheng.",
     tools: ["løkker", "funksjoner", "Turtle", "grafer"],
-    moduleIds: [3, 4, 5, 7],
+    moduleIds: [3, 4, 5, 7, 8],
   },
   {
     id: "10-pythonkode",
@@ -903,7 +1060,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "Følg variabelverdier linje for linje, forutsi resultatet, forklar matematikken og foreslå en begrunnet endring.",
     tools: ["variabler", "if/else", "løkker", "funksjoner"],
-    moduleIds: [1, 2, 3, 4],
+    moduleIds: [1, 2, 3, 4, 8],
   },
 ];
 
@@ -1749,6 +1906,132 @@ const modules: Module[] = [
         "La elevene designe et repeterende mønster, begrunne symmetrien og eksportere en senterlinje eller et lukket omriss til skaperverkstedet.",
     },
   },
+  {
+    id: 8,
+    title: "Bygg et spill: Snake",
+    shortTitle: "Spill og Snake",
+    eyebrow: "Fra regler til spill",
+    question: "Hvordan kan lister, koordinater, vilkår og en løkke bli til et spill vi faktisk kan styre?",
+    intro:
+      "Snake ser enkelt ut, men samler mange viktige ideer i programmering: en spilltilstand, en retning, en oppdatering som gjentas, tilfeldige plasseringer og regler for kollisjon. Vi bygger forståelsen bit for bit før vi starter den spillbare versjonen.",
+    refresh: {
+      title: "Et spill er en tilstand som endres",
+      body: "På hvert tidspunkt må programmet vite hvor slangen er, hvor maten ligger, hvilken vei slangen beveger seg og hvor mange poeng spilleren har. Én runde i spill-løkken regner ut den neste tilstanden og tegner brettet på nytt.",
+      examples: [
+        { code: "hode = [5, 4]", explanation: "Hodet ligger i kolonne 5 og rad 4 på et rutenett." },
+        { code: "retning = [1, 0]", explanation: "x øker med 1 og y endres ikke: Slangen går mot høyre." },
+        { code: "slange = [[5, 4], [4, 4], [3, 4]]", explanation: "En liste med ruter beskriver hele kroppen, fra hode til hale." },
+      ],
+    },
+    theory: [
+      {
+        title: "Koordinater plasserer alt på brettet",
+        body: "Vi kan tenke på spillbrettet som et koordinatsystem av ruter. Et punkt [x, y] sier hvilken kolonne og rad noe ligger i. Når slangen går mot høyre, øker x med 1. Når den går nedover på en skjerm, øker y med 1 fordi radene telles fra toppen.",
+        code: "nytt_hode = [hode[0] + dx, hode[1] + dy]",
+        steps: ["hode[0] er den gamle x-koordinaten.", "hode[1] er den gamle y-koordinaten.", "dx og dy beskriver endringen i én spillrunde.", "Det nye hodet er gammel plassering pluss retningsendringen."],
+        reflection: "Hvis hodet er [5, 4] og retningen er [0, -1], hvor havner hodet etter én runde?",
+        why: "Bevegelse blir enkel når den uttrykkes som endring i koordinater. Samme regel virker uansett hvor på brettet slangen er.",
+      },
+      {
+        title: "En liste holder orden på hele slangen",
+        body: "Første element i listen er hodet. For hver runde legger vi det nye hodet først. Hvis slangen ikke spiser, fjerner vi siste element – halen. Da ser kroppen ut til å flytte seg uten at lengden endres.",
+        code: "slange.insert(0, nytt_hode)\nslange.pop()",
+        steps: ["insert(0, ...) legger en ny rute først i listen.", "Alle de gamle kroppsdelene skyves én plass bakover.", "pop() fjerner den siste ruten.", "Når pop hoppes over etter at mat er spist, blir slangen én rute lengre."],
+        reflection: "Hvorfor vokser slangen hvis vi legger til et hode, men ikke fjerner halen?",
+        why: "Listen er spillets modell av kroppen. Ved å endre listen etter faste regler endrer vi også det som blir tegnet på brettet.",
+      },
+      {
+        title: "Vilkår bestemmer mat, poeng og game over",
+        body: "Etter at nytt_hode er beregnet, må programmet stille flere spørsmål: Er hodet utenfor brettet? Ligger det allerede i kroppen? Er hodet på samme rute som maten? Svarene bestemmer hva som skjer videre.",
+        code: "if nytt_hode in slange:\n    game_over = True",
+        steps: ["Veggkollisjon undersøker om x eller y er utenfor brettets grenser.", "Kroppskollisjon bruker in for å se om ruten allerede finnes i slangen.", "Mat treffes når nytt_hode == mat.", "Bare når ingen kollisjon har skjedd, fortsetter neste spillrunde."],
+        reflection: "I hvilken rekkefølge bør programmet sjekke kollisjon og mat? Kan mat ligge inni slangen?",
+        why: "Vilkårene er spillreglene skrevet presist. Uten dem ville vi hatt en animasjon, men ikke et spill med mål, risiko og poeng.",
+      },
+    ],
+    progression: {
+      intro: "Følg én koordinat først, bygg deretter en kropp av flere ruter, legg til spillregler og start til slutt den spillbare Snake-motoren.",
+      steps: [
+        {
+          label: "Plassering",
+          title: "Flytt ett punkt på rutenettet",
+          body: "Vi begynner med bare hodet og en retning. Løkken viser de fem neste plasseringene som tekst.",
+          code: `hode = [3, 4]\nretning = [1, 0]\n\nfor runde in range(5):\n    hode[0] += retning[0]\n    hode[1] += retning[1]\n    print(hode)`,
+          tryThis: "Endre retningen til [0, -1]. Forutsi alle fem koordinatene før du kjører.",
+        },
+        {
+          label: "Kropp",
+          title: "Legg til nytt hode og fjern halen",
+          body: "Listen starter med tre kroppsdeler. Hver runde lager vi en ny liste med det nye hodet først og alle unntatt den gamle halen etterpå.",
+          code: `slange = [[5, 4], [4, 4], [3, 4]]\ndx, dy = 1, 0\n\nfor runde in range(3):\n    hode = slange[0]\n    nytt_hode = [hode[0] + dx, hode[1] + dy]\n    slange = [nytt_hode] + slange[:-1]\n    print(slange)`,
+          tryThis: "Tegn rutene på papir. Hvorfor er lengden fortsatt 3 etter hver runde?",
+          upgrade: {
+            title: "Hva betyr slange[:-1]?",
+            body: "Dette er et utsnitt av listen fra starten fram til, men ikke med, det siste elementet. Dermed beholdes kroppen uten den gamle halen.",
+            code: `slange = [[5, 4], [4, 4], [3, 4]]\nprint(slange[:-1])  # [[5, 4], [4, 4]]`,
+          },
+        },
+        {
+          label: "Regler",
+          title: "Finn vegg, kropp og mat",
+          body: "En funksjon samler det som skal skje i én spillrunde. Den returnerer oppdatert slange, poeng og beskjed.",
+          code: `def ett_steg(slange, retning, mat, bredde, hoyde, poeng):\n    hode = slange[0]\n    dx, dy = retning\n    nytt_hode = [hode[0] + dx, hode[1] + dy]\n\n    x, y = nytt_hode\n    traff_vegg = x < 0 or x >= bredde or y < 0 or y >= hoyde\n    traff_kropp = nytt_hode in slange[:-1]\n\n    if traff_vegg or traff_kropp:\n        return slange, poeng, "game over"\n\n    ny_slange = [nytt_hode] + slange\n    if nytt_hode == mat:\n        return ny_slange, poeng + 1, "mat"\n\n    return ny_slange[:-1], poeng, "fortsett"`,
+          tryThis: "Følg funksjonen med nytt_hode [10, 4] når bredde er 10. Hvorfor blir det veggkollisjon?",
+        },
+        {
+          label: "Spillbar versjon",
+          title: "Start Snake med spill-biblioteket",
+          body: "Bjørnsveens lokale spill-bibliotek tar seg av tegning, tastatur og den gjentatte spill-løkken. Variablene i koden bestemmer brett, fart, farger og veggregel.",
+          code: `from spill import Snake\n\nspill = Snake(\n    bredde=18,\n    hoyde=12,\n    fart=6,\n    gjennom_vegg=False,\n    tittel="Mitt Snake-spill",\n)\n\nspill.start()`,
+          tryThis: "Prøv fart 3 og 10. Endre gjennom_vegg til True og undersøk hva som skjer ved kanten.",
+        },
+      ],
+    },
+    starterCode: `from spill import Snake\n\nspill = Snake(\n    bredde=18,\n    hoyde=12,\n    fart=6,\n    slangefarge="#62b88b",\n    hodefarge="#f4c95d",\n    matfarge="#f06f51",\n    gjennom_vegg=False,\n    tittel="Mitt Snake-spill",\n)\n\nspill.start()`,
+    typingSteps: [
+      { kind: "write", code: "from spill import Snake", explanation: "Dette henter den lokale Snake-motoren. Den fungerer både på nettsiden og i offline-appen.", think: "Hvilke oppgaver kan et spill-bibliotek gjøre for oss?", breakdown: ["Det tegner rutenettet og figurene.", "Det leser piltaster og knapper.", "Det gjentar spillrunden i riktig fart.", "Det lar vår Python-kode bestemme regler og utseende."], why: "Et bibliotek lar nybegynnere arbeide med viktige ideer uten først å måtte bygge hele skjermmotoren." },
+      { kind: "do", explanation: "Lag en tom linje. Nå skal du opprette ett spill og gi innstillingene som navngitte argumenter." },
+      { kind: "write", code: "spill = Snake(\n    bredde=18,\n    hoyde=12,\n    fart=6,\n)", explanation: "Parentesen kan gå over flere linjer. Innrykket gjør innstillingene lettere å lese.", think: "Hva beskriver de tre tallene?", breakdown: ["bredde er antall kolonner.", "hoyde er antall rader.", "fart er antall spillrunder per sekund.", "Større fart betyr kortere tid til neste bevegelse."], why: "Navngitte argumenter viser tydelig hva hver verdi styrer. Rekkefølgen blir mindre viktig." },
+      { kind: "write", code: "spill.slangefarge = \"#62b88b\"\nspill.matfarge = \"#f06f51\"", explanation: "Fargekodene endrer kroppen og maten. Teksten må stå i anførselstegn." },
+      { kind: "write", code: "spill.gjennom_vegg = False", explanation: "False betyr at veggen gir game over. Bytt til True for et spill der slangen kommer inn på motsatt side.", think: "Hvilken av de to regelvariantene gjør spillet enklest?", breakdown: ["False aktiverer veggkollisjon.", "True bruker rutenettet som om venstre og høyre kant henger sammen.", "Verdien er en boolsk verdi: sant eller usant."], why: "En enkelt variabel kan representere en hel spillregel og gjøre det lett å lage varianter." },
+      { kind: "write", code: "spill.start()", explanation: "Denne linjen starter visningen. Trykk deretter «Kjør kode», klikk Start i spillet og bruk piltastene." },
+    ],
+    polish: {
+      title: "Lag deres egen spillvariant",
+      body: "Et spill blir mer personlig når reglene og det visuelle uttrykket henger sammen. Prøv et lite, raskt brett eller et stort, rolig brett med egne farger.",
+      before: "spill = Snake(bredde=18, hoyde=12, fart=6)",
+      after: `spill = Snake(\n    bredde=14, hoyde=10, fart=8,\n    slangefarge="#65d6ad",\n    hodefarge="#ffe06b",\n    matfarge="#ff7058",\n    bakgrunn="#102e2b",\n    gjennom_vegg=True,\n    tittel="Neon-Snake",\n)`,
+      explanation: "Alle disse er valgfrie argumenter. Start med å endre én ting om gangen, slik at dere kan forklare hvilken virkning hvert valg har.",
+    },
+    observe: [
+      "Hvordan er slangen representert som data i programmet?",
+      "Hvorfor må programmet oppdatere og tegne spillet mange ganger per sekund?",
+      "Hvilke vilkår kan føre til mat, poeng eller game over?",
+      "Hvordan påvirker fart og brettstørrelse vanskelighetsgraden?",
+    ],
+    task:
+      "Lag deres egen Snake-variant: velg brettstørrelse, fart, minst tre farger og om slangen kan gå gjennom veggen. Spill, test og begrunn valgene.",
+    taskHint: "Kontroller at spill.start() står etter alle innstillingene, og at farger står i anførselstegn.",
+    expected: ["snake"],
+    teacher: {
+      purpose:
+        "Samle koordinater, lister, funksjoner, vilkår, tilfeldighet og algoritmisk tenkning i et motiverende produkt elevene kan teste og forbedre.",
+      before: [
+        "Spill én kort runde og be elevene liste opp alt programmet må huske.",
+        "Bruk et fysisk rutenett og la elever være hode, kropp og mat.",
+        "Følg tre spillrunder på papir før editoren åpnes.",
+      ],
+      misconceptions: [
+        "x og y blandes, særlig fordi y øker nedover på skjermen.",
+        "Eleven tror at hele slangen flyttes direkte i stedet for at nytt hode legges til og hale fjernes.",
+        "En høyere fart-verdi tolkes som lengre ventetid og dermed lavere fart.",
+      ],
+      assess:
+        "Eleven kan forklare datastrukturen for slangen, regne ut neste hode og peke ut vilkårene for vekst og kollisjon.",
+      extension:
+        "La elevene utvide ett_steg-funksjonen med hindringer, bonusmat eller en regel som gir ulike poeng for ulike mattyper.",
+    },
+  },
 ];
 
 const steps = ["Problem", "Oppfriskning", "Lær", "Prøv", "Forklar", "Oppgave"];
@@ -2336,6 +2619,212 @@ function TurtlePlayer({ drawing, settings, onSettingsChange, onDownload, onDownl
   );
 }
 
+type SnakeDirection = "opp" | "ned" | "venstre" | "hoyre";
+type SnakePoint = [number, number];
+type SnakeRound = {
+  snake: SnakePoint[];
+  food: SnakePoint;
+  direction: SnakeDirection;
+  score: number;
+  gameOver: boolean;
+  message: string;
+};
+
+const snakeVectors: Record<SnakeDirection, SnakePoint> = {
+  opp: [0, -1],
+  ned: [0, 1],
+  venstre: [-1, 0],
+  hoyre: [1, 0],
+};
+const oppositeSnakeDirection: Record<SnakeDirection, SnakeDirection> = {
+  opp: "ned",
+  ned: "opp",
+  venstre: "hoyre",
+  hoyre: "venstre",
+};
+
+function nextSnakeFood(width: number, height: number, snake: SnakePoint[]): SnakePoint {
+  const occupied = new Set(snake.map(([x, y]) => `${x},${y}`));
+  const free: SnakePoint[] = [];
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (!occupied.has(`${x},${y}`)) free.push([x, y]);
+    }
+  }
+  return free[Math.floor(Math.random() * free.length)] ?? [0, 0];
+}
+
+function initialSnakeRound(config: SnakeGameConfig): SnakeRound {
+  const x = Math.max(3, Math.floor(config.width / 3));
+  const y = Math.floor(config.height / 2);
+  const snake: SnakePoint[] = [[x, y], [x - 1, y], [x - 2, y]];
+  return {
+    snake,
+    food: nextSnakeFood(config.width, config.height, snake),
+    direction: "hoyre",
+    score: 0,
+    gameOver: false,
+    message: "Trykk Start og bruk piltastene.",
+  };
+}
+
+function SnakePlayer({ config, onRestart }: { config: SnakeGameConfig; onRestart: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const gameRef = useRef<HTMLDivElement | null>(null);
+  const directionRef = useRef<SnakeDirection>("hoyre");
+  const [round, setRound] = useState<SnakeRound>(() => initialSnakeRound(config));
+  const [playing, setPlaying] = useState(false);
+
+  function reset() {
+    const next = initialSnakeRound(config);
+    directionRef.current = next.direction;
+    setRound(next);
+    setPlaying(false);
+    requestAnimationFrame(() => gameRef.current?.focus());
+  }
+
+  function turn(direction: SnakeDirection) {
+    if (oppositeSnakeDirection[directionRef.current] === direction) return;
+    directionRef.current = direction;
+    setRound((current) => ({ ...current, direction }));
+    gameRef.current?.focus();
+  }
+
+  useEffect(() => {
+    reset();
+  }, [config]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const cell = Math.max(18, Math.floor(720 / Math.max(config.width, config.height)));
+    canvas.width = config.width * cell;
+    canvas.height = config.height * cell;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.fillStyle = config.background;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = config.gridColor;
+    context.lineWidth = 1;
+    for (let x = 0; x <= config.width; x += 1) {
+      context.beginPath(); context.moveTo(x * cell + .5, 0); context.lineTo(x * cell + .5, canvas.height); context.stroke();
+    }
+    for (let y = 0; y <= config.height; y += 1) {
+      context.beginPath(); context.moveTo(0, y * cell + .5); context.lineTo(canvas.width, y * cell + .5); context.stroke();
+    }
+    const drawCell = ([x, y]: SnakePoint, color: string, inset = 2) => {
+      context.fillStyle = color;
+      context.beginPath();
+      context.roundRect(x * cell + inset, y * cell + inset, cell - inset * 2, cell - inset * 2, Math.max(3, cell * .18));
+      context.fill();
+    };
+    drawCell(round.food, config.foodColor, Math.max(4, cell * .18));
+    [...round.snake].reverse().forEach((point, index, reversed) => {
+      const isHead = index === reversed.length - 1;
+      drawCell(point, isHead ? config.headColor : config.snakeColor);
+    });
+    const [headX, headY] = round.snake[0];
+    context.fillStyle = "#ffffff";
+    const eye = Math.max(2, cell * .07);
+    context.beginPath(); context.arc((headX + .68) * cell, (headY + .35) * cell, eye, 0, Math.PI * 2); context.fill();
+    if (round.gameOver) {
+      context.fillStyle = "#071f1cbb";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = "white";
+      context.textAlign = "center";
+      context.font = `800 ${Math.max(24, cell * .85)}px Arial`;
+      context.fillText("Spillet er slutt", canvas.width / 2, canvas.height / 2 - 10);
+      context.font = `600 ${Math.max(14, cell * .42)}px Arial`;
+      context.fillText(`Poeng: ${round.score}`, canvas.width / 2, canvas.height / 2 + 28);
+    }
+  }, [config, round]);
+
+  useEffect(() => {
+    if (!playing || round.gameOver) return;
+    const interval = window.setInterval(() => {
+      setRound((current) => {
+        if (current.gameOver) return current;
+        const direction = directionRef.current;
+        const [dx, dy] = snakeVectors[direction];
+        const [headX, headY] = current.snake[0];
+        let nextX = headX + dx;
+        let nextY = headY + dy;
+        if (config.wrap) {
+          nextX = (nextX + config.width) % config.width;
+          nextY = (nextY + config.height) % config.height;
+        }
+        const hitWall = nextX < 0 || nextX >= config.width || nextY < 0 || nextY >= config.height;
+        const ate = nextX === current.food[0] && nextY === current.food[1];
+        const bodyToCheck = ate ? current.snake : current.snake.slice(0, -1);
+        const hitSelf = bodyToCheck.some(([x, y]) => x === nextX && y === nextY);
+        if (hitWall || hitSelf) {
+          return { ...current, gameOver: true, message: hitWall ? "Slangen traff veggen." : "Slangen traff seg selv." };
+        }
+        const nextHead: SnakePoint = [nextX, nextY];
+        const nextSnake = [nextHead, ...current.snake];
+        if (!ate) nextSnake.pop();
+        return {
+          snake: nextSnake,
+          food: ate ? nextSnakeFood(config.width, config.height, nextSnake) : current.food,
+          direction,
+          score: current.score + (ate ? 1 : 0),
+          gameOver: false,
+          message: ate ? "Mat! Slangen vokste med én rute." : "Spillet kjører.",
+        };
+      });
+    }, Math.round(1000 / config.speed));
+    return () => window.clearInterval(interval);
+  }, [config, playing, round.gameOver]);
+
+  useEffect(() => {
+    if (round.gameOver) setPlaying(false);
+  }, [round.gameOver]);
+
+  function handleKey(event: KeyboardEvent<HTMLDivElement>) {
+    const direction = ({ ArrowUp: "opp", ArrowDown: "ned", ArrowLeft: "venstre", ArrowRight: "hoyre" } as Record<string, SnakeDirection>)[event.key];
+    if (!direction) return;
+    event.preventDefault();
+    turn(direction);
+    if (!round.gameOver) setPlaying(true);
+  }
+
+  function saveImage() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const anchor = document.createElement("a");
+    anchor.href = canvas.toDataURL("image/png");
+    anchor.download = `${safeProjectName(config.title)}.png`;
+    anchor.click();
+  }
+
+  return (
+    <figure className="snake-player">
+      <div className="snake-heading">
+        <div><span>Python-spill</span><strong>{config.title}</strong></div>
+        <div><span>Poeng</span><strong>{round.score}</strong></div>
+      </div>
+      <div className="snake-game" ref={gameRef} tabIndex={0} onKeyDown={handleKey} aria-label="Snake-spill. Bruk piltastene eller knappene under.">
+        <canvas ref={canvasRef} className="snake-canvas" aria-label={`${config.title}, ${round.score} poeng`} />
+      </div>
+      <figcaption className="snake-controls">
+        <div className="snake-status" aria-live="polite"><strong>{playing ? "Kjører" : round.gameOver ? "Spillet er slutt" : "Klar"}</strong><span>{round.message}</span></div>
+        <div className="snake-arrows" aria-label="Styr slangen">
+          <button type="button" className="snake-up" onClick={() => turn("opp")} aria-label="Opp">↑</button>
+          <button type="button" onClick={() => turn("venstre")} aria-label="Venstre">←</button>
+          <button type="button" onClick={() => turn("ned")} aria-label="Ned">↓</button>
+          <button type="button" onClick={() => turn("hoyre")} aria-label="Høyre">→</button>
+        </div>
+        <div className="snake-actions">
+          <button type="button" className="snake-play" onClick={() => { if (round.gameOver) reset(); else setPlaying((current) => !current); gameRef.current?.focus(); }}>{round.gameOver ? "Spill igjen" : playing ? "Pause" : "Start"}</button>
+          <button type="button" onClick={reset}>Nullstill</button>
+          <button type="button" onClick={onRestart}>Kjør koden på nytt</button>
+          <button type="button" onClick={saveImage}>Lagre bilde</button>
+        </div>
+      </figcaption>
+    </figure>
+  );
+}
+
 export default function Home() {
   const [activeId, setActiveId] = useState(1);
   const [playground, setPlayground] = useState(true);
@@ -2359,6 +2848,7 @@ export default function Home() {
   const [plotImages, setPlotImages] = useState<string[]>([]);
   const [expandedPlotIndex, setExpandedPlotIndex] = useState<number | null>(null);
   const [turtleDrawing, setTurtleDrawing] = useState<TurtleDrawing | null>(null);
+  const [snakeGame, setSnakeGame] = useState<SnakeGameConfig | null>(null);
   const [turtleWorkshop, setTurtleWorkshop] = useState<TurtleWorkshopSettings>(defaultTurtleWorkshop);
   const [turtleExpanded, setTurtleExpanded] = useState(false);
   const [editorFontSize, setEditorFontSize] = useState(19);
@@ -2489,6 +2979,7 @@ export default function Home() {
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
     setTurtleExpanded(false);
+    setSnakeGame(null);
     setShareStatus("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -2504,6 +2995,7 @@ export default function Home() {
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
     setTurtleExpanded(false);
+    setSnakeGame(null);
     setShareStatus("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -2555,6 +3047,7 @@ export default function Home() {
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
     setTurtleExpanded(false);
+    setSnakeGame(null);
     setReferenceStatus(`Eksemplet «${reference.title}» ble åpnet som et nytt prosjekt. Det gamle prosjektet er bevart.`);
     window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(nextProjects));
     window.localStorage.setItem("bjornsveen-python-active-project", project.id);
@@ -2603,6 +3096,7 @@ export default function Home() {
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
     setTurtleExpanded(false);
+    setSnakeGame(null);
   }
 
   function resetCurrentEditor() {
@@ -2624,6 +3118,7 @@ export default function Home() {
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
     setTurtleExpanded(false);
+    setSnakeGame(null);
     requestAnimationFrame(() => document.getElementById("module-lab")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
@@ -2638,6 +3133,7 @@ export default function Home() {
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
     setTurtleExpanded(false);
+    setSnakeGame(null);
     setShareStatus("");
     window.localStorage.setItem("bjornsveen-python-active-project", projectId);
   }
@@ -2784,6 +3280,8 @@ export default function Home() {
     measure.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
     const width = Math.min(1800, Math.max(720, ...[...lines, ...answerLines].map((line) => measure.measureText(line).width + padding * 2)));
     const visualSources = plotImages.map((plotImage) => `data:image/png;base64,${plotImage}`);
+    const snakeCanvas = document.querySelector<HTMLCanvasElement>(".snake-canvas");
+    if (snakeGame && snakeCanvas) visualSources.unshift(snakeCanvas.toDataURL("image/png"));
     if (turtleDrawing) {
       const turtleCanvas = document.createElement("canvas");
       renderTurtleFrame(turtleCanvas, turtleDrawing, turtleDrawing.events.length, turtleWorkshop);
@@ -2899,9 +3397,10 @@ export default function Home() {
   }
 
   function plotGallery() {
-    if (!plotImages.length && !turtleDrawing) return null;
+    if (!plotImages.length && !turtleDrawing && !snakeGame) return null;
     return (
-      <div className={`plot-gallery ${turtleDrawing ? "has-turtle" : ""}`} aria-label={turtleDrawing ? "Turtle-tegning og grafer" : plotImages.length === 1 ? "Graf" : `${plotImages.length} grafer`}>
+      <div className={`plot-gallery ${turtleDrawing ? "has-turtle" : ""} ${snakeGame ? "has-game" : ""}`} aria-label={snakeGame ? "Python-spill og andre resultater" : turtleDrawing ? "Turtle-tegning og grafer" : plotImages.length === 1 ? "Graf" : `${plotImages.length} grafer`}>
+        {snakeGame && <SnakePlayer config={snakeGame} onRestart={runCode} />}
         {turtleDrawing && (
           <TurtlePlayer
             drawing={turtleDrawing}
@@ -2945,12 +3444,13 @@ export default function Home() {
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
     setTurtleExpanded(false);
+    setSnakeGame(null);
 
     const worker = makeWorker();
     let executionStarted = false;
 
     worker.onmessage = (event) => {
-      const data = event.data as { type: string; output?: string; error?: string; plots?: string[]; turtle?: TurtleDrawing | null };
+      const data = event.data as { type: string; output?: string; error?: string; plots?: string[]; turtle?: TurtleDrawing | null; game?: SnakeGameConfig | null };
       if (data.type === "ready") {
         executionStarted = true;
         setRunnerStatus("running");
@@ -2968,9 +3468,11 @@ export default function Home() {
         setRunnerStatus("idle");
         const nextPlots = data.plots ?? [];
         const nextTurtle = data.turtle ?? null;
-        setOutput(data.output?.trim() || (nextTurtle ? "Turtle-tegningen kan spilles av steg for steg under." : nextPlots.length ? `${nextPlots.length === 1 ? "Grafen" : `${nextPlots.length} grafer`} vises under.` : "Koden kjørte ferdig uten utskrift."));
+        const nextGame = data.game ?? null;
+        setOutput(data.output?.trim() || (nextGame ? "Snake-spillet er klart. Trykk Start og bruk piltastene." : nextTurtle ? "Turtle-tegningen kan spilles av steg for steg under." : nextPlots.length ? `${nextPlots.length === 1 ? "Grafen" : `${nextPlots.length} grafer`} vises under.` : "Koden kjørte ferdig uten utskrift."));
         setPlotImages(nextPlots);
         setTurtleDrawing(nextTurtle);
+        setSnakeGame(nextGame);
         worker.terminate();
       }
 
@@ -3083,7 +3585,7 @@ export default function Home() {
                 </div>
                 <div className="live-badge"><span /> Ekte Python i nettleseren</div>
               </div>
-              <div className={`code-workbench ${turtleDrawing ? "has-turtle" : ""}`} ref={workbenchRef}>
+              <div className={`code-workbench ${turtleDrawing ? "has-turtle" : ""} ${snakeGame ? "has-game" : ""}`} ref={workbenchRef}>
                 <div className="editor-panel">
                   <div className="panel-bar">
                     <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
@@ -3171,16 +3673,24 @@ export default function Home() {
 
               <div className="package-guide">
                 <div>
-                  <strong>Datapakker som fungerer her</strong>
-                  <p>NumPy, pandas, Matplotlib, SciPy, SymPy, scikit-learn, Pillow og NetworkX lastes automatisk når de importeres.</p>
+                  <strong>Matematikk og data</strong>
+                  <p>NumPy, pandas, Matplotlib, SciPy, SymPy, scikit-learn og Shapely lastes automatisk når de importeres.</p>
                 </div>
                 <div>
-                  <strong>Turtle for geometri og mønstre</strong>
-                  <p>Bruk <code>from turtle import *</code>. Tegningen kan spilles av, åpnes stort og lagres som PNG eller SVG.</p>
+                  <strong>Bilder, nettverk og geometri</strong>
+                  <p>Pillow, NetworkX, Turtle og Shapely lager bilder, forbindelser og figurer. Resultater kan vises som grafikk.</p>
+                </div>
+                <div>
+                  <strong>Spill som virker her</strong>
+                  <p>Bruk <code>from spill import Snake</code>. Det lokale spill-biblioteket gir et spillbart rutenett med tastatur og knapper.</p>
+                </div>
+                <div>
+                  <strong>Standardbiblioteket er allerede med</strong>
+                  <p><code>math</code>, <code>statistics</code>, <code>fractions</code>, <code>decimal</code>, <code>random</code>, <code>csv</code> og flere trenger ingen installasjon.</p>
                 </div>
                 <div>
                   <strong>Ikke helt som installert Python</strong>
-                  <p>Pakker som krever maskinvare, egne skjermvinduer eller en server kan ikke kjøre i nettleseren.</p>
+                  <p>Pakker som krever maskinvare, egne systemvinduer, server eller tråder kan være uegnede selv om pakken kan importeres.</p>
                 </div>
               </div>
             </section>
@@ -3196,6 +3706,7 @@ export default function Home() {
                 <button type="button" onClick={() => updateCode('from turtle import *\n\ncolor("#f06f51", "#f4c95d")\npensize(5)\n\nbegin_fill()\nfor side in range(4):\n    forward(120)\n    left(90)\nend_fill()\n\ndone()')}>Tegn et Turtle-kvadrat</button>
                 <button type="button" onClick={() => updateCode('from turtle import *\n\nbgcolor("#fffdf8")\ncolor("#2f6b5f")\npensize(3)\n\nfor lengde in range(10, 190, 6):\n    forward(lengde)\n    left(91)\n\ndone()')}>Lag en geometrisk spiral</button>
                 <button type="button" onClick={() => updateCode('import pandas as pd\n\ndata = {"navn": ["Ada", "Bo", "Celine"], "poeng": [8, 12, 10]}\ntabell = pd.DataFrame(data)\nprint(tabell.to_string(index=False))')}>Lag en tabell</button>
+                <button type="button" onClick={() => updateCode('from spill import Snake\n\nspill = Snake(bredde=18, hoyde=12, fart=6)\nspill.start()')}>Start et Snake-spill</button>
                 <button type="button" onClick={() => updateCode("")}>Tøm kodefeltet</button>
               </div>
               <a className="reference-jump" href="#python-handbok">Trenger du en oppskrift? Åpne Python-håndboken ↓</a>
@@ -3649,7 +4160,7 @@ export default function Home() {
               <div className="solution-note"><strong>Fasit er ikke låst.</strong> Endre tall, tekst eller uttrykk, kjør på nytt og se hva som skjer.</div>
             )}
 
-            <div className={`code-workbench module-workbench ${turtleDrawing ? "has-turtle" : ""}`} ref={workbenchRef}>
+            <div className={`code-workbench module-workbench ${turtleDrawing ? "has-turtle" : ""} ${snakeGame ? "has-game" : ""}`} ref={workbenchRef}>
               <div className="editor-panel">
                 <div className="panel-bar">
                   <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
