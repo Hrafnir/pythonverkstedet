@@ -21,15 +21,22 @@ test("appen inneholder seks komplette læringsmoduler", () => {
   assert.match(page, /Slik lager du en variabel/);
 });
 
-test("modulvelgeren har et fritt Python-rom uten sidepanel", () => {
+test("Python er første område, standardvisning og har ikke sidepanel", () => {
   assert.match(page, /id="module-select"/);
-  assert.match(page, /Fritt Python-rom/);
+  assert.match(page, /const \[playground, setPlayground\] = useState\(true\)/);
+  assert.match(page, /<option value="playground">Python<\/option>/);
+  assert.match(page, /name: "Nytt program"/);
+  assert.match(page, /setActiveProjectId\(firstProject\.id\)/);
+  assert.match(page, /setCode\(""\)/);
+  assert.doesNotMatch(page, /Fritt Python-rom/);
   assert.match(page, /playgroundCode/);
   assert.match(page, /Lokale prosjekter/);
   assert.match(page, /Importer \.py/);
   assert.match(page, /Bilde av kode \+ svar/);
   assert.match(page, /Kopier kode \+ svar/);
   assert.doesNotMatch(page, /<aside/);
+  const pickerSource = page.slice(page.indexOf('id="module-select"'), page.indexOf('<nav className="top-actions"'));
+  assert.ok(pickerSource.indexOf('<option value="playground">Python</option>') < pickerSource.indexOf("{modules.map"));
 });
 
 test("modulene har tom skrivelab, redigerbar fasit, kodefarger og ekstratriks", () => {
@@ -116,9 +123,11 @@ test("Python-rommet har et komplett, søkbart oppslagsverk", () => {
   }
 });
 
-test("Fritt Python-rom starter med editor og har en kodebygger", () => {
+test("Python starter med tom editor og har en kodebygger", () => {
   const playgroundSource = page.slice(page.indexOf("{playground && ("), page.indexOf("{!playground && ("));
   assert.ok(playgroundSource.indexOf('id="python-editor"') < playgroundSource.indexOf("playground-guide"));
+  assert.doesNotMatch(playgroundSource, /playground-hero/);
+  assert.match(page, /const playgroundCode = ""/);
   assert.match(page, /const codeSnippets: CodeSnippet\[]/);
   const snippetSource = page.slice(page.indexOf("const codeSnippets"), page.indexOf("const playgroundReferences"));
   assert.equal((snippetSource.match(/    id: "(?:variabler|print|regning|for-lokke|if-else|liste|funksjon|tilfeldig|graf|turtle)",/g) ?? []).length, 10);

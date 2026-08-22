@@ -459,15 +459,8 @@ p, li { text-wrap: pretty; }
 .lesson-nav small { font-weight: 750; }
 .lesson-nav p { color: #687572; font-size: 14px; }
 
-.playground-prompts { display: flex; flex-wrap: wrap; gap: 10px; }
-.playground-prompts span { padding: 9px 13px; border-radius: 99px; background: var(--mint); color: var(--green-dark); font-size: 14px; font-weight: 750; }
-.playground-stamp strong { font-size: 39px; letter-spacing: -.12em; }
-.playground-page .playground-hero { min-height: 275px; padding-top: 43px; padding-bottom: 37px; }
-.playground-page .playground-hero h1 { font-size: clamp(42px, 5vw, 60px); }
-.playground-page .playground-hero .hero-intro { margin-top: 18px; margin-bottom: 20px; font-size: 18px; line-height: 1.55; }
-.playground-page .playground-prompts { gap: 7px; }
-.playground-page .playground-prompts span { padding: 6px 10px; font-size: 12px; }
-.playground-lab { padding-top: 40px; }
+.playground-lab { min-height: calc(100vh - 100px); padding-top: 52px; }
+.playground-lab .lab-heading h1 { margin: 6px 0 0; font-size: 46px; line-height: 1.05; }
 .playground-lab-intro { max-width: 720px; margin: 10px 0 0; color: #b9cdc6; font-size: 17px; line-height: 1.6; }
 .snippet-builder { max-width: 1060px; margin: 36px auto 0; padding: 28px; border: 1px solid #78938b; border-radius: 16px; background: #f7faf8; color: var(--ink); box-shadow: 0 18px 36px #071f1c33; scroll-margin-top: 125px; }
 .snippet-heading { display: flex; align-items: end; justify-content: space-between; gap: 28px; }
@@ -693,9 +686,8 @@ p, li { text-wrap: pretty; }
   .project-toolbar label:first-child { flex-basis: 100%; }
   .project-toolbar button, .import-button { justify-content: center; flex: 1 1 130px; }
   .package-guide { grid-template-columns: 1fr; }
-  .playground-page .playground-hero { min-height: 0; padding: 34px 22px 30px; }
-  .playground-page .playground-hero h1 { font-size: 40px; }
-  .playground-page .playground-hero .hero-intro { font-size: 17px; }
+  .playground-lab { padding-top: 34px; }
+  .playground-lab .lab-heading h1 { font-size: 38px; }
   .snippet-builder { margin-left: -9px; margin-right: -9px; padding: 20px; scroll-margin-top: 20px; }
   .snippet-heading h3 { font-size: 27px; }
   .snippet-grid { grid-template-columns: 1fr; }
