@@ -127,6 +127,7 @@ test("Python starter med tom editor og har en kodebygger", () => {
   const playgroundSource = page.slice(page.indexOf("{playground && ("), page.indexOf("{!playground && ("));
   assert.ok(playgroundSource.indexOf('id="python-editor"') < playgroundSource.indexOf("playground-guide"));
   assert.doesNotMatch(playgroundSource, /playground-hero/);
+  assert.doesNotMatch(playgroundSource, /det frie rommet/);
   assert.match(page, /const playgroundCode = ""/);
   assert.match(page, /const codeSnippets: CodeSnippet\[]/);
   const snippetSource = page.slice(page.indexOf("const codeSnippets"), page.indexOf("const playgroundReferences"));
@@ -216,6 +217,10 @@ test("metadata og midlertidig startinnhold er ryddet", () => {
   assert.match(html, /<html lang="nb">/);
   assert.equal(existsSync("app/_sites-preview/SkeletonPreview.tsx"), false);
   assert.doesNotMatch(page, /codex-preview|SkeletonPreview/);
+  assert.match(page, /© 2026 Eirik Ditlefsen Gaarde/);
+  assert.match(page, /tvang en stakkars KI til å lage dette programmet/);
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.app-credit[\s\S]*font-size: 9px/);
 });
 
 test("GitHub Pages-pakken er komplett", () => {
