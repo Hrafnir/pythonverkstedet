@@ -47,6 +47,21 @@ test("modulene har tom skrivelab, redigerbar fasit, kodefarger og ekstratriks", 
   assert.equal((page.match(/    polish: \{/g) ?? []).length, 6);
 });
 
+test("alle moduler forklarer tankegangen grundig og inviterer til refleksjon", () => {
+  assert.equal((page.match(/^        reflection:/gm) ?? []).length, 18);
+  assert.equal((page.match(/^        why:/gm) ?? []).length, 18);
+  assert.ok((page.match(/think:/g) ?? []).length >= 12);
+  assert.ok((page.match(/breakdown:/g) ?? []).length >= 12);
+  assert.match(page, /1 står for hele den gamle prisen: 100 %/);
+  assert.match(page, /1 − 0\.25 = 0\.75/);
+  assert.match(page, /0\.75 er det samme som 75 %/);
+  assert.match(page, /Tenk først/);
+  assert.match(page, /Dette skjer/);
+  assert.match(page, /Derfor virker koden/);
+  assert.match(page, /theory-reflection/);
+  assert.match(page, /typing-deep-dive/);
+});
+
 test("alle moduler bygger kompetanse i små, kjørbare steg", () => {
   assert.equal((page.match(/    progression: \{/g) ?? []).length, 6);
   assert.match(page, /Små steg som bygger på hverandre/);
@@ -221,6 +236,9 @@ test("Mac-utgaven er offline, ARM64 og kan pakkes for IT", () => {
   assert.match(desktopBuild, /hdiutil/);
   assert.match(desktopBuild, /pkgbuild/);
   assert.match(desktopBuild, /kodeormen\.icns/);
+  assert.match(desktopBuild, /writeIcns/);
+  assert.match(desktopBuild, /dmgStaging[\s\S]*run\("ditto"/);
+  assert.match(desktopBuild, /finalAppDir[\s\S]*run\("ditto"/);
   assert.match(desktopBuild, /--noextattr/);
   assert.equal(existsSync("public/brand/kodeormen-master.png"), true);
   assert.equal(existsSync("public/brand/kodeormen-256.png"), true);

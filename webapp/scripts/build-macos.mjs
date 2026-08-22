@@ -17,6 +17,34 @@ function run(command, args, options = {}) {
   execFileSync(command, args, { cwd: root, stdio: "inherit", ...options });
 }
 
+async function writeIcns(iconsetPath, outputPath) {
+  const entries = [
+    ["icp4", "icon_16x16.png"],
+    ["ic11", "icon_16x16@2x.png"],
+    ["icp5", "icon_32x32.png"],
+    ["ic12", "icon_32x32@2x.png"],
+    ["ic07", "icon_128x128.png"],
+    ["ic13", "icon_128x128@2x.png"],
+    ["ic08", "icon_256x256.png"],
+    ["ic14", "icon_256x256@2x.png"],
+    ["ic09", "icon_512x512.png"],
+    ["ic10", "icon_512x512@2x.png"],
+  ];
+  const chunks = [];
+  for (const [type, filename] of entries) {
+    const png = await readFile(path.join(iconsetPath, filename));
+    const header = Buffer.alloc(8);
+    header.write(type, 0, 4, "ascii");
+    header.writeUInt32BE(png.length + 8, 4);
+    chunks.push(header, png);
+  }
+  const body = Buffer.concat(chunks);
+  const header = Buffer.alloc(8);
+  header.write("icns", 0, 4, "ascii");
+  header.writeUInt32BE(body.length + 8, 4);
+  await writeFile(outputPath, Buffer.concat([header, body]));
+}
+
 await rm(outRoot, { recursive: true, force: true });
 await rm(packageRoot, { recursive: true, force: true });
 await mkdir(outRoot, { recursive: true });
@@ -54,7 +82,7 @@ for (const [name, pixels] of [
   ["icon_512x512.png", 512], ["icon_512x512@2x.png", 1024],
 ]) run("sips", ["-z", String(pixels), String(pixels), iconMaster, "--out", path.join(iconset, name)]);
 const iconPath = path.join(resourcesDir, "kodeormen.icns");
-run("iconutil", ["-c", "icns", iconset, "-o", iconPath]);
+await writeIcns(iconset, iconPath);
 const plist = path.join(appPath, "Contents", "Info.plist");
 for (const [key, value] of [
   ["CFBundleDisplayName", productName],
@@ -89,7 +117,7 @@ if (signIdentity) {
 
 const dmgStaging = path.join(workRoot, "dmg-staging");
 await mkdir(dmgStaging, { recursive: true });
-await cp(appPath, path.join(dmgStaging, `${productName}.app`), { recursive: true });
+run("ditto", ["--noextattr", "--norsrc", appPath, path.join(dmgStaging, `${productName}.app`)]);
 await cp(path.join(root, "desktop", "IT-README.txt"), path.join(dmgStaging, "LES-MEG-IT.txt"));
 const workDmgPath = path.join(workRoot, `${productName}-${version}-arm64.dmg`);
 const dmgPath = path.join(outRoot, path.basename(workDmgPath));
@@ -107,7 +135,7 @@ if (process.env.MAC_INSTALLER_IDENTITY) productArgs.push("--sign", process.env.M
 productArgs.push(workPkgPath);
 run("productbuild", productArgs);
 const finalAppDir = path.join(outRoot, path.basename(appDir));
-await cp(appDir, finalAppDir, { recursive: true });
+run("ditto", ["--noextattr", "--norsrc", appDir, finalAppDir]);
 run("xattr", ["-cr", finalAppDir]);
 await cp(workDmgPath, dmgPath);
 await cp(workPkgPath, pkgPath);
