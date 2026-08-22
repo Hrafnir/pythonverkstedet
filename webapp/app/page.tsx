@@ -2747,7 +2747,7 @@ export default function Home() {
                 <div>
                   <p className="section-label"><span>⌘</span> Python-håndbok</p>
                   <h2>Finn det du trenger – og prøv med én gang</h2>
-                  <p>Dette er oppslagsverket for det frie rommet. Finn en kommando, se et komplett eksempel og åpne det som et nytt prosjekt. Det du allerede arbeider med, blir bevart.</p>
+                  <p>Dette er oppslagsverket for Python. Finn en kommando, se et komplett eksempel og åpne det som et nytt prosjekt. Det du allerede arbeider med, blir bevart.</p>
                 </div>
                 <div className="reference-method" aria-label="Arbeidsmåte">
                   <span><b>1</b> Finn</span>
@@ -2882,7 +2882,7 @@ export default function Home() {
 
             <section className="content-section playground-reflection">
               <p className="section-label"><span>↻</span> Utforsk videre</p>
-              <h2>En god arbeidsmåte i det frie rommet</h2>
+              <h2>En god arbeidsmåte i Python</h2>
               <ol className="question-list">
                 <li><span>1</span><p>Forutsi resultatet før dere kjører.</p></li>
                 <li><span>2</span><p>Endre bare én ting om gangen.</p></li>
@@ -3250,6 +3250,9 @@ export default function Home() {
           </div>
         </div>
       )}
+      <footer className="app-credit">
+        © 2026 Eirik Ditlefsen Gaarde · tvang en stakkars KI til å lage dette programmet.
+      </footer>
     </main>
   );
 }

@@ -114,6 +114,18 @@ p, li { text-wrap: pretty; }
 .course-progress { position: sticky; top: 95px; z-index: 41; height: 4px; background: #ddd9cf; }
 .course-progress span { display: block; height: 100%; background: var(--coral); transition: width .3s; }
 .app-shell { min-height: calc(100vh - 100px); }
+.app-credit {
+  margin: 0;
+  padding: 10px 24px 13px;
+  background: var(--cream);
+  color: #7f8986;
+  font-size: 9px;
+  line-height: 1.25;
+  letter-spacing: .025em;
+  text-align: center;
+  opacity: .52;
+}
+.app-credit:hover { opacity: .82; }
 .kicker, .section-label {
   margin: 0 0 10px;
   color: var(--coral-dark);
@@ -723,7 +735,7 @@ p, li { text-wrap: pretty; }
 }
 
 @media print {
-  .topbar, .course-progress, .lab-section, .task-actions, .lesson-nav, .mode-switch { display: none !important; }
+  .topbar, .course-progress, .lab-section, .task-actions, .lesson-nav, .mode-switch, .app-credit { display: none !important; }
   .app-shell { display: block; }
   .lesson { background: white; }
   .lesson-hero, .content-section { max-width: none; padding: 28px 36px; }
