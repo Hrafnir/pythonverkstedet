@@ -89,7 +89,8 @@ test("Python-rommet har et komplett, søkbart oppslagsverk", () => {
   assert.match(page, /Python-håndbok/);
   assert.match(page, /Søk i håndboken/);
   assert.match(page, /playgroundReferences/);
-  assert.equal((page.match(/    id: "(?:variabler|tekst|vilkar|tallmonster|lister|funksjoner|tilfeldighet|tabeller|grafer|turtle-figurer|turtle-spiral|numpy|symbolsk)",/g) ?? []).length, 13);
+  const referenceSource = page.slice(page.indexOf("const playgroundReferences"), page.indexOf("const modules"));
+  assert.equal((referenceSource.match(/    id: "(?:variabler|tekst|vilkar|tallmonster|lister|funksjoner|tilfeldighet|tabeller|grafer|turtle-figurer|turtle-spiral|numpy|symbolsk)",/g) ?? []).length, 13);
   assert.match(page, /Viktige koder og kommandoer/);
   assert.match(page, /Eksperimenter videre/);
   assert.match(page, /Åpne som nytt prosjekt/);
@@ -98,6 +99,23 @@ test("Python-rommet har et komplett, søkbart oppslagsverk", () => {
   for (const errorName of ["SyntaxError", "IndentationError", "NameError", "TypeError"]) {
     assert.match(page, new RegExp(errorName));
   }
+});
+
+test("Fritt Python-rom starter med editor og har en kodebygger", () => {
+  const playgroundSource = page.slice(page.indexOf("{playground && ("), page.indexOf("{!playground && ("));
+  assert.ok(playgroundSource.indexOf('id="python-editor"') < playgroundSource.indexOf("playground-guide"));
+  assert.match(page, /const codeSnippets: CodeSnippet\[]/);
+  const snippetSource = page.slice(page.indexOf("const codeSnippets"), page.indexOf("const playgroundReferences"));
+  assert.equal((snippetSource.match(/    id: "(?:variabler|print|regning|for-lokke|if-else|liste|funksjon|tilfeldig|graf|turtle)",/g) ?? []).length, 10);
+  assert.match(page, /Bygg et program av små deler/);
+  assert.match(page, /Legg til i editor/);
+  assert.match(page, /appendSnippet/);
+  assert.match(page, /Kopier/);
+  assert.match(page, /for n in range\(1, 6\):/);
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.snippet-grid/);
+  assert.match(css, /text-wrap: balance/);
+  assert.match(css, /button:focus-visible/);
 });
 
 test("Turtle tegner geometriske figurer lokalt i resultatpanelet", () => {

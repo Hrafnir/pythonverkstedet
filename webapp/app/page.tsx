@@ -134,6 +134,101 @@ type PlaygroundReference = {
   tip?: string;
 };
 
+const snippetCategories = ["Alle", "Kom i gang", "Styring", "Byggeklosser", "Tilfeldighet", "Tegning"] as const;
+type SnippetCategory = (typeof snippetCategories)[number];
+
+type CodeSnippet = {
+  id: string;
+  category: Exclude<SnippetCategory, "Alle">;
+  title: string;
+  purpose: string;
+  code: string;
+  change: string;
+};
+
+const codeSnippets: CodeSnippet[] = [
+  {
+    id: "variabler",
+    category: "Kom i gang",
+    title: "Lag variabler",
+    purpose: "Lagre tekst og tall under tydelige navn.",
+    code: 'navn = "Ada"\nalder = 15',
+    change: "Bytt ut Ada, alder og variabelnavnene.",
+  },
+  {
+    id: "print",
+    category: "Kom i gang",
+    title: "Skriv et forståelig svar",
+    purpose: "Vis tekst og en variabel i samme utskrift.",
+    code: 'print("Hei", navn)\nprint("Du er", alder, "år.")',
+    change: "Bytt teksten og variablene mellom kommaene.",
+  },
+  {
+    id: "regning",
+    category: "Kom i gang",
+    title: "Regn med variabler",
+    purpose: "Gang sammen verdier og lagre resultatet.",
+    code: 'pris = 80\nantall = 3\ntotal = pris * antall\nprint("Total:", total, "kr")',
+    change: "Endre pris, antall eller regneart.",
+  },
+  {
+    id: "for-lokke",
+    category: "Styring",
+    title: "Gjenta med en for-løkke",
+    purpose: "La n få verdiene 1, 2, 3, 4 og 5.",
+    code: "for n in range(1, 6):\n    print(n)",
+    change: "Endre start, stopp og det som skjer med innrykk.",
+  },
+  {
+    id: "if-else",
+    category: "Styring",
+    title: "Velg med if og else",
+    purpose: "Kjør ulik kode avhengig av et vilkår.",
+    code: 'tall = 8\n\nif tall > 5:\n    print("Større enn 5")\nelse:\n    print("5 eller mindre")',
+    change: "Endre tallet, sammenligningen og beskjedene.",
+  },
+  {
+    id: "liste",
+    category: "Byggeklosser",
+    title: "Gå gjennom en liste",
+    purpose: "Behandle flere verdier med den samme koden.",
+    code: 'poeng = [3, 7, 10]\n\nfor verdi in poeng:\n    print("Poeng:", verdi)',
+    change: "Legg til tall i listen eller regn med verdi.",
+  },
+  {
+    id: "funksjon",
+    category: "Byggeklosser",
+    title: "Lag en funksjon",
+    purpose: "Gi en liten oppskrift et navn og bruk den flere ganger.",
+    code: 'def dobbel(tall):\n    return tall * 2\n\nprint(dobbel(5))',
+    change: "Bytt navn, regneoperasjon og tallet i funksjonskallet.",
+  },
+  {
+    id: "tilfeldig",
+    category: "Tilfeldighet",
+    title: "Trekk et tilfeldig tall",
+    purpose: "Bruk random til terningkast og simuleringer.",
+    code: 'import random\n\nkast = random.randint(1, 6)\nprint("Terningen viser", kast)',
+    change: "Endre minste og største mulige verdi.",
+  },
+  {
+    id: "graf",
+    category: "Tegning",
+    title: "Tegn en enkel graf",
+    purpose: "Vis sammenhengen mellom x- og y-verdier.",
+    code: 'import matplotlib.pyplot as plt\n\nx = [0, 1, 2, 3, 4]\ny = [0, 1, 4, 9, 16]\n\nplt.plot(x, y, marker="o")\nplt.grid()\nplt.show()',
+    change: "Endre tallene i listene, fargen eller tittelen.",
+  },
+  {
+    id: "turtle",
+    category: "Tegning",
+    title: "Tegn et Turtle-kvadrat",
+    purpose: "Kombiner en løkke med lengde og vinkel.",
+    code: 'from turtle import *\n\nfor side in range(4):\n    forward(120)\n    left(90)\n\ndone()',
+    change: "Endre antall sider, lengde og vinkel.",
+  },
+];
+
 const playgroundReferences: PlaygroundReference[] = [
   {
     id: "variabler",
@@ -1786,6 +1881,8 @@ export default function Home() {
   const [referenceQuery, setReferenceQuery] = useState("");
   const [referenceCategory, setReferenceCategory] = useState<ReferenceCategory>("Alle");
   const [referenceStatus, setReferenceStatus] = useState("");
+  const [snippetCategory, setSnippetCategory] = useState<SnippetCategory>("Alle");
+  const [snippetStatus, setSnippetStatus] = useState("");
   const workbenchRef = useRef<HTMLDivElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1813,6 +1910,11 @@ export default function Home() {
       return searchable.includes(query);
     });
   }, [referenceCategory, referenceQuery]);
+
+  const filteredSnippets = useMemo(
+    () => codeSnippets.filter((snippet) => snippetCategory === "Alle" || snippet.category === snippetCategory),
+    [snippetCategory],
+  );
 
   useEffect(() => {
     const saved = window.localStorage.getItem("pythonverkstedet-progress");
@@ -1951,6 +2053,27 @@ export default function Home() {
       setReferenceStatus(`Koden til «${reference.title}» er kopiert.`);
     } catch {
       setReferenceStatus("Nettleseren tillot ikke kopiering. Åpne kortet og marker koden manuelt.");
+    }
+  }
+
+  function appendSnippet(snippet: CodeSnippet) {
+    const nextCode = code.trimEnd() ? `${code.trimEnd()}\n\n${snippet.code}` : snippet.code;
+    updateCode(nextCode);
+    setSnippetStatus(`«${snippet.title}» er lagt til nederst i editoren. Endre navn, tall og tekst slik dere vil.`);
+    requestAnimationFrame(() => {
+      const editor = document.getElementById("playground-code") as HTMLTextAreaElement | null;
+      editor?.focus();
+      editor?.setSelectionRange(nextCode.length, nextCode.length);
+      workbenchRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+
+  async function copySnippet(snippet: CodeSnippet) {
+    try {
+      await navigator.clipboard.writeText(snippet.code);
+      setSnippetStatus(`«${snippet.title}» er kopiert. Lim den inn der dere vil.`);
+    } catch {
+      setSnippetStatus("Nettleseren tillot ikke kopiering. Marker koden i kortet og kopier manuelt.");
     }
   }
 
@@ -2454,6 +2577,117 @@ export default function Home() {
               </div>
             </section>
 
+            <section className="content-section lab-section playground-lab" id="python-editor">
+              <div className="section-heading lab-heading">
+                <div>
+                  <p className="section-label inverse"><span>1</span> Start her · Python-editor</p>
+                  <h2>Skriv, bygg og kjør med én gang</h2>
+                  <p className="playground-lab-intro">Skriv selv, eller legg sammen ferdige byggeklosser fra kodebyggeren rett under editoren. Alt kan endres.</p>
+                </div>
+                <div className="live-badge"><span /> Ekte Python i nettleseren</div>
+              </div>
+              <div className={`code-workbench ${turtleDrawing ? "has-turtle" : ""}`} ref={workbenchRef}>
+                <div className="editor-panel">
+                  <div className="panel-bar">
+                    <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
+                    <strong>{safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py</strong>
+                    <span className="panel-tools">
+                      <button type="button" onClick={copyCodeAsText}>Kopier kode + svar</button>
+                      <button type="button" onClick={() => copyCodeAsImage(`${safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py`)}>Bilde av kode + svar</button>
+                      <span className="editor-size-controls" aria-label="Skriftstørrelse i kodefeltet">
+                        <button type="button" onClick={() => changeEditorFontSize(-2)} disabled={editorFontSize <= 15} aria-label="Mindre kodetekst">A−</button>
+                        <output aria-live="polite">{editorFontSize} px</output>
+                        <button type="button" onClick={() => changeEditorFontSize(2)} disabled={editorFontSize >= 28} aria-label="Større kodetekst">A+</button>
+                      </span>
+                      <button type="button" onClick={toggleEditorFullscreen} aria-pressed={editorFullscreen}>{editorFullscreen ? "Avslutt fullskjerm" : "Fullskjerm"}</button>
+                    </span>
+                  </div>
+                  <label htmlFor="playground-code" className="sr-only">Skriv fri Python-kode</label>
+                  <PythonEditor
+                    id="playground-code"
+                    value={code}
+                    onChange={updateCode}
+                    describedBy="playground-help"
+                    fontSize={editorFontSize}
+                    tall
+                  />
+                  <div className="editor-footer" id="playground-help">
+                    <span>Start tomt, eller bruk kodebyggeren under.</span>
+                    <button type="button" className="run-button" onClick={runCode} disabled={runnerStatus === "loading" || runnerStatus === "running"}>
+                      <span>▶</span>{runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : "Kjør kode"}
+                    </button>
+                  </div>
+                </div>
+                <div className="output-panel" aria-live="polite">
+                  <div className="panel-bar output-bar">
+                    <strong>Resultat</strong>
+                    <span className={`status-dot ${runnerStatus}`} />
+                  </div>
+                  <pre>{output}</pre>
+                  {plotGallery()}
+                  <div className="output-tip"><strong>Neste spørsmål:</strong> Hva kan dere endre for å få et annet resultat?</div>
+                </div>
+              </div>
+              {shareStatus && <p className="share-status" role="status">{shareStatus}</p>}
+
+              <div className="snippet-builder" id="kodebygger">
+                <div className="snippet-heading">
+                  <div>
+                    <p className="section-label"><span>+</span> Kodebygger</p>
+                    <h3>Bygg et program av små deler</h3>
+                    <p>Velg en byggekloss. «Legg til i editor» beholder koden dere allerede har og setter den nye delen nederst.</p>
+                  </div>
+                  <a href="#python-handbok">Trenger dere mer? Åpne hele håndboken ↓</a>
+                </div>
+                <div className="snippet-categories" aria-label="Filtrer kodesnutter etter emne">
+                  {snippetCategories.map((category) => (
+                    <button
+                      type="button"
+                      key={category}
+                      className={snippetCategory === category ? "is-active" : ""}
+                      aria-pressed={snippetCategory === category}
+                      onClick={() => setSnippetCategory(category)}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+                <div className="snippet-grid">
+                  {filteredSnippets.map((snippet) => (
+                    <article className="snippet-card" key={snippet.id}>
+                      <div className="snippet-card-heading">
+                        <span>{snippet.category}</span>
+                        <h4>{snippet.title}</h4>
+                        <p>{snippet.purpose}</p>
+                      </div>
+                      <pre><code>{snippet.code}</code></pre>
+                      <p className="snippet-change"><strong>Endre selv:</strong> {snippet.change}</p>
+                      <div className="snippet-actions">
+                        <button type="button" className="snippet-add" onClick={() => appendSnippet(snippet)}>+ Legg til i editor</button>
+                        <button type="button" onClick={() => copySnippet(snippet)}>Kopier</button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                {snippetStatus && <p className="snippet-status" role="status">{snippetStatus}</p>}
+              </div>
+
+              <div className="package-guide">
+                <div>
+                  <strong>Datapakker som fungerer her</strong>
+                  <p>NumPy, pandas, Matplotlib, SciPy, SymPy, scikit-learn, Pillow og NetworkX lastes automatisk når de importeres.</p>
+                </div>
+                <div>
+                  <strong>Turtle for geometri og mønstre</strong>
+                  <p>Bruk <code>from turtle import *</code>. Tegningen kan spilles av, åpnes stort og lagres som PNG eller SVG.</p>
+                </div>
+                <div>
+                  <strong>Ikke helt som installert Python</strong>
+                  <p>Pakker som krever maskinvare, egne skjermvinduer eller en server kan ikke kjøre i nettleseren.</p>
+                </div>
+              </div>
+            </section>
+
             <section className="content-section playground-guide">
               <p className="section-label"><span>?</span> Start med undring</p>
               <h2>Hva har dere lyst til å undersøke?</h2>
@@ -2605,73 +2839,6 @@ export default function Home() {
                 {window.bjornsveenDesktop?.isDesktop && <button type="button" onClick={() => saveDesktopProject(false)}>Lagre</button>}
                 {window.bjornsveenDesktop?.isDesktop && <button type="button" onClick={() => saveDesktopProject(true)}>Lagre som …</button>}
                 <button type="button" className="delete-project-button" onClick={deleteProject}>Slett</button>
-              </div>
-            </section>
-
-            <section className="content-section lab-section playground-lab">
-              <div className="section-heading lab-heading">
-                <div>
-                  <p className="section-label inverse"><span>▶</span> Python-editor</p>
-                  <h2>Skriv, kjør og undersøk</h2>
-                </div>
-                <div className="live-badge"><span /> Ekte Python i nettleseren</div>
-              </div>
-              <div className={`code-workbench ${turtleDrawing ? "has-turtle" : ""}`} ref={workbenchRef}>
-                <div className="editor-panel">
-                  <div className="panel-bar">
-                    <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
-                    <strong>{safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py</strong>
-                    <span className="panel-tools">
-                      <button type="button" onClick={copyCodeAsText}>Kopier kode + svar</button>
-                      <button type="button" onClick={() => copyCodeAsImage(`${safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py`)}>Bilde av kode + svar</button>
-                      <span className="editor-size-controls" aria-label="Skriftstørrelse i kodefeltet">
-                        <button type="button" onClick={() => changeEditorFontSize(-2)} disabled={editorFontSize <= 15} aria-label="Mindre kodetekst">A−</button>
-                        <output aria-live="polite">{editorFontSize} px</output>
-                        <button type="button" onClick={() => changeEditorFontSize(2)} disabled={editorFontSize >= 28} aria-label="Større kodetekst">A+</button>
-                      </span>
-                      <button type="button" onClick={toggleEditorFullscreen} aria-pressed={editorFullscreen}>{editorFullscreen ? "Avslutt fullskjerm" : "Fullskjerm"}</button>
-                    </span>
-                  </div>
-                  <label htmlFor="playground-code" className="sr-only">Skriv fri Python-kode</label>
-                  <PythonEditor
-                    id="playground-code"
-                    value={code}
-                    onChange={updateCode}
-                    describedBy="playground-help"
-                    fontSize={editorFontSize}
-                    tall
-                  />
-                  <div className="editor-footer" id="playground-help">
-                    <span>Prøv gjerne noe du ikke vet om virker.</span>
-                    <button type="button" className="run-button" onClick={runCode} disabled={runnerStatus === "loading" || runnerStatus === "running"}>
-                      <span>▶</span>{runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : "Kjør kode"}
-                    </button>
-                  </div>
-                </div>
-                <div className="output-panel" aria-live="polite">
-                  <div className="panel-bar output-bar">
-                    <strong>Resultat</strong>
-                    <span className={`status-dot ${runnerStatus}`} />
-                  </div>
-                  <pre>{output}</pre>
-                  {plotGallery()}
-                  <div className="output-tip"><strong>Neste spørsmål:</strong> Hva kan dere endre for å få et annet resultat?</div>
-                </div>
-              </div>
-              {shareStatus && <p className="share-status" role="status">{shareStatus}</p>}
-              <div className="package-guide">
-                <div>
-                  <strong>Datapakker som fungerer her</strong>
-                  <p>NumPy, pandas, Matplotlib, SciPy, SymPy, scikit-learn, Pillow og NetworkX er med i den kuraterte skolepakken og lastes automatisk når de importeres.</p>
-                </div>
-                <div>
-                  <strong>Turtle for geometri og mønstre</strong>
-                  <p>Bruk <code>from turtle import *</code>. Tegn med blant annet <code>forward()</code>, <code>left()</code>, <code>right()</code>, <code>goto()</code>, <code>circle()</code>, farger og fyll. Canvaset kan spilles av steg for steg, åpnes stort og lagres som PNG eller ekte SVG-vektorer til skaperverkstedet.</p>
-                </div>
-                <div>
-                  <strong>Ikke helt som installert Python</strong>
-                  <p>Pakker som krever operativsystem, skjermvinduer, maskinvare eller en egen server kan ikke kjøre i nettleseren.</p>
-                </div>
               </div>
             </section>
 
