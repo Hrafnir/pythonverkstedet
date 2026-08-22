@@ -1326,7 +1326,7 @@ const playgroundCode = "";
 
 const firstProject: LocalProject = {
   id: "mitt-forste-prosjekt",
-  name: "Mitt første prosjekt",
+  name: "Nytt program",
   code: playgroundCode,
   updatedAt: new Date(0).toISOString(),
 };
@@ -1901,7 +1901,7 @@ function TurtlePlayer({ drawing, settings, onSettingsChange, onDownload, onDownl
 
 export default function Home() {
   const [activeId, setActiveId] = useState(1);
-  const [playground, setPlayground] = useState(false);
+  const [playground, setPlayground] = useState(true);
   const [teacherMode, setTeacherMode] = useState(false);
   const [code, setCode] = useState("");
   const [labTab, setLabTab] = useState<"practice" | "solution">("practice");
@@ -1966,7 +1966,6 @@ export default function Home() {
     const saved = window.localStorage.getItem("pythonverkstedet-progress");
     const savedMode = window.localStorage.getItem("pythonverkstedet-mode");
     const savedProjects = window.localStorage.getItem("bjornsveen-python-projects");
-    const savedActiveProject = window.localStorage.getItem("bjornsveen-python-active-project");
     const savedEditorFontSize = Number(window.localStorage.getItem("bjornsveen-editor-font-size"));
     if (saved) setCompleted(JSON.parse(saved));
     if (savedMode === "teacher") setTeacherMode(true);
@@ -1977,12 +1976,24 @@ export default function Home() {
             ? { ...project, code: "" }
             : project,
         );
-        if (parsed.length) {
-          setProjects(parsed);
-          const selected = parsed.find((project) => project.id === savedActiveProject) ?? parsed[0];
-          setActiveProjectId(selected.id);
-          window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(parsed));
-        }
+        const previousScratch = parsed.find((project) => project.id === firstProject.id);
+        const preservedScratch = previousScratch?.code.trim()
+          ? {
+              ...previousScratch,
+              id: `${firstProject.id}-lagret-${previousScratch.updatedAt.replace(/\D/g, "") || "eldre"}`,
+              name: ["Mitt første prosjekt", "Nytt program"].includes(previousScratch.name) ? "Lagret program" : previousScratch.name,
+            }
+          : null;
+        const nextProjects = [
+          firstProject,
+          ...(preservedScratch ? [preservedScratch] : []),
+          ...parsed.filter((project) => project.id !== firstProject.id),
+        ];
+        setProjects(nextProjects);
+        setActiveProjectId(firstProject.id);
+        setCode("");
+        window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(nextProjects));
+        window.localStorage.setItem("bjornsveen-python-active-project", firstProject.id);
       } catch {
         window.localStorage.removeItem("bjornsveen-python-projects");
       }
@@ -2564,7 +2575,7 @@ export default function Home() {
           </span>
         </a>
         <div className="module-picker">
-          <label htmlFor="module-select">Velg modul</label>
+          <label htmlFor="module-select">Velg område</label>
           <select
             id="module-select"
             value={playground ? "playground" : String(active.id)}
@@ -2573,14 +2584,14 @@ export default function Home() {
               else chooseModule(modules[Number(event.target.value) - 1]);
             }}
           >
+            <option value="playground">Python</option>
             {modules.map((module) => (
               <option key={module.id} value={module.id}>
                 {completed.includes(module.id) ? "✓ " : ""}Modul {module.id}: {module.shortTitle}
               </option>
             ))}
-            <option value="playground">✦ Fritt Python-rom</option>
           </select>
-          <span className="module-position">{completed.length} av {modules.length} fullført</span>
+          <span className="module-position">{playground ? "Python-editor" : `${completed.length} av ${modules.length} fullført`}</span>
         </div>
         <nav className="top-actions" aria-label="Verktøy">
           <button className="text-button print-button" type="button" onClick={() => window.print()}>
@@ -2604,31 +2615,12 @@ export default function Home() {
       <div className="app-shell" id="top">
         {playground && (
           <article className="lesson playground-page">
-            <section className="lesson-hero playground-hero">
-              <div className="hero-copy">
-                <p className="kicker">Fritt verksted · Ingen fasit</p>
-                <h1>La oss prøve noe sammen</h1>
-                <p className="hero-intro">Her kan dere skrive egne Python-programmer fra bunnen av. Still et spørsmål, gjett hva som vil skje, kjør koden og bruk resultatet til å stille et nytt spørsmål.</p>
-                <div className="playground-prompts">
-                  <span>1 · Hva tror vi skjer?</span>
-                  <span>2 · Prøv</span>
-                  <span>3 · Observer</span>
-                  <span>4 · Endre én ting</span>
-                </div>
-              </div>
-              <div className="hero-stamp playground-stamp" aria-hidden="true">
-                <span>Python</span>
-                <strong>&gt;_</strong>
-                <small>fritt rom</small>
-              </div>
-            </section>
-
             <section className="content-section lab-section playground-lab" id="python-editor">
               <div className="section-heading lab-heading">
                 <div>
-                  <p className="section-label inverse"><span>1</span> Start her · Python-editor</p>
-                  <h2>Skriv, bygg og kjør med én gang</h2>
-                  <p className="playground-lab-intro">Skriv selv, eller legg sammen ferdige byggeklosser fra kodebyggeren rett under editoren. Alt kan endres.</p>
+                  <p className="section-label inverse"><span>&gt;_</span> Python</p>
+                  <h1>Skriv og kjør</h1>
+                  <p className="playground-lab-intro">Editoren starter tom. Skriv helt selv, eller hent byggeklosser fra kodebyggeren under når du trenger dem.</p>
                 </div>
                 <div className="live-badge"><span /> Ekte Python i nettleseren</div>
               </div>
@@ -2648,7 +2640,7 @@ export default function Home() {
                       <button type="button" onClick={toggleEditorFullscreen} aria-pressed={editorFullscreen}>{editorFullscreen ? "Avslutt fullskjerm" : "Fullskjerm"}</button>
                     </span>
                   </div>
-                  <label htmlFor="playground-code" className="sr-only">Skriv fri Python-kode</label>
+                  <label htmlFor="playground-code" className="sr-only">Skriv Python-kode</label>
                   <PythonEditor
                     id="playground-code"
                     value={code}
