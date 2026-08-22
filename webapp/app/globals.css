@@ -194,6 +194,11 @@ p, li { text-wrap: pretty; }
 .theory-card code { display: block; margin-top: 18px; padding: 14px 16px; border-radius: 8px; background: #eae7dd; color: var(--green-dark); white-space: pre-wrap; font-family: var(--mono); font-size: 17px; overflow-x: auto; }
 .how-to-list { display: grid; gap: 8px; margin: 20px 0 0; padding-left: 24px; color: #3f514d; font-size: 16px; line-height: 1.55; }
 .how-to-list li::marker { color: var(--coral-dark); font-family: var(--mono); font-weight: 800; }
+.theory-reflection, .theory-why { margin-top: 18px; padding: 16px 18px; border-radius: 10px; }
+.theory-reflection { border-left: 5px solid var(--yellow); background: #fff7d7; }
+.theory-why { border-left: 5px solid #62b88b; background: #e9f6ee; }
+.theory-reflection strong, .theory-why strong { display: block; margin-bottom: 5px; color: #32453f; font-size: 11px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.theory-card .theory-reflection p, .theory-card .theory-why p { color: #3f514d; font-size: 16px; line-height: 1.6; }
 
 .progression-section { padding-top: 0; padding-bottom: 76px; }
 .progression-section .section-heading > p { max-width: 430px; }
@@ -251,7 +256,7 @@ p, li { text-wrap: pretty; }
 .typing-guide { display: grid; grid-template-columns: minmax(220px, .65fr) minmax(0, 1.35fr); gap: 28px; padding: 24px; }
 .typing-guide > div { display: grid; align-content: start; }
 .typing-guide h3 { margin: 9px 0 3px; font-size: 22px; }
-.typing-guide p { margin: 0; color: #9eb5ae; font-size: 14px; line-height: 1.55; }
+.typing-guide p { margin: 0; color: #9eb5ae; font-size: 15px; line-height: 1.6; }
 .keyboard-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 10px; background: #2c5c54; color: var(--yellow); }
 .typing-legend { display: grid; gap: 8px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #ffffff18; color: #baccc6; font-size: 11px; font-weight: 750; }
 .typing-legend span { display: flex; align-items: center; gap: 8px; }
@@ -259,13 +264,25 @@ p, li { text-wrap: pretty; }
 .legend-code { border: 1px solid #f4c95d; background: #071f1c; }
 .legend-explanation { border-left: 3px solid #6fd79f; background: #214a45; }
 .typing-guide .typing-steps { display: grid; gap: 11px; margin: 0; padding: 0; list-style: none; color: #dbe9e4; }
-.typing-steps li { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 11px; padding: 13px; border: 1px solid #42635b; border-radius: 10px; background: #143733; }
+.typing-steps > li { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 11px; padding: 13px; border: 1px solid #42635b; border-radius: 10px; background: #143733; }
 .typing-step-number { display: grid; place-items: center; align-self: start; width: 34px; height: 34px; border-radius: 8px; background: var(--yellow); color: #263a35; font-family: var(--mono); font-size: 11px; font-weight: 900; }
 .typing-step-kind { display: block; margin: 1px 0 7px; color: var(--yellow); font-size: 9px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
-.typing-steps code { display: block; margin: 0 0 9px; padding: 10px 12px; border: 1px solid #6d7650; border-left: 4px solid var(--yellow); border-radius: 7px; background: #071f1c; color: #f5f7ed; font-family: var(--mono); font-size: 15px; font-weight: 650; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4; }
+.typing-steps code { display: block; margin: 0 0 9px; padding: 12px 14px; border: 1px solid #6d7650; border-left: 4px solid var(--yellow); border-radius: 7px; background: #071f1c; color: #f5f7ed; font-family: var(--mono); font-size: 17px; font-weight: 650; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4; }
 .typing-explanation { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 9px; align-items: start; padding: 8px 10px; border-left: 3px solid #6fd79f; border-radius: 0 6px 6px 0; background: #214a45; }
 .typing-explanation strong { padding-top: 2px; color: #91dcb1; font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
-.typing-guide .typing-explanation p { color: #cfddd8; font-size: 12px; line-height: 1.45; }
+.typing-guide .typing-explanation p { color: #cfddd8; font-size: 14px; line-height: 1.55; }
+.typing-deep-dive { display: grid; gap: 8px; margin-top: 10px; }
+.typing-deep-dive > div { display: grid; grid-template-columns: 115px minmax(0, 1fr); gap: 12px; padding: 11px 13px; border-radius: 8px; }
+.typing-deep-dive strong { padding-top: 2px; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.typing-guide .typing-deep-dive p, .typing-breakdown ol { color: #dbe8e3; font-size: 14px; line-height: 1.55; }
+.typing-think { border: 1px solid #7e713f; background: #3c3a29; }
+.typing-think strong { color: var(--yellow); }
+.typing-breakdown { border: 1px solid #46665f; background: #173b36; }
+.typing-breakdown strong { color: #a9c7bd; }
+.typing-breakdown ol { display: grid; gap: 5px; margin: 0; padding-left: 20px; }
+.typing-breakdown li::marker { color: var(--yellow); font-family: var(--mono); font-weight: 800; }
+.typing-why { border: 1px solid #3d7b61; background: #164737; }
+.typing-why strong { color: #8be0ae; }
 .typing-steps .is-action-step { border-color: #4f756b; background: #193f3a; }
 .typing-steps .is-action-step .typing-step-number { background: #6fd79f; }
 .typing-steps .is-action-step .typing-step-kind { color: #91dcb1; }
@@ -645,9 +662,10 @@ p, li { text-wrap: pretty; }
   .syntax-layer, .syntax-input { padding: 20px 17px; font-size: var(--editor-font-size, 19px); }
   .lab-tabs { grid-template-columns: 1fr; }
   .typing-guide { padding: 17px; }
-  .typing-steps li { grid-template-columns: 32px minmax(0, 1fr); gap: 8px; padding: 10px; }
+  .typing-steps > li { grid-template-columns: 32px minmax(0, 1fr); gap: 8px; padding: 10px; }
   .typing-step-number { width: 30px; height: 30px; }
   .typing-explanation { grid-template-columns: 1fr; gap: 3px; }
+  .typing-deep-dive > div { grid-template-columns: 1fr; gap: 5px; }
   .polish-section summary { align-items: flex-start; padding: 18px; }
   .polish-open { display: none; }
   .polish-content { padding: 20px; }

@@ -15,7 +15,14 @@ type Module = {
     body: string;
     examples: { code: string; explanation: string }[];
   };
-  theory: { title: string; body: string; code?: string; steps: string[] }[];
+  theory: {
+    title: string;
+    body: string;
+    code?: string;
+    steps: string[];
+    reflection?: string;
+    why?: string;
+  }[];
   progression: {
     intro: string;
     steps: {
@@ -32,6 +39,9 @@ type Module = {
     kind: "write" | "do";
     code?: string;
     explanation: string;
+    think?: string;
+    breakdown?: string[];
+    why?: string;
   }[];
   polish: {
     title: string;
@@ -608,21 +618,27 @@ const modules: Module[] = [
     theory: [
       {
         title: "Slik lager du en variabel",
-        body: "Når Python leser pris = 800, lagres verdien 800 under navnet pris. Her betyr likhetstegnet «gi variabelen en verdi» – ikke «regn ut begge sider».",
+        body: "Når Python leser pris = 800, lagres tallet 800 under navnet pris. Tenk på variabelen som en navnelapp vi kan bruke i resten av programmet. Her betyr likhetstegnet «gi variabelen en verdi» – ikke «regn ut begge sider» slik det ofte gjør i en matematisk ligning.",
         code: "pris = 800",
-        steps: ["Velg et navn som forteller hva verdien betyr.", "Skriv ett likhetstegn.", "Skriv verdien på høyre side.", "Les linjen fra høyre: «pris får verdien 800»."],
+        steps: ["Python regner eller leser høyresiden først: 800.", "Deretter lagres verdien under navnet på venstre side: pris.", "Når pris brukes senere, henter Python fram 800.", "Les derfor linjen fra høyre: «pris får verdien 800»."],
+        reflection: "Hvis neste linje er pris = 950, hvilken verdi ligger da i pris – 800 eller 950?",
+        why: "En variabel gjør at vi kan bruke et meningsfullt navn i stedet for å skrive tallet på nytt overalt. Endrer vi startverdien ett sted, bruker resten av programmet den nye verdien.",
       },
       {
         title: "Et uttrykk blir regnet ut",
-        body: "Rabatt på 25 % gir vekstfaktoren 1 − 0,25 = 0,75. Python bruker punktum som desimalskilletegn.",
+        body: "Rabatt betyr at en del av den opprinnelige prisen skal trekkes bort. Hele prisen er 100 %, og som desimaltall er 100 % det samme som 1. Rabatten 25 % skrives 0.25 i Python. Derfor er delen vi fortsatt skal betale 1 − 0.25 = 0.75, altså 75 % av den gamle prisen.",
         code: "ny_pris = pris * (1 - rabatt)",
-        steps: ["Python henter verdiene til pris og rabatt.", "Parentesen regnes ut først: 1 − 0,25.", "Resultatet ganges med prisen.", "Svaret lagres i ny_pris."],
+        steps: ["1 står for hele den gamle prisen: 100 %.", "rabatt er 0.25, som betyr 25 av 100, altså 25 %.", "Parentesen blir 1 − 0.25 = 0.75. Vi skal derfor beholde 75 %.", "Python regner 800 · 0.75 = 600 og lagrer svaret i ny_pris."],
+        reflection: "Hvorfor ville pris * rabatt gitt et annet svar? Hva ville 800 · 0.25 egentlig fortalt oss?",
+        why: "Vi ganger med 0.75 fordi 0.75 er delen av prisen som er igjen etter rabatten. Uttrykket pris * rabatt finner bare rabattbeløpet, mens pris * (1 - rabatt) finner det kunden faktisk skal betale.",
       },
       {
         title: "print viser resultatet",
-        body: "print(...) skriver en verdi i resultatfeltet. Det gjør det mulig å observere hva programmet har regnet ut.",
+        body: "En beregning kan være riktig selv om vi ikke ser den. print(...) ber Python vise en verdi i resultatfeltet, slik at vi kan kontrollere hva programmet faktisk regnet ut.",
         code: "print(ny_pris)",
-        steps: ["Skriv print og parenteser.", "Sett variabelen du vil se, inni parentesene.", "Kjør koden og sammenlign med overslaget ditt."],
+        steps: ["Python henter verdien som nå ligger i ny_pris.", "print viser verdien, men endrer den ikke.", "Sammenlign 600.0 med overslaget: 25 % rabatt bør gi en pris som er lavere enn 800."],
+        reflection: "Hva tror du vises hvis du skriver print(rabatt) i stedet? Forutsi før du prøver.",
+        why: "Utskrift er et kontrollverktøy. Når vi viser mellomresultater, blir det lettere å finne hvilken linje som eventuelt gir feil.",
       },
     ],
     progression: {
@@ -670,9 +686,9 @@ const modules: Module[] = [
     },
     starterCode: `pris = 800\nrabatt = 0.25\nny_pris = pris * (1 - rabatt)\nprint(ny_pris)`,
     typingSteps: [
-      { kind: "write", code: "pris = 800", explanation: "Trykk Enter etter linjen." },
-      { kind: "write", code: "rabatt = 0.25", explanation: "Python bruker punktum i desimaltall." },
-      { kind: "write", code: "ny_pris = pris * (1 - rabatt)", explanation: "Parentesen regnes ut før multiplikasjonen." },
+      { kind: "write", code: "pris = 800", explanation: "Variabelen pris får startverdien 800.", think: "Hva er navnet på variabelen, og hva er verdien som lagres?", breakdown: ["Høyresiden 800 leses først.", "Tallet lagres under navnet pris."], why: "Senere kan vi skrive pris i stedet for å gjenta tallet 800." },
+      { kind: "write", code: "rabatt = 0.25", explanation: "Python bruker punktum i desimaltall. 0.25 betyr 25 hundredeler, altså 25 %.", think: "Hvorfor skriver vi 0.25 og ikke 25 når rabatten er 25 %?", breakdown: ["Prosent betyr «av hundre».", "25 % = 25 / 100 = 0.25."], why: "Når prosenten er skrevet som desimaltall, kan den brukes direkte i multiplikasjon." },
+      { kind: "write", code: "ny_pris = pris * (1 - rabatt)", explanation: "Uttrykket finner den delen av prisen som er igjen etter rabatten.", think: "Hvis 1 er hele prisen, hvor stor del er igjen når 0.25 trekkes bort?", breakdown: ["1 betyr 100 % av den gamle prisen.", "1 − 0.25 = 0.75.", "0.75 er det samme som 75 %.", "800 · 0.75 = 600."], why: "Vi ganger med 0.75 fordi kunden skal betale de 75 prosentene som er igjen – ikke de 25 prosentene som trekkes fra." },
       { kind: "write", code: "print(ny_pris)", explanation: "Denne linjen viser svaret i resultatfeltet." },
       { kind: "do", explanation: "Les koden tegn for tegn. Trykk deretter «Kjør kode»." },
     ],
@@ -731,21 +747,27 @@ const modules: Module[] = [
     theory: [
       {
         title: "Sammenligning bruker to likhetstegn",
-        body: "Uttrykket rest == 0 spør om rest er lik null. Svaret er enten sant eller usant.",
+        body: "Uttrykket rest == 0 er et spørsmål: «Har rest verdien 0?» To likhetstegn sammenligner verdier. Ett likhetstegn ville i stedet forsøkt å gi en variabel en verdi.",
         code: "rest == 0",
-        steps: ["Finn verdien til rest.", "Sammenlign den med 0.", "Avgjør om spørsmålet er sant eller usant."],
+        steps: ["Finn først verdien som er lagret i rest.", "Sammenlign denne verdien med 0.", "Hvis de er like, blir svaret True (sant). Hvis ikke, blir svaret False (usant)."],
+        reflection: "Hvis rest er 1, blir rest == 0 sant eller usant? Hvilken programvei tror du velges?",
+        why: "if trenger et spørsmål som kan besvares sant eller usant. Sammenligningen gir nettopp et slikt svar og lar programmet velge vei.",
       },
       {
         title: "% finner divisjonsresten",
-        body: "17 % 2 blir 1, mens 18 % 2 blir 0. Alle partall gir rest 0 når de deles på 2.",
+        body: "% betyr ikke prosent i denne koden. Det er modulo-operatoren, som finner resten etter en heltallsdivisjon. 18 kan deles i ni hele grupper på 2 uten noe til overs, mens 17 gir åtte hele grupper og 1 til overs.",
         code: "rest = tall % 2",
-        steps: ["Del tallet på 2.", "Se bare på resten etter delingen.", "Rest 0 betyr partall; rest 1 betyr oddetall."],
+        steps: ["18 ÷ 2 = 9 med rest 0, derfor blir 18 % 2 lik 0.", "17 ÷ 2 = 8 med rest 1, derfor blir 17 % 2 lik 1.", "Alle partall kan deles på 2 uten rest. Derfor kan rest 0 brukes som kjennetegn på partall."],
+        reflection: "Hva tror du 21 % 2 og 21 % 3 blir? Regn ut før du prøver i Python.",
+        why: "Vi gjør regelen «partall kan deles på 2» om til et presist spørsmål Python kan undersøke: Er divisjonsresten lik 0?",
       },
       {
         title: "Innrykk viser hva som hører sammen",
-        body: "Linjene under if og else må rykkes inn. Innrykket er en del av Python-språket.",
+        body: "Linjene under if og else må rykkes inn. Innrykket fungerer som en synlig ramme rundt koden som hører til hver vei. Det er derfor en del av Python-språket, ikke bare pynt.",
         code: 'if rest == 0:\n    print("partall")',
-        steps: ["Skriv if, vilkåret og kolon.", "Rykk inn koden som skal kjøres når vilkåret er sant.", "Bruk else for det som skal skje ellers."],
+        steps: ["Python undersøker vilkåret etter if.", "Er vilkåret sant, kjøres den innrykkede print-linjen under if.", "Er vilkåret usant, hopper Python over den linjen og går til else.", "Bare én av de to innrykkede grenene kjøres."],
+        reflection: "Hva ville skjedd dersom den første print-linjen ikke hadde innrykk? Ville den fortsatt bare høre til if?",
+        why: "Kolon varsler at en blokk kommer, og innrykket viser nøyaktig hvilke linjer blokken inneholder. Dermed vet Python hvor hver programvei starter og slutter.",
       },
     ],
     progression: {
@@ -782,8 +804,8 @@ const modules: Module[] = [
     starterCode: `tall = 18\nrest = tall % 2\n\nif rest == 0:\n    print("partall")\nelse:\n    print("oddetall")`,
     typingSteps: [
       { kind: "write", code: "tall = 18", explanation: "Variabelen tall får verdien 18." },
-      { kind: "write", code: "rest = tall % 2", explanation: "% finner resten etter divisjon med 2." },
-      { kind: "write", code: "if rest == 0:", explanation: "Trykk Enter. Legg merke til kolon helt til slutt." },
+      { kind: "write", code: "rest = tall % 2", explanation: "% finner resten etter divisjon med 2.", think: "Kan 18 deles i hele grupper på 2 uten at noe blir til overs?", breakdown: ["18 ÷ 2 = 9 med rest 0.", "Derfor lagres 0 i variabelen rest."], why: "Partall gir alltid rest 0 ved divisjon med 2. Oddetall gir rest 1." },
+      { kind: "write", code: "if rest == 0:", explanation: "Python spør om verdien i rest er lik 0. Kolon varsler at en innrykket kodeblokk kommer.", think: "Hva blir svaret på spørsmålet når rest er 0?", breakdown: ["== sammenligner; det lagrer ikke en ny verdi.", "0 == 0 blir True.", "Python velger derfor koden under if."], why: "Et sant/usant-spørsmål gjør den matematiske regelen om partall om til et valg programmet kan ta." },
       { kind: "write", code: "    print(\"partall\")", explanation: "Linjen starter med fire mellomrom. Du kan bruke Tab." },
       { kind: "write", code: "else:\n    print(\"oddetall\")", explanation: "else står helt til venstre. print-linjen under har fire mellomrom." },
     ],
@@ -842,21 +864,27 @@ const modules: Module[] = [
     theory: [
       {
         title: "for gjentar",
-        body: "For hver verdi i tallfølgen utføres den innrykkede linjen én gang.",
+        body: "En for-løkke går gjennom en samling verdier én etter én. I denne løkken får variabelen n en ny verdi for hver runde, og hele den innrykkede kodeblokken kjøres én gang per verdi.",
         code: "for n in range(1, 6):",
-        steps: ["Velg navn på løkkevariabelen, for eksempel n.", "Velg start og stopp med range.", "Avslutt linjen med kolon.", "Rykk inn det som skal gjentas."],
+        steps: ["range lager tallfølgen som løkken skal gå gjennom.", "n får den første verdien i følgen.", "Den innrykkede koden kjøres med denne n-verdien.", "Python gir n neste verdi og gjentar til det ikke er flere verdier igjen."],
+        reflection: "Er n fem forskjellige variabler, eller én variabel som endrer verdi fem ganger?",
+        why: "Løkken lar oss beskrive selve mønsteret én gang. Python gjør den samme handlingen for alle verdiene uten at vi må kopiere kodelinjen.",
       },
       {
         title: "Sluttverdien er ikke med",
-        body: "range(1, 6) gir tallene 1, 2, 3, 4 og 5. Tallet 6 er stoppunktet.",
+        body: "range(1, 6) starter på 1 og stopper rett før 6. Derfor blir verdiene 1, 2, 3, 4 og 5. Det siste tallet er en stoppgrense, ikke en verdi løkken skal bruke.",
         code: "range(start, stopp)",
-        steps: ["Startverdien er med.", "Stoppverdien er ikke med.", "Tell verdiene før du kjører koden."],
+        steps: ["Startverdien 1 er med.", "Python øker med 1: 2, 3, 4 og 5.", "Neste verdi ville vært 6, men da er stoppgrensen nådd.", "Det blir derfor fem runder, selv om stoppverdien er 6."],
+        reflection: "Hva må stoppverdien være hvis du vil ha tallene 1 til og med 10? Hvor mange runder blir det?",
+        why: "At stoppverdien ikke er med, gjør det enkelt å angi grenser og passer med måten Python teller posisjoner fra 0. Men i starten er det tryggest å skrive ut tallfølgen eller liste den før du bruker den.",
       },
       {
         title: "Uttrykket endres hver runde",
-        body: "Når n får en ny verdi, regnes 2 * n ut på nytt. Slik oppstår en tallfølge.",
+        body: "Når n får en ny verdi, regnes 2 * n ut på nytt. Regelen er den samme, men tallet som settes inn endres. Slik lager én kodelinje en hel tallfølge.",
         code: "print(2 * n)",
-        steps: ["Sett inn første verdi av n i uttrykket.", "Regn ut og skriv resultatet.", "Gjenta med neste n-verdi til løkken er ferdig."],
+        steps: ["Første runde: n = 1, så 2 · n = 2.", "Andre runde: n = 2, så 2 · n = 4.", "Deretter blir svarene 6, 8 og 10.", "Etter n = 5 finnes ingen flere verdier i range, og løkken stopper."],
+        reflection: "Hva må stå i uttrykket for at de samme n-verdiene skal gi 3, 6, 9, 12 og 15?",
+        why: "Løkkevariabelen fungerer som en plassholder. Ved å følge n og utskriften i en sportabell kan vi forklare hvert eneste resultat.",
       },
     ],
     progression: {
@@ -892,10 +920,10 @@ const modules: Module[] = [
     },
     starterCode: `for n in range(1, 6):\n    print(2 * n)`,
     typingSteps: [
-      { kind: "write", code: "for n in range(1, 6):", explanation: "Trykk Enter etter kolon." },
+      { kind: "write", code: "for n in range(1, 6):", explanation: "Løkken lar n få verdiene 1, 2, 3, 4 og 5, én om gangen.", think: "Hvor mange verdier ligger mellom startverdien 1 og stoppgrensen 6?", breakdown: ["1 er med.", "6 er ikke med.", "Tallfølgen blir 1, 2, 3, 4, 5 – altså fem runder."], why: "for-linjen bestemmer både hvilke verdier som skal brukes, og hvor mange ganger den innrykkede koden skal gjentas." },
       { kind: "do", explanation: "Kontroller at løkkelinjen slutter med kolon (:)." },
       { kind: "do", explanation: "Lag innrykk på neste linje med Tab eller fire mellomrom." },
-      { kind: "write", code: "    print(2 * n)", explanation: "Mellomrommene først på linjen viser at print hører til løkken." },
+      { kind: "write", code: "    print(2 * n)", explanation: "Mellomrommene viser at print hører til løkken. Uttrykket regnes på nytt i hver runde.", think: "Hva blir 2 * n når n først er 1 og deretter 2?", breakdown: ["n = 1 gir 2 · 1 = 2.", "n = 2 gir 2 · 2 = 4.", "Slik fortsetter det til n = 5 gir 10."], why: "Regelen 2 * n er fast, men n endrer seg. Det er dette som skaper mønsteret." },
       { kind: "do", explanation: "Trykk «Kjør kode», og tell hvor mange svar du får." },
     ],
     polish: {
@@ -953,21 +981,27 @@ const modules: Module[] = [
     theory: [
       {
         title: "def lager funksjonen",
-        body: "Navnet kommer etter def. Verdien i parentes kalles en parameter.",
+        body: "def betyr at vi definerer – lager – en funksjon. Vi gir en oppskrift navnet f. Bokstaven x i parentes er en parameter: en tom plass som får en konkret verdi først når funksjonen brukes.",
         code: "def f(x):",
-        steps: ["Skriv def for å definere en funksjon.", "Gi funksjonen et navn.", "Skriv parameteren i parentes.", "Avslutt med kolon og rykk inn innholdet."],
+        steps: ["def forteller Python at en funksjon skal beskrives.", "f er navnet vi senere bruker for å kalle funksjonen.", "x er navnet på verdien funksjonen skal ta imot.", "Kolon og innrykk viser hvilke linjer som tilhører funksjonen."],
+        reflection: "Kjører regnestykket allerede når Python leser def-linjen, eller venter programmet til vi skriver f(6)?",
+        why: "Definisjonen lagrer en gjenbrukbar oppskrift. Den utføres ikke før vi kaller funksjonen, og samme oppskrift kan derfor brukes med mange forskjellige verdier.",
       },
       {
         title: "return sender svaret tilbake",
-        body: "Uttrykket etter return bestemmer funksjonsverdien.",
+        body: "Uttrykket etter return bestemmer funksjonsverdien. Når funksjonen kalles, regner Python ut uttrykket med den aktuelle x-verdien og sender resultatet tilbake til stedet der funksjonen ble brukt.",
         code: "return 2 * x + 3",
-        steps: ["Skriv regelen som et Python-uttrykk.", "Bruk * for gange.", "Sett return foran uttrykket for å sende svaret tilbake."],
+        steps: ["Hvis x er 6, erstattes x med 6 i uttrykket.", "Python regner gange før pluss: 2 · 6 = 12, deretter 12 + 3 = 15.", "return sender tallet 15 tilbake.", "return viser ikke svaret automatisk; det må lagres eller skrives ut."],
+        reflection: "Hva ville funksjonen returnert for x = 0? Hvilken del av uttrykket avgjør svaret da?",
+        why: "return gjør resultatet brukbart videre i programmet. Vi kan lagre det, regne videre med det eller sende det til print.",
       },
       {
         title: "Et funksjonskall setter inn en verdi",
-        body: "f(6) betyr at x får verdien 6. Resultatet blir 2 · 6 + 3 = 15.",
+        body: "f(6) er et funksjonskall. Tallet 6 sendes inn i funksjonen og får rollen som x akkurat i dette kallet. Resultatet blir 2 · 6 + 3 = 15.",
         code: "resultat = f(6)",
-        steps: ["Skriv funksjonsnavnet.", "Sett inn ønsket verdi i parentes.", "Lagre svaret i en variabel eller skriv det ut med print."],
+        steps: ["Python ser funksjonskallet f(6) på høyresiden.", "Inne i funksjonen får x verdien 6.", "Funksjonen returnerer 15.", "Til slutt lagres 15 i variabelen resultat."],
+        reflection: "Hvis vi skriver f(10) på neste linje, endres den gamle variabelen resultat automatisk? Hvorfor eller hvorfor ikke?",
+        why: "Hvert funksjonskall er en ny tur gjennom den samme oppskriften. Verdien i parentes kan endres uten at vi skriver selve regelen på nytt.",
       },
     ],
     progression: {
@@ -1003,10 +1037,10 @@ const modules: Module[] = [
     },
     starterCode: `def f(x):\n    return 2 * x + 3\n\nresultat = f(6)\nprint(resultat)`,
     typingSteps: [
-      { kind: "write", code: "def f(x):", explanation: "Trykk Enter etter kolon." },
-      { kind: "write", code: "    return 2 * x + 3", explanation: "Linjen starter med fire mellomrom fordi den hører til funksjonen." },
+      { kind: "write", code: "def f(x):", explanation: "Dette lager en funksjon med navnet f og parameteren x.", think: "Hva tror du x betyr før funksjonen er kalt med en konkret verdi?", breakdown: ["def betyr «definer en funksjon».", "f er funksjonsnavnet.", "x er en plassholder for verdien som kommer inn."], why: "Funksjonen er nå en lagret oppskrift, men regnestykket kjøres først når funksjonen blir kalt." },
+      { kind: "write", code: "    return 2 * x + 3", explanation: "Den innrykkede linjen er regelen funksjonen bruker. return sender svaret tilbake.", think: "Hvis x blir 6, i hvilken rekkefølge regnes 2 * 6 + 3?", breakdown: ["Gange regnes før pluss: 2 · 6 = 12.", "Deretter legges 3 til: 12 + 3 = 15.", "return sender 15 tilbake til funksjonskallet."], why: "Uten return får ikke resten av programmet funksjonsverdien som det kan lagre eller regne videre med." },
       { kind: "do", explanation: "Lag en tom linje. Gå deretter helt tilbake til venstre uten innrykk." },
-      { kind: "write", code: "resultat = f(6)", explanation: "Her brukes funksjonen med x = 6." },
+      { kind: "write", code: "resultat = f(6)", explanation: "Her kalles funksjonen. x får verdien 6, og svaret lagres i resultat.", think: "Les linjen fra høyre: Hva må Python regne ut før resultat kan få en verdi?", breakdown: ["f(6) kjøres først.", "Funksjonen returnerer 15.", "Deretter får resultat verdien 15."], why: "Et funksjonskall kan stå på høyresiden av en tildeling fordi kallet gir én verdi tilbake." },
       { kind: "write", code: "print(resultat)", explanation: "Trykk deretter «Kjør kode»." },
     ],
     polish: {
@@ -1064,21 +1098,27 @@ const modules: Module[] = [
     theory: [
       {
         title: "random lager tilfeldige forsøk",
-        body: "randint(1, 6) velger et heltall fra 1 til og med 6.",
+        body: "random.randint(1, 6) etterligner ett terningkast ved å velge et heltall fra 1 til og med 6. Begge grensene er med, så alle de seks mulige terningverdiene kan bli valgt.",
         code: "kast = random.randint(1, 6)",
-        steps: ["Importer random øverst i programmet.", "Bruk randint med minste og største mulige verdi.", "Lagre det tilfeldige resultatet i en variabel."],
+        steps: ["import random gjør tilfeldighetsverktøyet tilgjengelig.", "randint(1, 6) velger én av verdiene 1, 2, 3, 4, 5 eller 6.", "Den valgte verdien lagres i kast.", "Neste gang linjen kjøres, kan kast få en ny verdi."],
+        reflection: "Kan to kast etter hverandre bli like? Ville det vært mer eller mindre tilfeldig om Python forbød det?",
+        why: "En simulering trenger samme mulige utfall som forsøket den etterligner. En vanlig terning har seks sider, derfor bruker vi heltallene 1 til 6.",
       },
       {
         title: "En teller samler resultater",
-        body: "Hver gang kastet er 6, økes antall_seksere med én.",
+        body: "Variabelen antall_seksere er en teller. Den starter på 0 før løkken. Hver gang vilkåret kast == 6 er sant, økes den gamle verdien med 1 og den nye verdien lagres tilbake.",
         code: "antall_seksere += 1",
-        steps: ["Start telleren på 0 før løkken.", "Undersøk hvert kast med if.", "Legg til 1 bare når vilkåret er sant."],
+        steps: ["Før første kast har vi observert 0 seksere.", "if undersøker ett kast om gangen.", "Ved en sekser betyr += 1 det samme som antall_seksere = antall_seksere + 1.", "Ved alle andre kast hoppes økningen over, så telleren beholder verdien sin."],
+        reflection: "Hvorfor må telleren stå før løkken? Hva ville skjedd hvis antall_seksere = 0 sto inne i løkken?",
+        why: "Telleren må huske treff fra alle rundene. Derfor opprettes den én gang før gjentakelsen og oppdateres bare når hendelsen vi teller, skjer.",
       },
       {
         title: "Relativ frekvens",
-        body: "Antall seksere delt på antall kast kan sammenlignes med 1/6 ≈ 0,167.",
+        body: "Antall seksere alene sier lite uten å vite hvor mange kast vi gjorde. Relativ frekvens er treff delt på alle forsøk. Får vi 98 seksere på 600 kast, blir andelen 98 / 600 ≈ 0.163, altså omtrent 16,3 %.",
         code: "andel = antall_seksere / antall_kast",
-        steps: ["Tell hvor mange ganger hendelsen skjedde.", "Del på totalt antall forsøk.", "Sammenlign resultatet med teoretisk sannsynlighet."],
+        steps: ["Tell hvor mange ganger hendelsen skjedde: for eksempel 98.", "Del på totalt antall forsøk: 98 / 600 ≈ 0.163.", "Gjør om til prosent: 0.163 ≈ 16,3 %.", "Sammenlign med teorien 1 / 6 ≈ 0.167 = 16,7 %, uten å kreve at tallene er helt like."],
+        reflection: "Er 98 seksere et dårlig resultat fordi vi forventet omtrent 100? Hva betyr «omtrent» i et tilfeldig forsøk?",
+        why: "Tilfeldighet gir naturlig variasjon. Når antall forsøk blir stort, pleier relativ frekvens å stabilisere seg nær den teoretiske sannsynligheten, men den blir ikke garantert nøyaktig 1/6.",
       },
     ],
     progression: {
@@ -1115,10 +1155,10 @@ const modules: Module[] = [
     starterCode: `import random\n\nantall_kast = 600\nantall_seksere = 0\n\nfor _ in range(antall_kast):\n    kast = random.randint(1, 6)\n    if kast == 6:\n        antall_seksere += 1\n\nandel = antall_seksere / antall_kast\nprint(round(andel, 3))`,
     typingSteps: [
       { kind: "write", code: "import random", explanation: "Dette gir programmet tilgang til tilfeldige tall." },
-      { kind: "write", code: "antall_kast = 600\nantall_seksere = 0", explanation: "Den første variabelen bestemmer antall forsøk. Telleren starter på 0." },
+      { kind: "write", code: "antall_kast = 600\nantall_seksere = 0", explanation: "Den første variabelen bestemmer antall forsøk. Telleren starter på 0 fordi ingen kast er gjort ennå.", think: "Hvorfor skal antall_seksere ikke starte på 1?", breakdown: ["Før løkken har programmet ikke observert noen terningkast.", "Dermed er antall observerte seksere 0.", "Telleren skal økes senere, bare når et kast faktisk blir 6."], why: "Startverdien må beskrive situasjonen før forsøket begynner. Ellers ville sluttresultatet fått med en sekser som aldri ble kastet." },
       { kind: "write", code: "for _ in range(antall_kast):\n    kast = random.randint(1, 6)", explanation: "kast-linjen har fire mellomrom fordi den hører til løkken." },
-      { kind: "write", code: "    if kast == 6:\n        antall_seksere += 1", explanation: "if har fire mellomrom. Telleren under har åtte mellomrom." },
-      { kind: "write", code: "andel = antall_seksere / antall_kast\nprint(round(andel, 3))", explanation: "Disse linjene står helt til venstre fordi de kjøres etter løkken." },
+      { kind: "write", code: "    if kast == 6:\n        antall_seksere += 1", explanation: "if undersøker hvert kast. Telleren økes bare når kastet er 6.", think: "Hva skjer med telleren når kast er 4? Hva skjer når kast er 6?", breakdown: ["Ved kast = 4 er vilkåret usant, og økningen hoppes over.", "Ved kast = 6 er vilkåret sant.", "+= 1 legger da én til den gamle tellerverdien og lagrer den nye."], why: "De to innrykksnivåene viser rekkefølgen: if kjøres inni løkken, og tellerøkningen kjøres inni if." },
+      { kind: "write", code: "andel = antall_seksere / antall_kast\nprint(round(andel, 3))", explanation: "Etter alle kastene deler vi antall treff på antall forsøk.", think: "Hvis telleren ender på 100, hvilken brøk og hvilket desimaltall får vi?", breakdown: ["100 / 600 forkortes til 1 / 6.", "Som desimaltall er dette omtrent 0.167.", "Det tilsvarer omtrent 16,7 %."], why: "En andel gjør resultatet sammenlignbart med sannsynligheten 1/6 og med simuleringer som bruker et annet antall kast." },
     ],
     polish: {
       title: "Vis svaret som prosent",
@@ -1175,21 +1215,27 @@ const modules: Module[] = [
     theory: [
       {
         title: "Eksponentiell modell",
-        body: "Ved 10 % vekst multipliseres verdien med vekstfaktoren 1,10 for hver periode.",
+        body: "Ved 10 % vekst skal vi beholde hele den gamle verdien og legge til 10 %. Hele verdien er 100 % = 1, og økningen er 10 % = 0.10. Derfor blir vekstfaktoren 1 + 0.10 = 1.10. Faktoren brukes på nytt for hver periode.",
         code: "verdi = start * vekstfaktor ** tid",
-        steps: ["Finn startverdien.", "Gjør prosenten om til vekstfaktor.", "Opphøy vekstfaktoren i antall perioder.", "Gang med startverdien."],
+        steps: ["start er verdien før veksten begynner: 1000.", "vekstfaktor 1.10 betyr 110 % av verdien fra perioden før.", "tid = 2 betyr at faktoren skal brukes to ganger.", "Regnestykket blir 1000 · 1.10 · 1.10 = 1210."],
+        reflection: "Hvorfor blir svaret 1210 og ikke 1200 når veksten er 10 % i to perioder?",
+        why: "Den andre veksten regnes av 1100, ikke av den opprinnelige 1000. Vi får altså vekst også på den første økningen. Det er kjernen i eksponentiell vekst.",
       },
       {
         title: "** betyr potens",
-        body: "1.10 ** 2 betyr 1,10². Python bruker to stjerner for potens.",
+        body: "1.10 ** 2 betyr 1,10². Eksponenten 2 forteller hvor mange ganger 1.10 skal være faktor: 1.10 · 1.10. Python bruker to stjerner for potens; én stjerne betyr vanlig multiplikasjon.",
         code: "vekstfaktor ** tid",
-        steps: ["Skriv grunntallet først.", "Bruk to stjerner.", "Skriv eksponenten etter stjernene."],
+        steps: ["Grunntallet er vekstfaktoren 1.10.", "Eksponenten er tid, her 2.", "Python regner potensen først: 1.10² = 1.21.", "Deretter ganges startverdien med 1.21: 1000 · 1.21 = 1210."],
+        reflection: "Hva betyr 1.10 ** 0? Hva bør verdien være etter null perioder?",
+        why: "Potens er en kort skrivemåte for gjentatt multiplikasjon. Den passer bare når den samme vekstfaktoren brukes i hver periode.",
       },
       {
         title: "En modell har forutsetninger",
-        body: "Konstant prosentvis vekst er en antakelse. Virkelige renter, priser eller bestander kan endre seg.",
+        body: "Koden gir et nøyaktig svar på modellen, men modellen er en forenkling av virkeligheten. Her antar vi blant annet at veksten er nøyaktig 10 % i hver periode, at ingen penger tas ut eller settes inn, og at periodene er like lange.",
         code: "vekstfaktor = 1.10  # holdes konstant",
-        steps: ["Finn hva modellen antar er konstant.", "Spør hvor lenge antakelsen er rimelig.", "Skille mellom et beregnet modellsvar og virkeligheten."],
+        steps: ["Finn hvilke størrelser modellen holder faste.", "Undersøk hvilke hendelser modellen ikke tar med.", "Vurder om tidsrommet er så langt at antakelsene blir urimelige.", "Skill mellom «programmet regnet riktig» og «modellen beskriver virkeligheten godt»."],
+        reflection: "Kan 1210 være riktig beregnet, men likevel et dårlig anslag for virkeligheten? Nevn én mulig grunn.",
+        why: "Programmer regner konsekvent ut det vi ber om, også når antakelsene våre er svake. Derfor må modeller alltid forklares og vurderes, ikke bare kjøres.",
       },
     ],
     progression: {
@@ -1226,9 +1272,9 @@ const modules: Module[] = [
     starterCode: `start = 1000\nvekstfaktor = 1.10\ntid = 2\n\nverdi = start * vekstfaktor ** tid\nprint(round(verdi, 2))`,
     typingSteps: [
       { kind: "write", code: "start = 1000", explanation: "Startverdien lagres i variabelen start." },
-      { kind: "write", code: "vekstfaktor = 1.10\ntid = 2", explanation: "Dette er to separate kodelinjer. Trykk Enter mellom dem." },
+      { kind: "write", code: "vekstfaktor = 1.10\ntid = 2", explanation: "1.10 betyr at 100 % beholdes og 10 % legges til. tid = 2 betyr to vekstperioder.", think: "Hvilke to prosentdeler er samlet i tallet 1.10?", breakdown: ["1 står for hele den gamle verdien: 100 %.", "0.10 står for økningen: 10 %.", "1 + 0.10 = 1.10, altså 110 %.", "Faktoren skal brukes to ganger fordi tid er 2."], why: "En vekstfaktor samler den gamle verdien og økningen i ett tall som vi kan multiplisere med." },
       { kind: "do", explanation: "Lag en tom linje. Den gjør koden lettere å lese, men endrer ikke svaret." },
-      { kind: "write", code: "verdi = start * vekstfaktor ** tid", explanation: "** betyr potens. Her opphøyes vekstfaktoren i tid." },
+      { kind: "write", code: "verdi = start * vekstfaktor ** tid", explanation: "Potensen gjentar vekstfaktoren én gang for hver periode.", think: "Hvorfor holder det ikke å regne start * 1.10 bare én gang når tid er 2?", breakdown: ["vekstfaktor ** tid blir 1.10 ** 2.", "Det betyr 1.10 · 1.10 = 1.21.", "1000 · 1.21 = 1210.", "Den andre 10-prosentveksten regnes av 1100, derfor blir økningen 110 i periode 2."], why: "Veksten bygger på forrige periodes nye verdi. Potensen beskriver denne gjentatte multiplikasjonen." },
       { kind: "write", code: "print(round(verdi, 2))", explanation: "Denne linjen viser svaret avrundet til to desimaler. Trykk deretter «Kjør kode»." },
     ],
     polish: {
@@ -2916,6 +2962,18 @@ export default function Home() {
                     <ol className="how-to-list">
                       {item.steps.map((step) => <li key={step}>{step}</li>)}
                     </ol>
+                    {item.reflection && (
+                      <div className="theory-reflection">
+                        <strong>Tenk først</strong>
+                        <p>{item.reflection}</p>
+                      </div>
+                    )}
+                    {item.why && (
+                      <div className="theory-why">
+                        <strong>Derfor virker det</strong>
+                        <p>{item.why}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -3010,6 +3068,22 @@ export default function Home() {
                         <span className="typing-step-kind">{instruction.kind === "write" ? "Skriv dette i kodefeltet" : "Gjør dette"}</span>
                         {instruction.code && <code>{instruction.code}</code>}
                         <div className="typing-explanation"><strong>{instruction.kind === "write" ? "Forklaring" : "Neste handling"}</strong><p>{instruction.explanation}</p></div>
+                        {(instruction.think || instruction.breakdown || instruction.why) && (
+                          <div className="typing-deep-dive">
+                            {instruction.think && (
+                              <div className="typing-think"><strong>Tenk først</strong><p>{instruction.think}</p></div>
+                            )}
+                            {instruction.breakdown && (
+                              <div className="typing-breakdown">
+                                <strong>Dette skjer</strong>
+                                <ol>{instruction.breakdown.map((step) => <li key={step}>{step}</li>)}</ol>
+                              </div>
+                            )}
+                            {instruction.why && (
+                              <div className="typing-why"><strong>Derfor virker koden</strong><p>{instruction.why}</p></div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </li>
                   ))}
