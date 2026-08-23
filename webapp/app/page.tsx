@@ -182,6 +182,63 @@ type CurriculumGoal = {
   moduleIds: number[];
 };
 
+const examGraphTemplate = `import numpy as np
+import matplotlib.pyplot as plt
+
+# =====================================================
+# DEL 1: ENDRE BARE VERDIENE I DENNE DELEN
+# =====================================================
+
+def f(x):
+    return 2 * x + 3  # Skriv funksjonsuttrykket etter return
+
+funksjonsnavn = "f(x) = 2x + 3"  # Teksten som forklarer grafen
+graf_tittel = "Grafen til f"      # Her skriver du tittelen på grafen
+x_aksetittel = "x"                # Her skriver du aksetittelen for x-aksen
+y_aksetittel = "f(x)"             # Her skriver du aksetittelen for y-aksen
+
+x_min = -5   # Minste x-verdi som skal vises
+x_maks = 5   # Største x-verdi som skal vises
+y_min = -8   # Minste y-verdi som skal vises
+y_maks = 14  # Største y-verdi som skal vises
+
+x_steg = 1   # Avstand mellom tallene på x-aksen
+y_steg = 2   # Avstand mellom tallene på y-aksen
+
+# "auto" fyller plassen automatisk.
+# Bruk 1 hvis én x-enhet og én y-enhet skal være like lange på arket.
+# Bruk for eksempel 2 hvis én y-enhet skal tegnes dobbelt så lang som én x-enhet.
+akseforhold = "auto"
+
+# =====================================================
+# DEL 2: DENNE DELEN KAN VANLIGVIS STÅ UENDRET
+# =====================================================
+
+x = np.linspace(x_min, x_maks, 500)
+y = f(x)  # y-verdiene er funksjonsverdiene f(x)
+
+fig, ax = plt.subplots(figsize=(9, 6))
+ax.plot(x, y, color="#d94f3d", linewidth=2.5, label=funksjonsnavn)
+
+ax.set_title(graf_tittel, fontsize=16)
+ax.set_xlabel(x_aksetittel, fontsize=13)
+ax.set_ylabel(y_aksetittel, fontsize=13)
+
+ax.set_xlim(x_min, x_maks)
+ax.set_ylim(y_min, y_maks)
+ax.set_xticks(np.arange(x_min, x_maks + x_steg * 0.5, x_steg))
+ax.set_yticks(np.arange(y_min, y_maks + y_steg * 0.5, y_steg))
+ax.set_aspect(akseforhold, adjustable="box")
+
+ax.axhline(0, color="black", linewidth=1)
+ax.axvline(0, color="black", linewidth=1)
+ax.grid(True, linestyle="--", alpha=0.5)
+ax.legend()
+
+fig.tight_layout()
+plt.show()
+print("Grafen er klar til kontroll og lagring.")`;
+
 const codeSnippets: CodeSnippet[] = [
   {
     id: "variabler",
@@ -254,6 +311,14 @@ const codeSnippets: CodeSnippet[] = [
     purpose: "Vis sammenhengen mellom x- og y-verdier.",
     code: 'import matplotlib.pyplot as plt\n\nx = [0, 1, 2, 3, 4]\ny = [0, 1, 4, 9, 16]\n\nplt.plot(x, y, marker="o")\nplt.grid()\nplt.show()',
     change: "Endre tallene i listene, fargen eller tittelen.",
+  },
+  {
+    id: "eksamensgraf",
+    category: "Tegning",
+    title: "Lag en eksamensklar funksjonsgraf",
+    purpose: "Hent en komplett mal med aksetitler, utsnitt, målestokk, rutenett og forklaringer i koden.",
+    code: examGraphTemplate,
+    change: "Endre først bare verdiene i DEL 1. Resten av grafkoden kan stå uendret.",
   },
   {
     id: "turtle",
@@ -516,6 +581,27 @@ plt.show()`,
       "Endre farge, linjetykkelse og tittel.",
     ],
     tip: "Grafen vises i resultatpanelet. Der kan den åpnes stort eller lagres som PNG-bilde.",
+  },
+  {
+    id: "eksamensgraf",
+    category: "Tegne og vise",
+    level: "Utforsk",
+    title: "Komplett mal for funksjonsgraf",
+    purpose: "Lag en ryddig graf som kan brukes i en matematisk besvarelse ved å endre en samlet innstillingsdel.",
+    commands: [
+      { code: "def f(x): return ...", explanation: "Definerer selve funksjonsregelen. Potens skrives med **, ikke ^." },
+      { code: "ax.set_xlabel / set_ylabel", explanation: "Gir begge aksene tydelige navn og eventuelle enheter." },
+      { code: "ax.set_xlim / set_ylim", explanation: "Bestemmer hvilket utsnitt av koordinatsystemet som vises." },
+      { code: "ax.set_xticks / set_yticks", explanation: "Bestemmer avstanden mellom tallene og rutenettlinjene." },
+      { code: "ax.set_aspect(...) ", explanation: "Bestemmer det visuelle lengdeforholdet mellom én x-enhet og én y-enhet." },
+    ],
+    example: examGraphTemplate,
+    experiments: [
+      "Tegn f(x) = -3x + 6 og velg et utsnitt som viser nullpunktet tydelig.",
+      "Bytt til f(x) = x ** 2 - 4 og sammenlign akseforhold 'auto' og 1.",
+      "Gi aksene navn med enheter, for eksempel Tid (timer) og Pris (kr).",
+    ],
+    tip: "Python-kommentarer begynner med #. Tegnet // brukes ikke til kommentarer i Python.",
   },
   {
     id: "turtle-figurer",
@@ -844,7 +930,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "Skriv funksjoner for to praktiske modeller, endre parameterne og sammenlign tabeller og grafer.",
     tools: ["def", "return", "Matplotlib", "tabeller"],
-    moduleIds: [4, 6],
+    moduleIds: [4, 6, 9],
   },
   {
     id: "8-representasjoner",
@@ -853,7 +939,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "La samme funksjon vises som tekstsituasjon, uttrykk, verditabell og graf. Pek ut hvor samme informasjon finnes i alle fire.",
     tools: ["funksjoner", "Pandas", "Matplotlib", "uttrykk"],
-    moduleIds: [4, 6],
+    moduleIds: [4, 6, 9],
   },
   {
     id: "8-algoritmer",
@@ -925,7 +1011,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "God støtte",
     activity: "Gjenskap en graf med Matplotlib, endre aksestart og skala og diskuter hvordan inntrykket forandres.",
     tools: ["Matplotlib", "Pandas", "akser", "datasett"],
-    moduleIds: [4],
+    moduleIds: [4, 9],
   },
   {
     id: "9-sentral-spredning",
@@ -943,7 +1029,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "Lag to korrekte grafer av samme datasett med ulike utsnitt, diagramtyper eller skalaer og vurder budskapet.",
     tools: ["Matplotlib", "Pandas", "grafer", "akser"],
-    moduleIds: [4],
+    moduleIds: [4, 9],
   },
   {
     id: "9-sannsynlighet",
@@ -988,7 +1074,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "God støtte",
     activity: "Modeller en praktisk situasjon med to funksjoner, finn skjæringspunktet grafisk og kontroller med SymPy.",
     tools: ["funksjoner", "Matplotlib", "SymPy", "grafer"],
-    moduleIds: [4, 6],
+    moduleIds: [4, 6, 9],
   },
   {
     id: "10-funksjonstyper",
@@ -997,7 +1083,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "Tegn flere funksjonstyper i samme koordinatsystem og undersøk nullpunkter, vekst, asymptoter og parameterendringer.",
     tools: ["NumPy", "Matplotlib", "funksjoner", "grafer"],
-    moduleIds: [4, 6],
+    moduleIds: [4, 6, 9],
   },
   {
     id: "10-stigningstall",
@@ -1006,7 +1092,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "Beregn endring i y delt på endring i x, tegn linjen og koble stigningstallet til den praktiske situasjonen.",
     tools: ["funksjoner", "tabeller", "Matplotlib", "variabler"],
-    moduleIds: [1, 4],
+    moduleIds: [1, 4, 9],
   },
   {
     id: "10-prosentvekst",
@@ -1015,7 +1101,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "Sammenlign prosentvis endring periode for periode med potensmodellen, og vis utviklingen som tabell og graf.",
     tools: ["vekstfaktor", "**", "løkker", "Matplotlib"],
-    moduleIds: [1, 4, 6],
+    moduleIds: [1, 4, 6, 9],
   },
   {
     id: "10-okonomi-konsekvenser",
@@ -1024,7 +1110,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "Lag sammenlignbare modeller for sparing, lån og kreditt. Vis total kostnad og undersøk virkningen av rente og tid.",
     tools: ["variabler", "vekstfaktor", "tabeller", "grafer"],
-    moduleIds: [1, 6],
+    moduleIds: [1, 6, 9],
   },
   {
     id: "10-okonomi-arbeid",
@@ -1033,7 +1119,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "Formuler et økonomisk spørsmål, samle forutsetninger, programmer en modell og presenter funn og begrensninger.",
     tools: ["Pandas", "Matplotlib", "modeller", "f-tekst"],
-    moduleIds: [1, 6],
+    moduleIds: [1, 6, 9],
   },
   {
     id: "10-modellering",
@@ -1042,7 +1128,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "Gjør antakelser om til variabler, beregn eller simuler utviklingen, presenter resultatet og test modellens grenser.",
     tools: ["funksjoner", "tabeller", "grafer", "simulering"],
-    moduleIds: [4, 5, 6],
+    moduleIds: [4, 5, 6, 9],
   },
   {
     id: "10-programmering",
@@ -1051,7 +1137,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "Still et matematisk spørsmål, lag kode som produserer eksempler, og bruk mønsteret til å formulere og begrunne en sammenheng.",
     tools: ["løkker", "funksjoner", "Turtle", "grafer"],
-    moduleIds: [3, 4, 5, 7, 8],
+    moduleIds: [3, 4, 5, 7, 8, 9],
   },
   {
     id: "10-pythonkode",
@@ -1060,7 +1146,7 @@ const curriculumGoals: CurriculumGoal[] = [
     fit: "Direkte",
     activity: "Følg variabelverdier linje for linje, forutsi resultatet, forklar matematikken og foreslå en begrunnet endring.",
     tools: ["variabler", "if/else", "løkker", "funksjoner"],
-    moduleIds: [1, 2, 3, 4, 8],
+    moduleIds: [1, 2, 3, 4, 8, 9],
   },
 ];
 
@@ -2030,6 +2116,137 @@ const modules: Module[] = [
         "Eleven kan forklare datastrukturen for slangen, regne ut neste hode og peke ut vilkårene for vekst og kollisjon.",
       extension:
         "La elevene utvide ett_steg-funksjonen med hindringer, bonusmat eller en regel som gir ulike poeng for ulike mattyper.",
+    },
+  },
+  {
+    id: 9,
+    title: "Tegn grafer/funksjoner med Python",
+    shortTitle: "Eksamensklare grafer",
+    eyebrow: "Fra funksjonsuttrykk til ferdig figur",
+    question: "Hvordan lager vi en funksjonsgraf som er matematisk riktig, lett å lese og klar til å leveres?",
+    intro:
+      "En god graf er mer enn en kurve. Den må vise hvilken funksjon som er tegnet, hva aksene betyr, hvilket utsnitt som er valgt og hvordan enhetene er skalert. Her bygger vi en leveringsklar graf og lærer hva hver del av koden gjør.",
+    refresh: {
+      title: "En graf viser sammenhengen mellom x og f(x)",
+      body: "Funksjonen er en regel som gir én funksjonsverdi for hver tillatte x-verdi. Punktene (x, f(x)) danner grafen. I Python lager vi først mange x-verdier, regner ut de tilhørende funksjonsverdiene og sender begge listene til tegneverktøyet.",
+      examples: [
+        { code: "f(x) = 2x + 3", explanation: "Matematisk skrivemåte for funksjonsregelen." },
+        { code: "def f(x): return 2 * x + 3", explanation: "Den samme regelen definert som en Python-funksjon." },
+        { code: "y = f(x)", explanation: "Python regner ut funksjonsverdiene. Her representerer y de samme utverdiene som f(x)." },
+      ],
+    },
+    theory: [
+      {
+        title: "y-verdiene er f(x), men = er en tildeling",
+        body: "I matematikk kan vi skrive y = f(x). Da er y og f(x) to navn på funksjonens utverdi. I Python betyr y = f(x) mer konkret: Kjør funksjonen med x-verdiene og lagre svarene under navnet y. Selve funksjonsregelen defineres i def f(x)-blokken.",
+        code: "def f(x):\n    return 2 * x + 3\n\ny = f(x)",
+        steps: ["def f(x) oppretter en regel som kan brukes flere ganger.", "return-linjen er stedet der funksjonsuttrykket skrives.", "x kan være ett tall eller mange NumPy-verdier.", "y = f(x) beregner og lagrer alle punktenes y-verdier."],
+        reflection: "Hvor i koden må du endre hvis grafen skal vise f(x) = x² − 4? Hvorfor brukes ** og ikke ^?",
+        why: "Når regelen samles i f, kan samme funksjon brukes til både graf, verditabell og beregning av bestemte funksjonsverdier uten at uttrykket gjentas flere steder.",
+      },
+      {
+        title: "Utsnitt, tallsteg og akseforhold er tre ulike valg",
+        body: "x_min og x_maks bestemmer hvilket område av x-aksen vi ser. x_steg bestemmer avstanden mellom tallmerkene. akseforhold bestemmer hvor lang én x-enhet ser ut sammenlignet med én y-enhet. Det er derfor mulig å beholde samme utsnitt, men endre det visuelle forholdet mellom aksene.",
+        code: "ax.set_xlim(-5, 5)\nax.set_xticks(range(-5, 6, 1))\nax.set_aspect(1, adjustable=\"box\")",
+        steps: ["set_xlim og set_ylim velger det synlige koordinatområdet.", "set_xticks og set_yticks bestemmer hvor tallene plasseres.", "aspect = 1 gir like lange x- og y-enheter på skjermen.", "aspect = 'auto' lar grafen fylle plassen, selv om enhetene da kan få ulik visuell lengde."],
+        reflection: "Kan en sirkel se ut som en oval selv om koordinatene er riktige? Hvilket akseforhold vil hindre dette?",
+        why: "Aksevalg påvirker hvordan grafen oppfattes. En korrekt graf kan bli misvisende hvis utsnitt eller målestokk skjuler viktige egenskaper eller overdriver en endring.",
+      },
+      {
+        title: "En leveringsklar graf kommuniserer matematikk",
+        body: "En leser skal kunne forstå grafen uten å gjette. Begge aksene trenger navn og eventuelle enheter. Flere grafer trenger tegnforklaring. Utsnittet må vise de punktene oppgaven handler om, og elevens tekst må forklare hva grafen viser – bildet alene er ikke hele besvarelsen.",
+        code: "ax.set_xlabel(\"Tid (timer)\")\nax.set_ylabel(\"Pris (kr)\")\nax.legend()",
+        steps: ["Skriv størrelsen og enheten i hver aksetittel.", "Gi kurven et matematisk navn med label.", "Bruk tittel til å beskrive situasjonen kort.", "Kontroller at relevante skjæringspunkter, nullpunkter eller vendepunkter faktisk er synlige."],
+        reflection: "Hva mangler hvis en graf har pene farger, men aksene bare heter x og y i en praktisk prisoppgave?",
+        why: "Matematisk kommunikasjon handler om at representasjonen er presis og tilpasset situasjonen. Aksetitler og forklaring knytter kurven til problemet som løses.",
+      },
+    ],
+    progression: {
+      intro: "Begynn med å kontrollere funksjonsverdier. Tegn deretter kurven, legg til nødvendige akser og avslutt med den komplette endre-bare-her-malen.",
+      steps: [
+        {
+          label: "Kontroller regelen",
+          title: "Regn ut noen funksjonsverdier",
+          body: "Før grafen tegnes, bør vi kontrollere at Python-regelen stemmer med matematikkuttrykket.",
+          code: `def f(x):\n    return 2 * x + 3\n\nprint(f(-1))\nprint(f(0))\nprint(f(2))`,
+          tryThis: "Regn ut de tre svarene for hånd. Hvis de ikke stemmer, bør funksjonen rettes før grafen lages.",
+        },
+        {
+          label: "Tegn kurven",
+          title: "Lag mange x-verdier og beregn y",
+          body: "linspace lager mange jevnt fordelte x-verdier. y = f(x) beregner funksjonsverdien for hver av dem.",
+          code: `import numpy as np\nimport matplotlib.pyplot as plt\n\ndef f(x):\n    return 2 * x + 3\n\nx = np.linspace(-5, 5, 500)\ny = f(x)\n\nplt.plot(x, y)\nplt.show()`,
+          tryThis: "Endre 500 til 5. Hvorfor består grafen fortsatt av en linje, men med langt færre beregnede punkter?",
+        },
+        {
+          label: "Gjør den lesbar",
+          title: "Legg til navn, utsnitt og koordinatakser",
+          body: "Axes-variabelen ax gir ryddige kommandoer for alle delene av koordinatsystemet.",
+          code: `fig, ax = plt.subplots()\nax.plot(x, y, label="f(x) = 2x + 3")\nax.set_xlabel("x")\nax.set_ylabel("f(x)")\nax.set_xlim(-5, 5)\nax.set_ylim(-8, 14)\nax.axhline(0, color="black")\nax.axvline(0, color="black")\nax.grid()\nax.legend()\nplt.show()`,
+          tryThis: "Gjør dette om til en prisoppgave. Hvilke aksetitler og enheter ville vært presise?",
+        },
+        {
+          label: "Eksamensmal",
+          title: "Endre bare innstillingene øverst",
+          body: "Den fullstendige malen samler alt eleven vanligvis skal endre i DEL 1. Kommentarene begynner med # og forklarer hvert valg direkte i koden.",
+          code: examGraphTemplate,
+          tryThis: "Tegn f(x) = x ** 2 - 4. Velg et utsnitt og tallsteg som viser begge nullpunktene tydelig.",
+          upgrade: {
+            title: "Husk: ^ betyr ikke potens i Python",
+            body: "Python bruker to stjerner til potens. Skriv x ** 2 for x². Tegnet ^ har en annen teknisk betydning og gir ikke funksjonen du forventer.",
+            code: `def f(x):\n    return x ** 2 - 4`,
+          },
+        },
+      ],
+    },
+    starterCode: examGraphTemplate,
+    typingSteps: [
+      { kind: "write", code: "import numpy as np\nimport matplotlib.pyplot as plt", explanation: "NumPy lager x-verdiene. Matplotlib tegner koordinatsystemet og grafen." },
+      { kind: "do", explanation: "Skriv overskriften # DEL 1: ENDRE BARE VERDIENE HER. Python ignorerer tekst som står etter #, så kommentaren er hjelp til mennesket som leser koden." },
+      { kind: "write", code: "def f(x):\n    return 2 * x + 3", explanation: "Dette er funksjonen. Endre bare uttrykket etter return når en ny funksjon skal tegnes.", think: "Hva må stå etter return for f(x) = x² − 4?", breakdown: ["x² skrives x ** 2.", "Deretter trekkes 4 fra.", "Hele linjen blir return x ** 2 - 4."], why: "def lager en virkelig Python-funksjon. Senere kan y = f(x) beregne mange funksjonsverdier samtidig." },
+      { kind: "write", code: "x_aksetittel = \"x\"\ny_aksetittel = \"f(x)\"", explanation: "Skriv tydelige navn og enheter mellom anførselstegn. I en praktisk oppgave kan dette være Tid (timer) og Pris (kr)." },
+      { kind: "write", code: "x_min = -5\nx_maks = 5\ny_min = -8\ny_maks = 14", explanation: "Disse fire tallene velger utsnittet. De endrer ikke funksjonen, bare hva vi ser." },
+      { kind: "write", code: "x_steg = 1\ny_steg = 2", explanation: "Dette bestemmer avstanden mellom tallmerkene på aksene, ikke det visuelle lengdeforholdet mellom enhetene." },
+      { kind: "write", code: "akseforhold = \"auto\"", explanation: "auto bruker plassen godt. Bytt til 1 når én enhet skal være like lang på begge aksene.", think: "Når er like enheter særlig viktig?", breakdown: ["Geometriske figurer bør ikke strekkes.", "En sirkel skal se rund ut.", "På mange funksjonsgrafer kan auto gi bedre plass, men valget må vurderes."], why: "Målestokk er et faglig valg. Koden gjør valget synlig og mulig å begrunne." },
+      { kind: "do", explanation: "Hent resten fra fasitfanen eller kodekortet «Lag en eksamensklar funksjonsgraf». Kjør, kontroller grafen og bruk sjekklisten før du lagrer bildet." },
+    ],
+    polish: {
+      title: "Marker og forklar et viktig punkt",
+      body: "Når oppgaven handler om et nullpunkt eller skjæringspunkt, kan punktet markeres og få en kort tekst. Beregningen må fortsatt forklares i besvarelsen.",
+      before: "ax.plot(x, y, label=funksjonsnavn)",
+      after: `ax.plot(x, y, label=funksjonsnavn)\nnullpunkt = -1.5\nax.scatter(nullpunkt, 0, color=\"#173f3a\", zorder=5)\nax.annotate(\"Nullpunkt (-1,5, 0)\", (nullpunkt, 0), xytext=(8, 10), textcoords=\"offset points\")`,
+      explanation: "scatter tegner punktet, mens annotate setter forklarende tekst ved siden av. Bruk bare markeringer som er relevante for oppgaven.",
+    },
+    observe: [
+      "Stemmer noen utvalgte funksjonsverdier med regning for hånd?",
+      "Har begge aksene navn og eventuelle enheter?",
+      "Viser utsnittet alle punktene oppgaven handler om?",
+      "Er tallsteg og akseforhold valgt slik at grafen er lett å lese og ikke misvisende?",
+      "Har besvarelsen en tekst som forklarer hva grafen viser?",
+    ],
+    task:
+      "Bruk eksamensmalen til å tegne f(x) = -3x + 6. Vis nullpunktet tydelig, bruk aksetitler, velg et fornuftig utsnitt og skriv én setning som tolker grafen.",
+    taskHint: "Endre return-linjen, funksjonsnavnet, titlene og aksegrensene i DEL 1. Nullpunktet er der grafen krysser x-aksen.",
+    expected: ["grafen er klar"],
+    teacher: {
+      purpose:
+        "Gi elevene en trygg arbeidsflyt for å produsere og kontrollere funksjonsgrafer, samtidig som de begrunner representasjonsvalgene matematisk.",
+      before: [
+        "Vis to grafer av samme funksjon med ulike utsnitt og diskuter hvilket inntrykk de gir.",
+        "Repeter forskjellen mellom funksjonsuttrykk, definisjonsområde og verdimengde.",
+        "La elevene finne tre funksjonsverdier for hånd før grafen kjøres.",
+      ],
+      misconceptions: [
+        "Elevene bruker // som kommentar i stedet for #.",
+        "x_min og y_min oppfattes som en del av funksjonsuttrykket.",
+        "Tallsteg, utsnitt og akseforhold blandes sammen.",
+        "^ brukes som potens i stedet for **.",
+        "En pen graf leveres uten forklaring eller vurdering.",
+      ],
+      assess:
+        "Eleven kan forklare funksjonsregelen, velge og begrunne utsnitt og målestokk, navngi aksene presist og tolke et relevant punkt på grafen.",
+      extension:
+        "Tegn to modeller i samme koordinatsystem, finn skjæringspunktet og vurder i hvilket område hver modell er mest fordelaktig.",
     },
   },
 ];
@@ -3703,6 +3920,7 @@ export default function Home() {
                 <button type="button" onClick={() => updateCode('import random\n\nfor _ in range(10):\n    print(random.randint(1, 6))')}>Kast en terning</button>
                 <button type="button" onClick={() => updateCode('def areal(lengde, bredde):\n    return lengde * bredde\n\nprint(areal(8, 5))')}>Lag en funksjon</button>
                 <button type="button" onClick={() => updateCode('import numpy as np\nimport matplotlib.pyplot as plt\n\nx = np.linspace(-5, 5, 100)\ny = x ** 2\n\nplt.plot(x, y)\nplt.title("Grafen til y = x²")\nplt.grid()\nplt.show()')}>Tegn en graf</button>
+                <button type="button" onClick={() => updateCode(examGraphTemplate)}>Lag en eksamensklar graf</button>
                 <button type="button" onClick={() => updateCode('from turtle import *\n\ncolor("#f06f51", "#f4c95d")\npensize(5)\n\nbegin_fill()\nfor side in range(4):\n    forward(120)\n    left(90)\nend_fill()\n\ndone()')}>Tegn et Turtle-kvadrat</button>
                 <button type="button" onClick={() => updateCode('from turtle import *\n\nbgcolor("#fffdf8")\ncolor("#2f6b5f")\npensize(3)\n\nfor lengde in range(10, 190, 6):\n    forward(lengde)\n    left(91)\n\ndone()')}>Lag en geometrisk spiral</button>
                 <button type="button" onClick={() => updateCode('import pandas as pd\n\ndata = {"navn": ["Ada", "Bo", "Celine"], "poeng": [8, 12, 10]}\ntabell = pd.DataFrame(data)\nprint(tabell.to_string(index=False))')}>Lag en tabell</button>

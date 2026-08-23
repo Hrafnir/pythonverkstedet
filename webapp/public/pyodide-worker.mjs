@@ -505,7 +505,7 @@ try:
         _bjornsveen_figure.savefig(
             _bjornsveen_buffer,
             format="png",
-            dpi=170,
+            dpi=240,
             bbox_inches="tight",
             facecolor="white",
         )

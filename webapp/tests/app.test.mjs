@@ -10,13 +10,13 @@ const desktopBuild = readFileSync("scripts/build-macos.mjs", "utf8");
 const desktopPrepare = readFileSync("scripts/prepare-desktop-dev.mjs", "utf8");
 const offlinePackages = readFileSync("scripts/download-pyodide.mjs", "utf8");
 
-test("appen inneholder åtte komplette læringsmoduler", () => {
-  const moduleIds = page.match(/\n    id: [1-8],/g) ?? [];
-  assert.equal(moduleIds.length, 8);
+test("appen inneholder ni komplette læringsmoduler", () => {
+  const moduleIds = page.match(/\n    id: [1-9],/g) ?? [];
+  assert.equal(moduleIds.length, 9);
   for (const step of ["Problem", "Oppfriskning", "Lær", "Prøv", "Forklar", "Oppgave"]) {
     assert.match(page, new RegExp(`"${step}"`));
   }
-  assert.equal((page.match(/    refresh: \{/g) ?? []).length, 8);
+  assert.equal((page.match(/    refresh: \{/g) ?? []).length, 9);
   assert.match(page, /navn = verdi/);
   assert.match(page, /Slik lager du en variabel/);
 });
@@ -46,17 +46,17 @@ test("modulene har tom skrivelab, redigerbar fasit, kodefarger og ekstratriks", 
   assert.match(page, /pythonTokens/);
   assert.match(page, /Valgfritt ekstratriks/);
   assert.match(page, /Den nye prisen på produktet er/);
-  assert.equal((page.match(/    typingSteps: \[/g) ?? []).length, 8);
+  assert.equal((page.match(/    typingSteps: \[/g) ?? []).length, 9);
   assert.match(page, /Skriv dette i kodefeltet/);
   assert.match(page, /Forklaring/);
   assert.match(page, /Gjør dette/);
   assert.match(page, /typing-explanation/);
-  assert.equal((page.match(/    polish: \{/g) ?? []).length, 8);
+  assert.equal((page.match(/    polish: \{/g) ?? []).length, 9);
 });
 
 test("alle moduler forklarer tankegangen grundig og inviterer til refleksjon", () => {
-  assert.equal((page.match(/^        reflection:/gm) ?? []).length, 24);
-  assert.equal((page.match(/^        why:/gm) ?? []).length, 24);
+  assert.equal((page.match(/^        reflection:/gm) ?? []).length, 27);
+  assert.equal((page.match(/^        why:/gm) ?? []).length, 27);
   assert.ok((page.match(/think:/g) ?? []).length >= 12);
   assert.ok((page.match(/breakdown:/g) ?? []).length >= 12);
   assert.match(page, /1 står for hele den gamle prisen: 100 %/);
@@ -70,7 +70,7 @@ test("alle moduler forklarer tankegangen grundig og inviterer til refleksjon", (
 });
 
 test("alle moduler bygger kompetanse i små, kjørbare steg", () => {
-  assert.equal((page.match(/    progression: \{/g) ?? []).length, 8);
+  assert.equal((page.match(/    progression: \{/g) ?? []).length, 9);
   assert.match(page, /Små steg som bygger på hverandre/);
   assert.match(page, /Prøv koden i laboratoriet/);
   assert.match(page, /Legg sammen variabler/);
@@ -112,7 +112,7 @@ test("Python-rommet har et komplett, søkbart oppslagsverk", () => {
   assert.match(page, /Søk i håndboken/);
   assert.match(page, /playgroundReferences/);
   const referenceSource = page.slice(page.indexOf("const playgroundReferences"), page.indexOf("const modules"));
-  assert.equal((referenceSource.match(/    id: "(?:variabler|tekst|vilkar|tallmonster|lister|funksjoner|tilfeldighet|tabeller|grafer|turtle-figurer|turtle-spiral|numpy|symbolsk|mattebibliotek|scipy|maskinlaering|pillow|networkx|shapely|spill-snake)",/g) ?? []).length, 20);
+  assert.equal((referenceSource.match(/    id: "(?:variabler|tekst|vilkar|tallmonster|lister|funksjoner|tilfeldighet|tabeller|grafer|eksamensgraf|turtle-figurer|turtle-spiral|numpy|symbolsk|mattebibliotek|scipy|maskinlaering|pillow|networkx|shapely|spill-snake)",/g) ?? []).length, 21);
   assert.match(page, /Viktige koder og kommandoer/);
   assert.match(page, /Eksperimenter videre/);
   assert.match(page, /Åpne som nytt prosjekt/);
@@ -131,7 +131,7 @@ test("Python starter med tom editor og har en kodebygger", () => {
   assert.match(page, /const playgroundCode = ""/);
   assert.match(page, /const codeSnippets: CodeSnippet\[]/);
   const snippetSource = page.slice(page.indexOf("const codeSnippets"), page.indexOf("const playgroundReferences"));
-  assert.equal((snippetSource.match(/    id: "(?:variabler|print|regning|for-lokke|if-else|liste|funksjon|tilfeldig|graf|turtle|snake)",/g) ?? []).length, 11);
+  assert.equal((snippetSource.match(/    id: "(?:variabler|print|regning|for-lokke|if-else|liste|funksjon|tilfeldig|graf|eksamensgraf|turtle|snake)",/g) ?? []).length, 12);
   assert.match(page, /Bygg et program av små deler/);
   assert.match(page, /Legg til i editor/);
   assert.match(page, /appendSnippet/);
@@ -179,6 +179,26 @@ test("Snake er en pedagogisk og spillbar egen modul", () => {
   assert.match(worker, /class Snake/);
   assert.match(worker, /_sys\.modules\["spill"\]/);
   assert.match(worker, /game = JSON\.parse\(encodedGame\)/);
+});
+
+test("funksjonsgrafer har en komplett og kommentert eksamensmodul", () => {
+  const templateSource = page.slice(page.indexOf("const examGraphTemplate"), page.indexOf("const codeSnippets"));
+  assert.match(page, /id: 9,[\s\S]*title: "Tegn grafer\/funksjoner med Python"/);
+  assert.match(templateSource, /# DEL 1: ENDRE BARE VERDIENE I DENNE DELEN/);
+  assert.match(templateSource, /# Her skriver du aksetittelen for x-aksen/);
+  assert.doesNotMatch(templateSource, /\n\/\/ /);
+  assert.match(templateSource, /def f\(x\):[\s\S]*return 2 \* x \+ 3/);
+  assert.match(templateSource, /y = f\(x\).*funksjonsverdiene f\(x\)/);
+  assert.match(templateSource, /ax\.set_xlabel/);
+  assert.match(templateSource, /ax\.set_ylabel/);
+  assert.match(templateSource, /ax\.set_xlim/);
+  assert.match(templateSource, /ax\.set_ylim/);
+  assert.match(templateSource, /ax\.set_xticks/);
+  assert.match(templateSource, /ax\.set_yticks/);
+  assert.match(templateSource, /ax\.set_aspect\(akseforhold/);
+  assert.match(page, /Utsnitt, tallsteg og akseforhold er tre ulike valg/);
+  assert.match(page, /Lag en eksamensklar graf/);
+  assert.match(worker, /dpi=240/);
 });
 
 test("læreplanfanen kartlegger alle mål på 8.–10. trinn til Python", () => {
