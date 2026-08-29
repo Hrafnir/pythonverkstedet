@@ -2,17 +2,17 @@
 
 Appen klargjør e-post til:
 
-`eirik.gaarde+skolepython@gmail.com`
+`skolepython@gmail.com`
 
-Plussadressen går til den vanlige Gmail-kontoen `eirik.gaarde@gmail.com`, men gjør meldingene enkle å sortere automatisk.
+Skolepython-kontoen videresender til den vanlige Gmail-kontoen `eirik.gaarde@gmail.com`, der meldingene sorteres automatisk.
 
 ## Lag etikett og filter i Gmail
 
 1. Opprett etiketten `Skolepython / Tilbakemeldinger` i Gmail.
-2. Opprett et filter med feltet **Til** satt til `eirik.gaarde+skolepython@gmail.com`.
+2. Opprett et filter med feltet **Til** satt til `skolepython@gmail.com`.
 3. La filteret bruke etiketten `Skolepython / Tilbakemeldinger`.
 4. Velg gjerne også **Merk som viktig** og **Bruk aldri nettsøppel**.
-5. Ikke velg **Hopp over innboksen** i starten. Da er nye tilbakemeldinger synlige både i innboksen og under etiketten.
+5. Velg **Hopp over innboksen**. Da samles nye tilbakemeldinger direkte under etiketten uten å fylle hovedinnboksen.
 
 ## Strukturen AI kan bruke senere
 

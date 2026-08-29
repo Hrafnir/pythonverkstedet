@@ -3800,7 +3800,7 @@ export default function Home() {
       "Versjon: 0.11.0",
     ].join("\n");
     setFeedbackDialogOpen(false);
-    window.location.href = `mailto:eirik.gaarde+skolepython@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = `mailto:skolepython@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 
   function switchLabTab(nextTab: "practice" | "solution") {
@@ -5248,7 +5248,7 @@ export default function Home() {
 
             <div className="feedback-privacy">
               <strong>Ingen skjult innsending</strong>
-              <p>Appen lagrer ikke teksten. Du ser og kan endre hele e-posten før du sender den til <code>eirik.gaarde+skolepython@gmail.com</code>.</p>
+              <p>Appen lagrer ikke teksten. Du ser og kan endre hele e-posten før du sender den til <code>skolepython@gmail.com</code>.</p>
             </div>
             <footer>
               <button type="button" className="feedback-cancel" onClick={() => setFeedbackDialogOpen(false)}>Avbryt</button>

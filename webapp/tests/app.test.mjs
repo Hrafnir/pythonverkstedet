@@ -218,9 +218,9 @@ test("kodehjelpen lar eleven lære uten å forlate editoren", () => {
   assert.match(css, /\.coding-tutorial-example/);
 });
 
-test("strukturert tilbakemelding åpnes som e-post til egen Gmail-adresse", () => {
+test("strukturert tilbakemelding åpnes som e-post til Skolepython-adressen", () => {
   assert.match(page, /Gi tilbakemelding/);
-  assert.match(page, /eirik\.gaarde\+skolepython@gmail\.com/);
+  assert.match(page, /mailto:skolepython@gmail\.com/);
   assert.match(page, /function composeFeedbackEmail/);
   assert.match(page, /Skolepython · Bjørnsveen: \$\{feedbackKind\}/);
   assert.match(page, /Ingen skjult innsending/);
