@@ -198,6 +198,41 @@ test("Python starter med tom editor og har en kodebygger", () => {
   assert.match(css, /button:focus-visible/);
 });
 
+test("kodehjelpen lar eleven lære uten å forlate editoren", () => {
+  const tutorialSource = page.slice(page.indexOf("const quickTutorials"), page.indexOf("type CurriculumFit"));
+  assert.equal((tutorialSource.match(/    id: "/g) ?? []).length, 12);
+  assert.match(page, /Hjelp mens du koder/);
+  assert.match(page, /Finn den lille detaljen/);
+  assert.match(page, /Tekst, variabler og regning i print/);
+  assert.match(page, /print\(\"Til sammen blir det\", epler \+ paerer, \"frukter\.\"\)/);
+  assert.match(page, /Steg for steg/);
+  assert.match(page, /Vanlig feil å se etter/);
+  assert.match(page, /\+ Sett inn ved markøren/);
+  assert.match(page, /function insertTutorialCode/);
+  assert.match(page, /selectionStart/);
+  assert.match(page, /const nextCode = `\$\{before\}\$\{insertion\}\$\{after\}`/);
+  assert.match(page, /copyTutorialCode/);
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.coding-help-drawer/);
+  assert.match(css, /\.coding-help-body/);
+  assert.match(css, /\.coding-tutorial-example/);
+});
+
+test("strukturert tilbakemelding åpnes som e-post til egen Gmail-adresse", () => {
+  assert.match(page, /Gi tilbakemelding/);
+  assert.match(page, /eirik\.gaarde\+skolepython@gmail\.com/);
+  assert.match(page, /function composeFeedbackEmail/);
+  assert.match(page, /Bjørnsveen Pythonverksted: \$\{feedbackKind\}/);
+  assert.match(page, /Ingen skjult innsending/);
+  assert.match(page, /Appen lagrer ikke teksten/);
+  assert.match(page, /Åpne ferdig e-post/);
+  assert.match(desktopMain, /shell\.openExternal/);
+  assert.match(desktopMain, /url\.startsWith\("mailto:"\)/);
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.feedback-modal/);
+  assert.match(css, /\.feedback-card/);
+});
+
 test("Turtle tegner geometriske figurer lokalt i resultatpanelet", () => {
   assert.match(page, /from turtle import \*/);
   assert.match(page, /Tegn et Turtle-kvadrat/);

@@ -180,6 +180,216 @@ type CodeSnippet = {
   change: string;
 };
 
+const tutorialCategories = ["Alle", "Utskrift", "Variabler", "Styring", "Funksjoner", "Data", "Grafikk", "Feilsøking"] as const;
+type TutorialCategory = (typeof tutorialCategories)[number];
+
+type QuickTutorial = {
+  id: string;
+  category: Exclude<TutorialCategory, "Alle">;
+  title: string;
+  question: string;
+  intro: string;
+  steps: string[];
+  example: string;
+  notice: string;
+  challenge: string;
+};
+
+const quickTutorials: QuickTutorial[] = [
+  {
+    id: "print-mix",
+    category: "Utskrift",
+    title: "Tekst, variabler og regning i print",
+    question: "Hvordan får jeg et forståelig svar med både tekst og matematikk?",
+    intro: "Gi print flere deler, skilt med komma. Python regner ut uttrykkene og setter automatisk inn mellomrom mellom delene.",
+    steps: [
+      "Tekst må stå mellom anførselstegn: \"Til sammen blir det\".",
+      "Variabler og regnestykker skal ikke ha anførselstegn. Da bruker Python verdiene og regner.",
+      "Et komma skiller delene. Det betyr ikke desimalkomma.",
+      "Python regner a + b før hele svaret vises.",
+    ],
+    example: 'epler = 4\npaerer = 3\n\nprint("Til sammen blir det", epler + paerer, "frukter.")',
+    notice: 'Skriver du "epler + paerer" med anførselstegn, vises ordene i stedet for svaret på regnestykket.',
+    challenge: "Bytt fruktene og tallene. Kan du også vise hvor mange flere epler enn pærer du har?",
+  },
+  {
+    id: "f-text",
+    category: "Utskrift",
+    title: "Lag pene setninger med f-tekst",
+    question: "Hvordan setter jeg verdier inn midt i en setning?",
+    intro: "En f foran anførselstegnet gjør teksten til en mal. Alt i {krøllparenteser} blir byttet ut med en verdi eller et regnestykke.",
+    steps: [
+      "Skriv bokstaven f rett foran det første anførselstegnet.",
+      "Skriv variabelen eller regnestykket inni { og }.",
+      "Resten er vanlig tekst og kan skrives akkurat slik svaret skal leses.",
+      "Bruk :.2f etter et desimaltall for å vise nøyaktig to desimaler.",
+    ],
+    example: 'pris = 79.9\nantall = 3\ntotal = pris * antall\n\nprint(f"{antall} varer koster {total:.2f} kr til sammen.")',
+    notice: "Glemmer du f-en, vises {total:.2f} som vanlig tekst. Krøllparentesene må også ha både start og slutt.",
+    challenge: "Vis også prisen per vare uten desimaler ved å bruke {pris:.0f}.",
+  },
+  {
+    id: "variables-math",
+    category: "Variabler",
+    title: "Regn med og endre variabler",
+    question: "Hvordan lagrer jeg et svar og endrer det senere?",
+    intro: "En variabel er en navnelapp på en verdi. Python regner ut høyresiden først og lagrer svaret under navnet til venstre.",
+    steps: [
+      "total = pris * antall lager først regnestykket og lagrer svaret i total.",
+      "total += frakt betyr det samme som total = total + frakt.",
+      "total -= rabatt trekker fra rabatt og lagrer det nye svaret i total.",
+      "Velg navn som forklarer hva tallet betyr.",
+    ],
+    example: 'pris = 120\nantall = 2\nfrakt = 49\nrabatt = 30\n\ntotal = pris * antall\ntotal += frakt\ntotal -= rabatt\nprint("Å betale:", total, "kr")',
+    notice: "Likhetstegnet betyr her «gi variabelen en verdi». Variabelen må lages før den kan brukes eller endres.",
+    challenge: "Legg til mva som et desimaltall, og lagre en ny variabel som heter total_med_mva.",
+  },
+  {
+    id: "if-choice",
+    category: "Styring",
+    title: "La programmet velge med if",
+    question: "Hvordan kjører jeg kode bare når noe er sant?",
+    intro: "Et if-vilkår er et spørsmål som blir sant eller usant. Kolon åpner kodeblokken, og innrykket viser hva som hører til valget.",
+    steps: [
+      "Bruk == når du sammenligner. Ett = lagrer en verdi.",
+      "Avslutt if-, elif- og else-linjer med kolon.",
+      "Trykk Tab én gang for koden som skal høre til vilkåret.",
+      "elif gir et nytt spørsmål; else brukes når ingen spørsmål var sanne.",
+    ],
+    example: 'poeng = 8\n\nif poeng >= 10:\n    print("Toppnivå")\nelif poeng >= 5:\n    print("Godt i gang")\nelse:\n    print("Prøv en gang til")',
+    notice: "Python ser innrykket som en del av språket. Linjer på samme nivå må starte like langt fra venstre.",
+    challenge: "Test poeng 4, 5, 9 og 10. Kan du forklare hvorfor grensene havner i riktig gruppe?",
+  },
+  {
+    id: "for-loop",
+    category: "Styring",
+    title: "Gjenta kode med en for-løkke",
+    question: "Hvordan gjør jeg nesten det samme flere ganger?",
+    intro: "En for-løkke gir variabelen én verdi om gangen. range lager tallfølgen løkken skal gå gjennom.",
+    steps: [
+      "range(1, 6) lager 1, 2, 3, 4 og 5. Stoppverdien 6 er ikke med.",
+      "Kolon varsler at en gjentatt kodeblokk kommer.",
+      "Koden med innrykk kjøres én gang for hver verdi.",
+      "Bruk range(start, stopp, steg) når du vil hoppe med for eksempel 2.",
+    ],
+    example: 'for tall in range(1, 6):\n    kvadrat = tall ** 2\n    print(tall, "i andre er", kvadrat)',
+    notice: "Hvis print-linjen ikke har innrykk, er den ikke en del av løkken. Hvis stoppverdien er 6, stopper Python før 6.",
+    challenge: "Lag femgangen. Prøv deretter range(10, 0, -1) og forutsi rekkefølgen.",
+  },
+  {
+    id: "function",
+    category: "Funksjoner",
+    title: "Lag en funksjon du kan bruke igjen",
+    question: "Hvordan gir jeg en liten oppskrift et navn?",
+    intro: "def beskriver en funksjon. Parameterne er verdier funksjonen får, og return sender svaret tilbake dit funksjonen ble kalt.",
+    steps: [
+      "Skriv def, funksjonsnavn, parenteser og kolon.",
+      "Parameterne inni parentesen får verdier når funksjonen kalles.",
+      "Funksjonskroppen må ha innrykk.",
+      "return gir et svar; print bare viser noe på skjermen.",
+    ],
+    example: 'def areal(lengde, bredde):\n    svar = lengde * bredde\n    return svar\n\nrom = areal(8, 5)\nprint("Arealet er", rom, "m²")',
+    notice: "Å definere funksjonen kjører ikke regnestykket. Det skjer først når du skriver for eksempel areal(8, 5).",
+    challenge: "Lag en funksjon for omkrets. Hvilke parametere trenger den?",
+  },
+  {
+    id: "lists",
+    category: "Data",
+    title: "Samle mange verdier i en liste",
+    question: "Hvordan lagrer og undersøker jeg flere tall?",
+    intro: "En liste samler verdier i en bestemt rekkefølge. Python teller plassene fra 0, så liste[0] er den første verdien.",
+    steps: [
+      "Skriv verdiene mellom [hakeparenteser] og skill dem med komma.",
+      "append legger til en ny verdi bakerst.",
+      "len, sum, min og max undersøker hele listen.",
+      "En for-løkke kan behandle én verdi om gangen.",
+    ],
+    example: 'poeng = [4, 7, 9, 6]\npoeng.append(10)\n\ngjennomsnitt = sum(poeng) / len(poeng)\nprint("Gjennomsnitt:", round(gjennomsnitt, 1))\n\nfor verdi in poeng:\n    print("Poeng:", verdi)',
+    notice: "liste[1] er den andre verdien, ikke den første. En indeks som ikke finnes, gir IndexError.",
+    challenge: "Skriv bare ut verdier over gjennomsnittet ved å bruke if inni løkken.",
+  },
+  {
+    id: "random",
+    category: "Data",
+    title: "Lag tilfeldige forsøk",
+    question: "Hvordan kaster jeg en digital terning?",
+    intro: "random er et bibliotek i Python. import gjør verktøyene tilgjengelige, og randint gir et heltall mellom begge grensene.",
+    steps: [
+      "Importer biblioteket én gang øverst i programmet.",
+      "random.randint(1, 6) kan gi 1, 2, 3, 4, 5 eller 6.",
+      "En løkke kan gjenta forsøket mange ganger.",
+      "Tell resultatene med en variabel som starter på 0.",
+    ],
+    example: 'import random\n\nantall_seksere = 0\n\nfor forsok in range(20):\n    kast = random.randint(1, 6)\n    if kast == 6:\n        antall_seksere += 1\n\nprint("Antall seksere:", antall_seksere)',
+    notice: "Tilfeldige svar kan variere selv om koden er helt lik. Det er ikke nødvendigvis en feil.",
+    challenge: "Øk til 1000 kast og regn ut andelen seksere. Hvor nær 1/6 kommer du?",
+  },
+  {
+    id: "graph",
+    category: "Grafikk",
+    title: "Tegn en enkel graf",
+    question: "Hvordan viser jeg x- og y-verdier som en graf?",
+    intro: "Matplotlib tegner. x-listen og y-listen må ha like mange verdier, fordi hvert x-tall skal pares med ett y-tall.",
+    steps: [
+      "Importer pyplot som plt.",
+      "Lag x- og y-verdier med samme antall elementer.",
+      "plot tegner linjen; xlabel og ylabel gir aksetitler.",
+      "grid gir rutenett, og show viser grafen i resultatfeltet.",
+    ],
+    example: 'import matplotlib.pyplot as plt\n\nx = [0, 1, 2, 3, 4]\ny = [0, 1, 4, 9, 16]\n\nplt.plot(x, y, marker="o")\nplt.xlabel("x")\nplt.ylabel("y")\nplt.title("Kvadrattall")\nplt.grid()\nplt.show()',
+    notice: "Hvis x har fem verdier og y har fire, vet ikke Python hvilke punkter som skal kobles sammen.",
+    challenge: "Endre y til dobbelt av x. Gi grafen en tittel som forklarer sammenhengen.",
+  },
+  {
+    id: "turtle",
+    category: "Grafikk",
+    title: "Tegn figurer med Turtle",
+    question: "Hvordan styrer jeg en digital penn?",
+    intro: "Turtle flytter en penn framover og roterer den. En regulær mangekant bruker samme lengde og samme dreievinkel på hver side.",
+    steps: [
+      "Importer Turtle-kommandoene.",
+      "forward flytter pennen; left og right dreier i grader.",
+      "En hel runde er 360°. En femkant dreier derfor 360 / 5 = 72°.",
+      "done avslutter og viser tegningen i appen.",
+    ],
+    example: 'from turtle import *\n\nantall_sider = 5\nlengde = 100\nvinkel = 360 / antall_sider\n\nfor side in range(antall_sider):\n    forward(lengde)\n    left(vinkel)\n\ndone()',
+    notice: "Hvis figuren ikke lukker seg, undersøk om dreievinkelen til sammen blir 360 grader.",
+    challenge: "Bytt til 3, 6 og 8 sider. Hva må skje med vinkelen når antallet sider øker?",
+  },
+  {
+    id: "comments-imports",
+    category: "Feilsøking",
+    title: "Kommentarer og import",
+    question: "Hvordan forklarer jeg koden, og hvordan henter jeg verktøy?",
+    intro: "En kommentar er en beskjed til mennesket som leser. import henter ferdige verktøy Python ikke laster inn automatisk.",
+    steps: [
+      "En Python-kommentar starter med #. Tegnet // brukes ikke til kommentarer.",
+      "Skriv import øverst før verktøyet brukes.",
+      "import math gir navn som math.sqrt og math.pi.",
+      "Kommentarer kan forklare hvorfor, mens tydelige variabelnavn viser hva.",
+    ],
+    example: 'import math\n\n# Radius måles i centimeter\nradius = 4\nareal = math.pi * radius ** 2\n\nprint("Areal:", round(areal, 2), "cm²")',
+    notice: "ModuleNotFoundError betyr ofte at biblioteket ikke finnes. Sjekk også stavemåten i import-linjen.",
+    challenge: "Legg inn en kommentar som forklarer hvorfor radius opphøyes i andre.",
+  },
+  {
+    id: "debug-small",
+    category: "Feilsøking",
+    title: "Finn små syntaksfeil uten å miste flyten",
+    question: "Hva sjekker jeg først når Python stopper?",
+    intro: "Les Feildetektivens markerte linje, men se også på linjen rett over. Python peker ofte på stedet der språket ikke lenger kunne forstå koden.",
+    steps: [
+      "Se etter kolon etter if, elif, else, for, while og def.",
+      "Tell anførselstegn og parenteser: Har alle en start og en slutt?",
+      "Kontroller at innrykk på samme nivå er likt.",
+      "Sjekk om variabelnavnet er skrevet nøyaktig likt som da det ble laget.",
+    ],
+    example: 'tall = 7\n\nif tall > 5:\n    print("Tallet er større enn 5")',
+    notice: "Endre én liten ting av gangen og kjør på nytt. Da vet du hvilken endring som løste problemet.",
+    challenge: "Lag med vilje én feil i eksemplet. Kan du bruke Feildetektiven til å finne den igjen?",
+  },
+];
+
 type CurriculumFit = "Direkte" | "God støtte" | "Supplerende";
 type CurriculumGrade = "Alle" | "8" | "9" | "10";
 
@@ -3265,6 +3475,16 @@ export default function Home() {
   const [referenceStatus, setReferenceStatus] = useState("");
   const [snippetCategory, setSnippetCategory] = useState<SnippetCategory>("Alle");
   const [snippetStatus, setSnippetStatus] = useState("");
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialQuery, setTutorialQuery] = useState("");
+  const [tutorialCategory, setTutorialCategory] = useState<TutorialCategory>("Alle");
+  const [selectedTutorialId, setSelectedTutorialId] = useState("print-mix");
+  const [tutorialStatus, setTutorialStatus] = useState("");
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [feedbackKind, setFeedbackKind] = useState("Forslag");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackSchool, setFeedbackSchool] = useState("");
+  const [feedbackName, setFeedbackName] = useState("");
   const workbenchRef = useRef<HTMLDivElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -3297,6 +3517,24 @@ export default function Home() {
     () => codeSnippets.filter((snippet) => snippetCategory === "Alle" || snippet.category === snippetCategory),
     [snippetCategory],
   );
+
+  const filteredTutorials = useMemo(() => {
+    const query = tutorialQuery.trim().toLocaleLowerCase("nb");
+    return quickTutorials.filter((tutorial) => {
+      if (tutorialCategory !== "Alle" && tutorial.category !== tutorialCategory) return false;
+      if (!query) return true;
+      const searchable = [
+        tutorial.title,
+        tutorial.question,
+        tutorial.intro,
+        tutorial.example,
+        tutorial.notice,
+        tutorial.challenge,
+        ...tutorial.steps,
+      ].join(" ").toLocaleLowerCase("nb");
+      return searchable.includes(query);
+    });
+  }, [tutorialCategory, tutorialQuery]);
 
   const filteredCurriculumGoals = useMemo(
     () => curriculumGoals.filter((goal) =>
@@ -3350,6 +3588,16 @@ export default function Home() {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    function closeOverlay(event: globalThis.KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      if (feedbackDialogOpen) setFeedbackDialogOpen(false);
+      else if (tutorialOpen) setTutorialOpen(false);
+    }
+    document.addEventListener("keydown", closeOverlay);
+    return () => document.removeEventListener("keydown", closeOverlay);
+  }, [feedbackDialogOpen, tutorialOpen]);
 
   function changeEditorFontSize(change: number) {
     const next = Math.min(28, Math.max(15, editorFontSize + change));
@@ -3492,6 +3740,67 @@ export default function Home() {
     } catch {
       setSnippetStatus("Nettleseren tillot ikke kopiering. Marker koden i kortet og kopier manuelt.");
     }
+  }
+
+  function openTutorial() {
+    setTutorialOpen(true);
+    setTutorialStatus("");
+  }
+
+  function chooseTutorial(tutorial: QuickTutorial) {
+    setSelectedTutorialId(tutorial.id);
+    setTutorialStatus("");
+  }
+
+  function insertTutorialCode(tutorial: QuickTutorial) {
+    const editorId = playground ? "playground-code" : "python-code";
+    const editor = document.getElementById(editorId) as HTMLTextAreaElement | null;
+    const start = editor?.selectionStart ?? code.length;
+    const end = editor?.selectionEnd ?? start;
+    const before = code.slice(0, start);
+    const after = code.slice(end);
+    const prefix = before && !before.endsWith("\n\n") ? (before.endsWith("\n") ? "\n" : "\n\n") : "";
+    const suffix = after && !after.startsWith("\n") ? "\n\n" : "";
+    const insertion = `${prefix}${tutorial.example}${suffix}`;
+    const nextCode = `${before}${insertion}${after}`;
+    const caret = before.length + insertion.length;
+    updateCode(nextCode);
+    setTutorialStatus(`«${tutorial.title}» er satt inn. Eksemplet kan endres fritt.`);
+    requestAnimationFrame(() => {
+      const nextEditor = document.getElementById(editorId) as HTMLTextAreaElement | null;
+      nextEditor?.focus();
+      nextEditor?.setSelectionRange(caret, caret);
+    });
+  }
+
+  async function copyTutorialCode(tutorial: QuickTutorial) {
+    try {
+      await navigator.clipboard.writeText(tutorial.example);
+      setTutorialStatus(`Koden til «${tutorial.title}» er kopiert.`);
+    } catch {
+      setTutorialStatus("Nettleseren tillot ikke kopiering. Marker koden i hjelpevinduet og kopier manuelt.");
+    }
+  }
+
+  function composeFeedbackEmail() {
+    const message = feedbackMessage.trim();
+    if (!message) return;
+    const context = playground ? "Python" : curriculumView ? "Læreplanmål" : `Modul ${active.id}: ${active.title}`;
+    const subject = `Bjørnsveen Pythonverksted: ${feedbackKind} – ${context}`;
+    const body = [
+      "Hei!",
+      "",
+      message,
+      "",
+      "---",
+      `Type: ${feedbackKind}`,
+      `Område: ${context}`,
+      `Skole: ${feedbackSchool.trim() || "Ikke oppgitt"}`,
+      `Navn: ${feedbackName.trim() || "Ikke oppgitt"}`,
+      "Versjon: 0.10.0",
+    ].join("\n");
+    setFeedbackDialogOpen(false);
+    window.location.href = `mailto:eirik.gaarde+skolepython@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 
   function switchLabTab(nextTab: "practice" | "solution") {
@@ -3867,6 +4176,97 @@ export default function Home() {
     );
   }
 
+  function codingTutorialPanel() {
+    if (!tutorialOpen) return null;
+    const tutorial = filteredTutorials.find((item) => item.id === selectedTutorialId) ?? filteredTutorials[0];
+    return (
+      <section className="coding-help-drawer" role="dialog" aria-labelledby="coding-help-title">
+        <header className="coding-help-header">
+          <div>
+            <span>Hjelp mens du koder</span>
+            <h2 id="coding-help-title">Finn den lille detaljen</h2>
+          </div>
+          <button type="button" onClick={() => setTutorialOpen(false)} aria-label="Lukk kodehjelpen">Lukk</button>
+        </header>
+
+        <div className="coding-help-controls">
+          <label htmlFor="tutorial-search">
+            <span>Søk etter det du prøver å gjøre</span>
+            <input
+              id="tutorial-search"
+              type="search"
+              value={tutorialQuery}
+              onChange={(event) => setTutorialQuery(event.target.value)}
+              placeholder="Prøv: print, løkke, desimal, graf …"
+              autoComplete="off"
+            />
+          </label>
+          <label htmlFor="tutorial-category">
+            <span>Emne</span>
+            <select id="tutorial-category" value={tutorialCategory} onChange={(event) => setTutorialCategory(event.target.value as TutorialCategory)}>
+              {tutorialCategories.map((category) => <option value={category} key={category}>{category}</option>)}
+            </select>
+          </label>
+        </div>
+
+        {tutorial ? (
+          <div className="coding-help-body">
+            <nav className="coding-help-list" aria-label="Mini-tutorials">
+              <small>{filteredTutorials.length} treff</small>
+              {filteredTutorials.map((item) => (
+                <button
+                  type="button"
+                  className={tutorial.id === item.id ? "is-active" : ""}
+                  aria-pressed={tutorial.id === item.id}
+                  onClick={() => chooseTutorial(item)}
+                  key={item.id}
+                >
+                  <span>{item.category}</span>
+                  <strong>{item.title}</strong>
+                  <small>{item.question}</small>
+                </button>
+              ))}
+            </nav>
+
+            <article className="coding-tutorial" key={tutorial.id}>
+              <p className="coding-tutorial-category">{tutorial.category}</p>
+              <h3>{tutorial.title}</h3>
+              <p className="coding-tutorial-question">{tutorial.question}</p>
+              <p className="coding-tutorial-intro">{tutorial.intro}</p>
+
+              <div className="coding-tutorial-steps">
+                <strong>Steg for steg</strong>
+                <ol>{tutorial.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+              </div>
+
+              <div className="coding-tutorial-example">
+                <div><strong>Eksempel du kan endre</strong><span>Kjørbart Python</span></div>
+                <pre><code>{tutorial.example}</code></pre>
+                <div className="coding-tutorial-actions">
+                  <button type="button" className="tutorial-insert" onClick={() => insertTutorialCode(tutorial)}>+ Sett inn ved markøren</button>
+                  <button type="button" onClick={() => copyTutorialCode(tutorial)}>Kopier kode</button>
+                </div>
+              </div>
+
+              <details className="coding-tutorial-notice">
+                <summary>Vanlig feil å se etter</summary>
+                <p>{tutorial.notice}</p>
+              </details>
+              <div className="coding-tutorial-challenge"><strong>Prøv selv</strong><p>{tutorial.challenge}</p></div>
+              {tutorialStatus && <p className="tutorial-status" role="status">{tutorialStatus}</p>}
+            </article>
+          </div>
+        ) : (
+          <div className="coding-help-empty">
+            <strong>Ingen tutorials traff søket.</strong>
+            <p>Prøv et kortere ord, eller vis alle emner.</p>
+            <button type="button" onClick={() => { setTutorialQuery(""); setTutorialCategory("Alle"); }}>Vis alle tutorials</button>
+          </div>
+        )}
+      </section>
+    );
+  }
+
   function plotGallery() {
     if (!plotImages.length && !turtleDrawing && !snakeGame) return null;
     return (
@@ -4031,6 +4431,9 @@ export default function Home() {
           <span className="module-position">{playground ? "Python-editor" : curriculumView ? "MAT01-06" : `${completed.length} av ${modules.length} fullført`}</span>
         </div>
         <nav className="top-actions" aria-label="Verktøy">
+          <button className="text-button feedback-button" type="button" onClick={() => setFeedbackDialogOpen(true)}>
+            Gi tilbakemelding
+          </button>
           <button className="text-button print-button" type="button" onClick={() => window.print()}>
             Skriv ut
           </button>
@@ -4067,6 +4470,7 @@ export default function Home() {
                     <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
                     <strong>{safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py</strong>
                     <span className="panel-tools">
+                      <button type="button" className="coding-help-button" onClick={openTutorial} aria-pressed={tutorialOpen}>? Hjelp mens du koder</button>
                       <button type="button" onClick={copyCodeAsText}>Kopier kode + svar</button>
                       <button type="button" onClick={() => copyCodeAsImage(`${safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py`)}>Bilde av kode + svar</button>
                       <span className="editor-size-controls" aria-label="Skriftstørrelse i kodefeltet">
@@ -4102,6 +4506,7 @@ export default function Home() {
                   {plotGallery()}
                   <div className="output-tip"><strong>Neste spørsmål:</strong> Hva kan dere endre for å få et annet resultat?</div>
                 </div>
+                {codingTutorialPanel()}
               </div>
               {shareStatus && <p className="share-status" role="status">{shareStatus}</p>}
 
@@ -4643,6 +5048,7 @@ export default function Home() {
                   <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
                   <strong>verksted.py</strong>
                   <span className="panel-tools">
+                    <button type="button" className="coding-help-button" onClick={openTutorial} aria-pressed={tutorialOpen}>? Hjelp mens du koder</button>
                     <button type="button" onClick={copyCodeAsText}>Kopier kode + svar</button>
                     <button type="button" onClick={() => copyCodeAsImage("verksted.py")}>Bilde av kode + svar</button>
                     <button type="button" onClick={resetCurrentEditor}>{labTab === "practice" ? "Tøm editor" : "Tilbakestill fasit"}</button>
@@ -4679,6 +5085,7 @@ export default function Home() {
                 {plotGallery()}
                 <div className="output-tip"><strong>Observer:</strong> Stemmer resultatet med det du forventet?</div>
               </div>
+              {codingTutorialPanel()}
             </div>
             {shareStatus && <p className="share-status" role="status">{shareStatus}</p>}
           </section>
@@ -4798,6 +5205,56 @@ export default function Home() {
             </div>
             <img src={`data:image/png;base64,${plotImages[expandedPlotIndex]}`} alt={`Graf ${expandedPlotIndex + 1} laget av Python-koden`} />
           </div>
+        </div>
+      )}
+      {feedbackDialogOpen && (
+        <div className="feedback-modal" role="presentation" onMouseDown={() => setFeedbackDialogOpen(false)}>
+          <section className="feedback-card" role="dialog" aria-modal="true" aria-labelledby="feedback-title" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <span>Hjelp oss å bli bedre</span>
+                <h2 id="feedback-title">Gi tilbakemelding</h2>
+              </div>
+              <button type="button" onClick={() => setFeedbackDialogOpen(false)} aria-label="Lukk tilbakemeldingsvinduet">Lukk</button>
+            </header>
+            <p className="feedback-intro">Fortell hva som fungerte, hva som var vanskelig eller hva dere savner. Knappen åpner e-postprogrammet med en ferdig strukturert melding.</p>
+
+            <div className="feedback-fields">
+              <label>
+                <span>Hva gjelder det?</span>
+                <select value={feedbackKind} onChange={(event) => setFeedbackKind(event.target.value)}>
+                  <option>Forslag</option>
+                  <option>Feil i appen</option>
+                  <option>Faglig innhold</option>
+                  <option>Lesbarhet og bruk</option>
+                  <option>Ros eller annet</option>
+                </select>
+              </label>
+              <label className="feedback-message">
+                <span>Tilbakemelding <b>påkrevd</b></span>
+                <textarea
+                  value={feedbackMessage}
+                  onChange={(event) => setFeedbackMessage(event.target.value)}
+                  placeholder="Hva prøvde dere å gjøre? Hva skjedde? Hva ville gjort det bedre?"
+                  rows={7}
+                  autoFocus
+                />
+              </label>
+              <div className="feedback-optional">
+                <label><span>Skole <small>valgfritt</small></span><input value={feedbackSchool} onChange={(event) => setFeedbackSchool(event.target.value)} /></label>
+                <label><span>Navn <small>valgfritt</small></span><input value={feedbackName} onChange={(event) => setFeedbackName(event.target.value)} /></label>
+              </div>
+            </div>
+
+            <div className="feedback-privacy">
+              <strong>Ingen skjult innsending</strong>
+              <p>Appen lagrer ikke teksten. Du ser og kan endre hele e-posten før du sender den til <code>eirik.gaarde+skolepython@gmail.com</code>.</p>
+            </div>
+            <footer>
+              <button type="button" className="feedback-cancel" onClick={() => setFeedbackDialogOpen(false)}>Avbryt</button>
+              <button type="button" className="feedback-send" onClick={composeFeedbackEmail} disabled={!feedbackMessage.trim()}>Åpne ferdig e-post →</button>
+            </footer>
+          </section>
         </div>
       )}
       <footer className="app-credit">

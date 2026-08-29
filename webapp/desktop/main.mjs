@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, session } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, session, shell } from "electron";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,9 +24,14 @@ async function createWindow() {
     },
   });
 
-  mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("mailto:") || url.startsWith("https://")) void shell.openExternal(url);
+    return { action: "deny" };
+  });
   mainWindow.webContents.on("will-navigate", (event, url) => {
-    if (!url.startsWith("file://")) event.preventDefault();
+    if (url.startsWith("file://")) return;
+    event.preventDefault();
+    if (url.startsWith("mailto:") || url.startsWith("https://")) void shell.openExternal(url);
   });
   await mainWindow.loadFile(path.join(webRoot, "index.html"));
 
