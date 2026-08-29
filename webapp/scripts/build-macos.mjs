@@ -10,7 +10,7 @@ const repoRoot = path.resolve(root, "..");
 const outRoot = path.join(repoRoot, "release", "macos-arm64");
 const packageRoot = path.join(root, "desktop-package");
 const workRoot = await mkdtemp(path.join(os.tmpdir(), "bjornsveen-pythonverksted-"));
-const productName = "Bjørnsveen Pythonverksted";
+const productName = "Skolepython";
 const version = JSON.parse(await readFile(path.join(root, "package.json"), "utf8")).version;
 
 function run(command, args, options = {}) {
@@ -57,7 +57,7 @@ await cp(path.join(root, "github-dist"), path.join(packageRoot, "github-dist"), 
 await cp(path.join(root, "desktop", "pyodide"), path.join(packageRoot, "github-dist", "pyodide"), { recursive: true });
 await cp(path.join(root, "desktop"), path.join(packageRoot, "desktop"), { recursive: true });
 await writeFile(path.join(packageRoot, "package.json"), `${JSON.stringify({
-  name: "bjornsveen-pythonverksted-desktop",
+  name: "skolepython-desktop",
   version,
   productName,
   main: "desktop/main.mjs",

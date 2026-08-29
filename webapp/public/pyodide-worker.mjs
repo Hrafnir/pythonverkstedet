@@ -388,7 +388,7 @@ _spill_module = _types.ModuleType("spill")
 _spill_module._game = None
 
 class Snake:
-    """En enkel, lokal Snake-motor for Bjørnsveen Pythonverksted."""
+    """En enkel, lokal Snake-motor for Skolepython fra Bjørnsveen."""
     def __init__(
         self,
         bredde=18,

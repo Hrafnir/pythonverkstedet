@@ -222,7 +222,7 @@ test("strukturert tilbakemelding åpnes som e-post til egen Gmail-adresse", () =
   assert.match(page, /Gi tilbakemelding/);
   assert.match(page, /eirik\.gaarde\+skolepython@gmail\.com/);
   assert.match(page, /function composeFeedbackEmail/);
-  assert.match(page, /Bjørnsveen Pythonverksted: \$\{feedbackKind\}/);
+  assert.match(page, /Skolepython · Bjørnsveen: \$\{feedbackKind\}/);
   assert.match(page, /Ingen skjult innsending/);
   assert.match(page, /Appen lagrer ikke teksten/);
   assert.match(page, /Åpne ferdig e-post/);
@@ -374,7 +374,10 @@ test("Python kjører i en arbeider med sikkerhetsstopp", () => {
 
 test("metadata og midlertidig startinnhold er ryddet", () => {
   const html = readFileSync("index.html", "utf8");
-  assert.match(html, /Bjørnsveen Pythonverksted/);
+  assert.match(html, /Skolepython/);
+  assert.match(html, /Fra Bjørnsveen/);
+  assert.match(page, /<strong>Skolepython<\/strong>/);
+  assert.match(page, /<small>Fra Bjørnsveen · Matematikk · 8.–10\. trinn<\/small>/);
   assert.match(html, /<html lang="nb">/);
   assert.equal(existsSync("app/_sites-preview/SkeletonPreview.tsx"), false);
   assert.doesNotMatch(page, /codex-preview|SkeletonPreview/);
@@ -397,7 +400,9 @@ test("GitHub Pages-pakken er komplett", () => {
 });
 
 test("Mac-utgaven er offline, ARM64 og kan pakkes for IT", () => {
-  assert.match(desktopMain, /no\.bjornsveen\.pythonverksted|Bjørnsveen Pythonverksted/);
+  assert.match(desktopMain, /Skolepython · Bjørnsveen/);
+  assert.match(desktopMain, /legacyUserDataPath/);
+  assert.match(desktopMain, /Bjørnsveen Pythonverksted/);
   assert.match(desktopMain, /cancel: !allowed/);
   assert.match(desktopMain, /project:open/);
   assert.match(desktopMain, /project:save/);
@@ -410,6 +415,7 @@ test("Mac-utgaven er offline, ARM64 og kan pakkes for IT", () => {
   assert.match(desktopPrepare, /pyodide/);
   assert.match(desktopBuild, /hdiutil/);
   assert.match(desktopBuild, /pkgbuild/);
+  assert.match(desktopBuild, /const productName = "Skolepython"/);
   assert.match(desktopBuild, /kodeormen\.icns/);
   assert.match(desktopBuild, /writeIcns/);
   assert.match(desktopBuild, /dmgStaging[\s\S]*run\("ditto"/);

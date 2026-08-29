@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 const desktopDir = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(desktopDir, "..");
 const webRoot = path.join(appRoot, "github-dist");
+const legacyUserDataPath = path.join(app.getPath("appData"), "Bjørnsveen Pythonverksted");
+app.setPath("userData", legacyUserDataPath);
 
 async function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -13,7 +15,7 @@ async function createWindow() {
     height: 920,
     minWidth: 900,
     minHeight: 650,
-    title: "Bjørnsveen Pythonverksted",
+    title: "Skolepython · Bjørnsveen",
     backgroundColor: "#fffdf8",
     webPreferences: {
       preload: path.join(desktopDir, "preload.cjs"),

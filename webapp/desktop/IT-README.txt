@@ -1,4 +1,4 @@
-Bjørnsveen Pythonverksted – offline macOS-prototype
+Skolepython fra Bjørnsveen – offline macOS-utgave
 
 Målplattform: MacBook Neo / Apple Silicon (ARM64)
 Bundle-ID: no.bjornsveen.pythonverksted
@@ -12,9 +12,11 @@ Denne prototypen:
   uten egne vinduer eller nettverk
 - eksporterer Turtle-mønstre som lokal SVG med fysisk millimeterstørrelse,
   senterlinje, parallelle ytterlinjer eller lukket omriss for skaperverksted
-- blokkerer alle nettverksforespørsler fra appen
+- blokkerer alle nettverksforespørsler fra Python-miljøet og appinnholdet
 - bruker lokale prosjektfiler og lokale nettleserdata
-- har ingen automatisk oppdatering, innlogging, KI eller kommunikasjon
+- har ingen automatisk oppdatering, innlogging, KI eller automatisk kommunikasjon
+- kan etter et aktivt brukerklikk åpne en ferdig tilbakemelding i Macens eksterne
+  e-postprogram; appen sender eller lagrer ikke meldingen selv
 
 DMG er ment for funksjonstesting. PKG er ment for pilotutrulling via MDM.
 Produksjonsutgaven må signeres med kommunens Developer ID Application- og

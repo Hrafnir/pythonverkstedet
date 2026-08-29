@@ -1,4 +1,4 @@
-# Tilbakemeldinger fra Bjørnsveen Pythonverksted
+# Tilbakemeldinger fra Skolepython · Bjørnsveen
 
 Appen klargjør e-post til:
 

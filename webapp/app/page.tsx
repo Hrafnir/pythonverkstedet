@@ -2921,7 +2921,7 @@ function createTurtleSvg(drawing: TurtleDrawing, settings: TurtleWorkshopSetting
   }
 
   const modeNames: Record<TurtleVectorMode, string> = { centerline: "senterlinje", edges: "to ytterlinjer", outline: "lukket omriss" };
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${widthMm}mm" height="${Number(heightMm.toFixed(2))}mm" viewBox="${viewLeft} ${viewTop} ${viewport.worldWidth} ${viewport.worldHeight}">\n  <title>${xmlEscape(drawing.title || "Turtle-tegning")}</title>\n  <desc>Laget i Bjørnsveen Pythonverksted. Vektortype: ${modeNames[settings.mode]}. Transparent bakgrunn.</desc>\n  <g id="turtle-vektorer">\n    ${[...fillElements, ...vectorElements, ...textElements].join("\n    ")}\n  </g>\n</svg>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${widthMm}mm" height="${Number(heightMm.toFixed(2))}mm" viewBox="${viewLeft} ${viewTop} ${viewport.worldWidth} ${viewport.worldHeight}">\n  <title>${xmlEscape(drawing.title || "Turtle-tegning")}</title>\n  <desc>Laget i Skolepython fra Bjørnsveen. Vektortype: ${modeNames[settings.mode]}. Transparent bakgrunn.</desc>\n  <g id="turtle-vektorer">\n    ${[...fillElements, ...vectorElements, ...textElements].join("\n    ")}\n  </g>\n</svg>\n`;
 }
 
 function renderTurtleFrame(canvas: HTMLCanvasElement, drawing: TurtleDrawing, frame: number, workshop = defaultTurtleWorkshop, workshopPreview = false) {
@@ -3786,7 +3786,7 @@ export default function Home() {
     const message = feedbackMessage.trim();
     if (!message) return;
     const context = playground ? "Python" : curriculumView ? "Læreplanmål" : `Modul ${active.id}: ${active.title}`;
-    const subject = `Bjørnsveen Pythonverksted: ${feedbackKind} – ${context}`;
+    const subject = `Skolepython · Bjørnsveen: ${feedbackKind} – ${context}`;
     const body = [
       "Hei!",
       "",
@@ -3797,7 +3797,7 @@ export default function Home() {
       `Område: ${context}`,
       `Skole: ${feedbackSchool.trim() || "Ikke oppgitt"}`,
       `Navn: ${feedbackName.trim() || "Ikke oppgitt"}`,
-      "Versjon: 0.10.0",
+      "Versjon: 0.11.0",
     ].join("\n");
     setFeedbackDialogOpen(false);
     window.location.href = `mailto:eirik.gaarde+skolepython@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -4402,11 +4402,11 @@ export default function Home() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="Bjørnsveen Pythonverksted hjem">
+        <a className="brand" href="#top" aria-label="Skolepython fra Bjørnsveen – hjem">
           <span className="brand-mark"><img src="./brand/kodeormen-256.png" width="58" height="58" alt="" decoding="sync" /></span>
           <span>
-            <strong>Bjørnsveen Pythonverksted</strong>
-            <small>Matematikk · 8.–10. trinn</small>
+            <strong>Skolepython</strong>
+            <small>Fra Bjørnsveen · Matematikk · 8.–10. trinn</small>
           </span>
         </a>
         <div className="module-picker">
@@ -4841,7 +4841,7 @@ export default function Home() {
 
             <section className="content-section curriculum-note">
               <strong>Faglig avgrensning</strong>
-              <p>Koblingene er didaktiske forslag fra Bjørnsveen Pythonverksted, ikke en del av Udirs ordlyd. Læreplanmålene er gjengitt fra MAT01-06, som gjelder fra 1. august 2026.</p>
+              <p>Koblingene er didaktiske forslag fra Skolepython ved Bjørnsveen, ikke en del av Udirs ordlyd. Læreplanmålene er gjengitt fra MAT01-06, som gjelder fra 1. august 2026.</p>
               <div>{(["8", "9", "10"] as const).map((grade) => <a href={curriculumSources[grade]} target="_blank" rel="noreferrer" key={grade}>Udir: {grade}. trinn ↗</a>)}</div>
             </section>
           </article>

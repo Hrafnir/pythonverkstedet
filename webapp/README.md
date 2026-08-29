@@ -1,13 +1,14 @@
-# Bjørnsveen Pythonverksted
+# Skolepython
 
-Digitalt hefte og Python-laboratorium for matematikk på 8.–10. trinn.
+Fra Bjørnsveen: digitalt hefte og Python-laboratorium for matematikk på 8.–10. trinn.
 
 ## Innhold
 
-- seks moduler: variabler, vilkår, løkker, funksjoner, simulering og modellering
+- ni moduler fra variabler og vilkår til Turtle, spill og eksamensklare funksjonsgrafer
 - arbeidsflyten problemstilling → teori → prøv → observer → oppgave
 - progresjonsstiger med små, kjørbare steg fra enkel forståelse til valgfri elegant kode
-- søkbar Python-håndbok i Fritt Python-rom med kommandoer, kjørbare eksempler, eksperimenter og feilsøking
+- søkbar Python-håndbok i Python-rommet med kommandoer, kjørbare eksempler, eksperimenter og feilsøking
+- kontekstnære mini-tutorials som kan holdes åpne mens eleven skriver kode
 - ekte Python i nettleseren ved hjelp av Pyodide
 - elevmodus og lærermodus
 - lærertips, typiske misforståelser, vurderingsstøtte og utvidelser
@@ -21,6 +22,7 @@ Digitalt hefte og Python-laboratorium for matematikk på 8.–10. trinn.
 - Skaperverksted-meny med ekte SVG-eksport i millimeter, farge- og tykkelsesvalg, senterlinje, ytterlinjer og lukket kutteomriss
 - kodeeditor med Tab-innrykk, justerbar skriftstørrelse og fullskjerm
 - skrivelab med tydelig skille mellom koden eleven skal skrive, forklaringen og praktiske handlinger
+- strukturert tilbakemelding via brukerens eget e-postprogram; meldinger sendes ikke av appen
 
 ## Lokal utvikling
 
