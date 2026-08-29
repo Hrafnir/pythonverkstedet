@@ -4,7 +4,7 @@ Fra Bjørnsveen: digitalt hefte og Python-laboratorium for matematikk på 8.–1
 
 ## Innhold
 
-- ni moduler fra variabler og vilkår til Turtle, spill og eksamensklare funksjonsgrafer
+- ti moduler fra variabler og vilkår til Turtle, spill, datafiler og eksamensklare funksjonsgrafer
 - arbeidsflyten problemstilling → teori → prøv → observer → oppgave
 - progresjonsstiger med små, kjørbare steg fra enkel forståelse til valgfri elegant kode
 - søkbar Python-håndbok i Python-rommet med kommandoer, kjørbare eksempler, eksperimenter og feilsøking
@@ -16,6 +16,7 @@ Fra Bjørnsveen: digitalt hefte og Python-laboratorium for matematikk på 8.–1
 - utskriftsvennlig heftemodus
 - fritt Python-rom med flere lokale prosjekter
 - import og eksport av `.py`-filer
+- lokal import av `.txt`- og `.csv`-filer som kan leses med `open`, `csv` eller pandas
 - kopiering av kode som formatert tekst eller bilde
 - støtte for Pyodide-pakker som NumPy, pandas og Matplotlib
 - lokal Turtle-tegning for geometri, mønstre, farger og fyll, med stegvis avspilling, variabel hastighet og høyoppløselig canvas

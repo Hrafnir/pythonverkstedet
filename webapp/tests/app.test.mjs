@@ -20,13 +20,13 @@ const analyzerContext = vm.createContext({});
 vm.runInContext(analyzerJavaScript, analyzerContext);
 const analyzePythonError = analyzerContext.analyzePythonError;
 
-test("appen inneholder ni komplette læringsmoduler", () => {
-  const moduleIds = page.match(/\n    id: [1-9],/g) ?? [];
-  assert.equal(moduleIds.length, 9);
+test("appen inneholder ti komplette læringsmoduler", () => {
+  const moduleIds = page.match(/\n    id: (?:[1-9]|10),/g) ?? [];
+  assert.equal(moduleIds.length, 10);
   for (const step of ["Problem", "Oppfriskning", "Lær", "Prøv", "Forklar", "Oppgave"]) {
     assert.match(page, new RegExp(`"${step}"`));
   }
-  assert.equal((page.match(/    refresh: \{/g) ?? []).length, 9);
+  assert.equal((page.match(/    refresh: \{/g) ?? []).length, 10);
   assert.match(page, /navn = verdi/);
   assert.match(page, /Slik lager du en variabel/);
 });
@@ -56,17 +56,17 @@ test("modulene har tom skrivelab, redigerbar fasit, kodefarger og ekstratriks", 
   assert.match(page, /pythonTokens/);
   assert.match(page, /Valgfritt ekstratriks/);
   assert.match(page, /Den nye prisen på produktet er/);
-  assert.equal((page.match(/    typingSteps: \[/g) ?? []).length, 9);
+  assert.equal((page.match(/    typingSteps: \[/g) ?? []).length, 10);
   assert.match(page, /Skriv dette i kodefeltet/);
   assert.match(page, /Forklaring/);
   assert.match(page, /Gjør dette/);
   assert.match(page, /typing-explanation/);
-  assert.equal((page.match(/    polish: \{/g) ?? []).length, 9);
+  assert.equal((page.match(/    polish: \{/g) ?? []).length, 10);
 });
 
 test("alle moduler forklarer tankegangen grundig og inviterer til refleksjon", () => {
-  assert.equal((page.match(/^        reflection:/gm) ?? []).length, 27);
-  assert.equal((page.match(/^        why:/gm) ?? []).length, 27);
+  assert.equal((page.match(/^        reflection:/gm) ?? []).length, 30);
+  assert.equal((page.match(/^        why:/gm) ?? []).length, 30);
   assert.ok((page.match(/think:/g) ?? []).length >= 12);
   assert.ok((page.match(/breakdown:/g) ?? []).length >= 12);
   assert.match(page, /1 står for hele den gamle prisen: 100 %/);
@@ -80,7 +80,7 @@ test("alle moduler forklarer tankegangen grundig og inviterer til refleksjon", (
 });
 
 test("alle moduler bygger kompetanse i små, kjørbare steg", () => {
-  assert.equal((page.match(/    progression: \{/g) ?? []).length, 9);
+  assert.equal((page.match(/    progression: \{/g) ?? []).length, 10);
   assert.match(page, /Små steg som bygger på hverandre/);
   assert.match(page, /Prøv koden i laboratoriet/);
   assert.match(page, /Legg sammen variabler/);
@@ -162,12 +162,45 @@ test("Python-rommet støtter datapakker, grafer og prosjektlagring", () => {
   assert.match(page, /plotImages/);
 });
 
+test("Python kan lese lokale tekst- og CSV-filer uten opplasting", () => {
+  assert.match(page, /type PythonDataFile/);
+  assert.match(page, /\+ Legg til \.txt eller \.csv/);
+  assert.match(page, /Bruk eksempel \.txt/);
+  assert.match(page, /Bruk eksempel \.csv/);
+  assert.match(page, /accept="\.txt,\.csv,text\/plain,text\/csv"/);
+  assert.match(page, /worker\.postMessage\(\{ code, files:/);
+  assert.match(worker, /event\.data\.files/);
+  assert.match(worker, /FS\.writeFile/);
+  assert.match(worker, /\/home\/pyodide/);
+  assert.match(page, /id: 10,[\s\S]*title: "Lister og datafiler"/);
+  assert.match(page, /csv\.DictReader/);
+  assert.match(page, /pd\.read_csv/);
+  assert.match(page, /Filene blir bare behandlet lokalt på denne enheten/);
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.data-file-shelf/);
+  assert.match(css, /\.data-file-list/);
+
+  const missingFile = analyzePythonError(
+    'File "<exec>", line 1, in <module>\nFileNotFoundError: [Errno 44] No such file or directory: \'tall.txt\'',
+    'with open("tall.txt") as fil:\n    print(fil.read())',
+  );
+  assert.equal(missingFile.kind, "file");
+  assert.match(missingFile.title, /finner ikke datafilen/);
+
+  const missingColumn = analyzePythonError(
+    'File "<exec>", line 4, in <module>\nKeyError: \'temperatur\'',
+    'import csv\nwith open("data.csv") as fil:\n    for rad in csv.DictReader(fil):\n        print(rad["temperatur"])',
+  );
+  assert.equal(missingColumn.kind, "data");
+  assert.match(missingColumn.title, /kolonnenavnet/);
+});
+
 test("Python-rommet har et komplett, søkbart oppslagsverk", () => {
   assert.match(page, /Python-håndbok/);
   assert.match(page, /Søk i håndboken/);
   assert.match(page, /playgroundReferences/);
   const referenceSource = page.slice(page.indexOf("const playgroundReferences"), page.indexOf("const modules"));
-  assert.equal((referenceSource.match(/    id: "(?:variabler|tekst|vilkar|tallmonster|lister|funksjoner|tilfeldighet|tabeller|grafer|eksamensgraf|turtle-figurer|turtle-spiral|numpy|symbolsk|mattebibliotek|scipy|maskinlaering|pillow|networkx|shapely|spill-snake)",/g) ?? []).length, 21);
+  assert.equal((referenceSource.match(/    id: "(?:variabler|tekst|vilkar|tallmonster|lister|tekstfiler|csv-filer|funksjoner|tilfeldighet|tabeller|grafer|eksamensgraf|turtle-figurer|turtle-spiral|numpy|symbolsk|mattebibliotek|scipy|maskinlaering|pillow|networkx|shapely|spill-snake)",/g) ?? []).length, 23);
   assert.match(page, /Viktige koder og kommandoer/);
   assert.match(page, /Eksperimenter videre/);
   assert.match(page, /Åpne som nytt prosjekt/);
@@ -186,7 +219,7 @@ test("Python starter med tom editor og har en kodebygger", () => {
   assert.match(page, /const playgroundCode = ""/);
   assert.match(page, /const codeSnippets: CodeSnippet\[]/);
   const snippetSource = page.slice(page.indexOf("const codeSnippets"), page.indexOf("const playgroundReferences"));
-  assert.equal((snippetSource.match(/    id: "(?:variabler|print|regning|for-lokke|if-else|liste|funksjon|tilfeldig|graf|eksamensgraf|turtle|snake)",/g) ?? []).length, 12);
+  assert.equal((snippetSource.match(/    id: "(?:variabler|print|regning|for-lokke|if-else|liste|les-txt|les-csv|funksjon|tilfeldig|graf|eksamensgraf|turtle|snake)",/g) ?? []).length, 14);
   assert.match(page, /Bygg et program av små deler/);
   assert.match(page, /Legg til i editor/);
   assert.match(page, /appendSnippet/);
@@ -200,7 +233,7 @@ test("Python starter med tom editor og har en kodebygger", () => {
 
 test("kodehjelpen lar eleven lære uten å forlate editoren", () => {
   const tutorialSource = page.slice(page.indexOf("const quickTutorials"), page.indexOf("type CurriculumFit"));
-  assert.equal((tutorialSource.match(/    id: "/g) ?? []).length, 12);
+  assert.equal((tutorialSource.match(/    id: "/g) ?? []).length, 14);
   assert.match(page, /Hjelp mens du koder/);
   assert.match(page, /Finn den lille detaljen/);
   assert.match(page, /Tekst, variabler og regning i print/);

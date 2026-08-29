@@ -39,6 +39,7 @@ async function start() {
 self.onmessage = async (event) => {
   const pyodide = await pyodideReady;
   const code = event.data.code;
+  const files = Array.isArray(event.data.files) ? event.data.files : [];
   let stdout = "";
   let stderr = "";
 
@@ -46,6 +47,13 @@ self.onmessage = async (event) => {
   pyodide.setStderr({ batched: (text) => { stderr += `${text}\n`; } });
 
   try {
+    pyodide.FS.mkdirTree("/home/pyodide");
+    pyodide.FS.chdir("/home/pyodide");
+    for (const file of files) {
+      const name = String(file?.name ?? "").replace(/\\/g, "/").split("/").at(-1);
+      if (!name || !/\.(?:txt|csv)$/i.test(name) || typeof file?.content !== "string") continue;
+      pyodide.FS.writeFile(name, file.content, { encoding: "utf8" });
+    }
     const usesGame = /(?:^|\n)\s*(?:from\s+spill\s+import|import\s+spill\b)/.test(code);
     const packageCode = usesGame
       ? code.replace(/^\s*(?:from\s+spill\s+import.*|import\s+spill(?:\s+as\s+\w+)?\s*)$/gm, "")

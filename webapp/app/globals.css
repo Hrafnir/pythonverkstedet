@@ -345,6 +345,19 @@ p, li { text-wrap: pretty; }
 .editor-size-controls output { min-width: 43px; color: #d9e5e0; font-family: var(--mono); font-size: 11px; text-align: center; }
 .panel-bar button { border: 0; background: transparent; color: #b9cbc5; font-size: 13px; cursor: pointer; }
 .panel-bar button:hover { color: white; }
+.data-file-shelf { padding: 11px 16px 10px; border-bottom: 1px solid #34514b; background: #0d2926; color: #dbe8e2; }
+.data-file-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.data-file-actions > strong { margin-right: 3px; color: #f4c95d; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+.data-file-actions > button, .data-file-button { min-height: 34px; display: inline-flex; align-items: center; padding: 6px 9px; border: 1px solid #58736c; border-radius: 7px; background: #183a36; color: #e8f1ed; font-size: 12px; font-weight: 800; cursor: pointer; }
+.data-file-actions > button:hover, .data-file-button:hover { border-color: var(--yellow); color: #ffe08a; }
+.data-file-button input { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
+.data-file-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+.data-file-list > span { max-width: 100%; display: inline-flex; align-items: center; gap: 7px; padding: 5px 6px 5px 9px; border: 1px solid #527068; border-radius: 99px; background: #173f3a; }
+.data-file-list code { overflow: hidden; color: #b9efcb; font-family: var(--mono); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.data-file-list small { color: #91aaa2; font-size: 10px; white-space: nowrap; }
+.data-file-list button { width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #ffffff10; color: #caddd6; font-size: 17px; line-height: 1; cursor: pointer; }
+.data-file-list button:hover { background: var(--coral); color: white; }
+.data-file-shelf > p { margin: 7px 0 0; color: #91aaa2; font-size: 11px; line-height: 1.4; }
 .dot { width: 8px; height: 8px; border-radius: 50%; }
 .dot.coral { background: var(--coral); }
 .dot.cream { background: var(--yellow); }

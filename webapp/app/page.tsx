@@ -70,6 +70,12 @@ type LocalProject = {
   updatedAt: string;
 };
 
+type PythonDataFile = {
+  name: string;
+  content: string;
+  size: number;
+};
+
 type TurtleEvent = {
   kind: "line" | "move" | "turn" | "fill" | "dot" | "text" | "visibility" | "clear" | "background" | "title" | "screen";
   x?: number;
@@ -111,7 +117,7 @@ type SnakeGameConfig = {
 };
 
 type ErrorCoach = {
-  kind: "syntax" | "indent" | "name" | "type" | "runtime";
+  kind: "syntax" | "indent" | "name" | "type" | "file" | "data" | "runtime";
   title: string;
   summary: string;
   lineNumber?: number;
@@ -168,7 +174,7 @@ type PlaygroundReference = {
   tip?: string;
 };
 
-const snippetCategories = ["Alle", "Kom i gang", "Styring", "Byggeklosser", "Tilfeldighet", "Tegning", "Spill"] as const;
+const snippetCategories = ["Alle", "Kom i gang", "Styring", "Byggeklosser", "Datafiler", "Tilfeldighet", "Tegning", "Spill"] as const;
 type SnippetCategory = (typeof snippetCategories)[number];
 
 type CodeSnippet = {
@@ -297,16 +303,48 @@ const quickTutorials: QuickTutorial[] = [
     category: "Data",
     title: "Samle mange verdier i en liste",
     question: "Hvordan lagrer og undersøker jeg flere tall?",
-    intro: "En liste samler verdier i en bestemt rekkefølge. Python teller plassene fra 0, så liste[0] er den første verdien.",
+    intro: "En liste er én variabel som kan holde mange verdier i en bestemt rekkefølge. Python teller plassene fra 0, så liste[0] er den første verdien.",
     steps: [
       "Skriv verdiene mellom [hakeparenteser] og skill dem med komma.",
-      "append legger til en ny verdi bakerst.",
-      "len, sum, min og max undersøker hele listen.",
-      "En for-løkke kan behandle én verdi om gangen.",
+      "Bruk liste[0] for første verdi og liste[-1] for siste verdi.",
+      "append legger til bakerst, remove fjerner en bestemt verdi og pop fjerner en plass.",
+      "len, sum, min og max undersøker hele listen, mens en for-løkke behandler én verdi om gangen.",
     ],
-    example: 'poeng = [4, 7, 9, 6]\npoeng.append(10)\n\ngjennomsnitt = sum(poeng) / len(poeng)\nprint("Gjennomsnitt:", round(gjennomsnitt, 1))\n\nfor verdi in poeng:\n    print("Poeng:", verdi)',
+    example: 'poeng = [4, 7, 9, 6]\npoeng.append(10)\n\nprint("Første:", poeng[0])\nprint("Siste:", poeng[-1])\n\ngjennomsnitt = sum(poeng) / len(poeng)\nprint("Gjennomsnitt:", round(gjennomsnitt, 1))\n\nfor verdi in poeng:\n    print("Poeng:", verdi)',
     notice: "liste[1] er den andre verdien, ikke den første. En indeks som ikke finnes, gir IndexError.",
     challenge: "Skriv bare ut verdier over gjennomsnittet ved å bruke if inni løkken.",
+  },
+  {
+    id: "read-txt-list",
+    category: "Data",
+    title: "Les en liste fra en tekstfil",
+    question: "Hvordan gjør jeg én linje i en .txt-fil om til én verdi i en liste?",
+    intro: "Når en tekstfil åpnes i en for-løkke, får Python én linje om gangen. strip fjerner linjeskiftet, og append legger den ferdige verdien inn i listen.",
+    steps: [
+      "Velg filen med «Legg til .txt eller .csv» ved editoren. Filnavnet i open må være helt likt.",
+      "with open(...) åpner filen og lukker den automatisk etter den innrykkede blokken.",
+      "linje.strip() fjerner linjeskift og tomrom rundt teksten.",
+      "float gjør tekst som \"12.5\" om til tallet 12.5. Uten omgjøring kan ikke sum regne med verdiene.",
+    ],
+    example: 'temperaturer = []\n\nwith open("temperaturer.txt", encoding="utf-8") as fil:\n    for linje in fil:\n        tekst = linje.strip()\n        if tekst:\n            temperaturer.append(float(tekst))\n\nprint("Temperaturer:", temperaturer)\nprint("Gjennomsnitt:", sum(temperaturer) / len(temperaturer))',
+    notice: "open gir tekst. Bruk int for heltall eller float for desimaltall før du regner. Norske desimalkomma kan endres med tekst.replace(\",\", \".\").",
+    challenge: "Finn laveste og høyeste temperatur. Hvor mange målinger er høyere enn gjennomsnittet?",
+  },
+  {
+    id: "read-csv-list",
+    category: "Data",
+    title: "Les rader og kolonner fra CSV",
+    question: "Hvordan henter jeg en bestemt kolonne fra en .csv-fil?",
+    intro: "En CSV-fil er en enkel tabell lagret som tekst. csv.DictReader bruker overskriftene i første rad som navn, slik at rad[\"temperatur\"] henter riktig kolonne.",
+    steps: [
+      "Importer csv, som følger med Python.",
+      "Åpne filen med newline=\"\" og riktig encoding.",
+      "Velg skilletegn: Norske regneark bruker ofte semikolon, så eksemplet har delimiter=\";\".",
+      "Hver rad er en ordbok. Gjør talltekst om til float før den legges i en talliste.",
+    ],
+    example: 'import csv\n\ndager = []\ntemperaturer = []\n\nwith open("maalinger.csv", encoding="utf-8-sig", newline="") as fil:\n    leser = csv.DictReader(fil, delimiter=";")\n    for rad in leser:\n        dager.append(rad["dag"])\n        temperaturer.append(float(rad["temperatur"]))\n\nprint("Dager:", dager)\nprint("Høyest:", max(temperaturer))',
+    notice: "Hvis hele raden blir én lang tekst, er skilletegnet trolig feil. Prøv delimiter=\",\" hvis filen bruker komma mellom kolonnene.",
+    challenge: "Finn dagen med høyest temperatur ved å bruke max og index, eller les filen med pandas.read_csv.",
   },
   {
     id: "random",
@@ -510,6 +548,22 @@ const codeSnippets: CodeSnippet[] = [
     change: "Legg til tall i listen eller regn med verdi.",
   },
   {
+    id: "les-txt",
+    category: "Datafiler",
+    title: "Les én verdi per linje fra .txt",
+    purpose: "Gjør linjene i en tekstfil om til en liste med tall.",
+    code: 'tall = []\n\nwith open("tall.txt", encoding="utf-8") as fil:\n    for linje in fil:\n        tekst = linje.strip()\n        if tekst:\n            tall.append(float(tekst.replace(",", ".")))\n\nprint(tall)',
+    change: "Bytt filnavnet til navnet som vises ved editoren. Bruk int i stedet for float hvis alle verdiene er heltall.",
+  },
+  {
+    id: "les-csv",
+    category: "Datafiler",
+    title: "Les en CSV-tabell",
+    purpose: "Hent navngitte kolonner fra en fil med overskrifter.",
+    code: 'import csv\n\nwith open("data.csv", encoding="utf-8-sig", newline="") as fil:\n    leser = csv.DictReader(fil, delimiter=";")\n    for rad in leser:\n        print(rad["navn"], rad["verdi"])',
+    change: "Bytt filnavn, kolonnenavn og eventuelt skilletegnet ; slik at det passer til filen.",
+  },
+  {
     id: "funksjon",
     category: "Byggeklosser",
     title: "Lag en funksjon",
@@ -683,6 +737,69 @@ for verdi in poeng:
       "Finn forskjellen mellom max(poeng) og min(poeng).",
       "Bruk et if-vilkår i løkken og skriv bare verdier over 6.",
     ],
+  },
+  {
+    id: "tekstfiler",
+    category: "Utforske data",
+    level: "Grunnmur",
+    title: "Tekstfiler: én linje blir én listeverdi",
+    purpose: "Hent en ekstern liste fra .txt og gjør tekst om til tall det går an å regne med.",
+    commands: [
+      { code: 'open("tall.txt", encoding="utf-8")', explanation: "Åpner den valgte filen med riktig navn og norsk tegnsett." },
+      { code: "with ... as fil:", explanation: "Holder filen åpen i den innrykkede blokken og lukker den etterpå." },
+      { code: "linje.strip()", explanation: "Fjerner linjeskift og tomrom rundt én linje." },
+      { code: "float(tekst)", explanation: "Gjør tall som er lest som tekst, om til desimaltall." },
+    ],
+    example: `temperaturer = []
+
+with open("temperaturer.txt", encoding="utf-8") as fil:
+    for linje in fil:
+        tekst = linje.strip()
+        if tekst:
+            temperaturer.append(float(tekst.replace(",", ".")))
+
+print("Målinger:", temperaturer)
+print("Antall:", len(temperaturer))
+print("Gjennomsnitt:", round(sum(temperaturer) / len(temperaturer), 1))`,
+    experiments: [
+      "Bruk eksempel-filen temperaturer.txt ved editoren og kjør koden.",
+      "Finn min, max og forskjellen mellom høyeste og laveste verdi.",
+      "Lag en ny tekstfil med ett navn per linje. Da skal float-linjen fjernes.",
+    ],
+    tip: "Filen blir værende lokalt på enheten. Filnavnet i open må være helt likt navnet som vises ved editoren.",
+  },
+  {
+    id: "csv-filer",
+    category: "Utforske data",
+    level: "Utforsk",
+    title: "CSV: lister i rader og kolonner",
+    purpose: "Les tabeller fra regneark og bygg lister fra kolonnene du trenger.",
+    commands: [
+      { code: "import csv", explanation: "Henter CSV-verktøyet som følger med Python." },
+      { code: "csv.DictReader(fil, delimiter=\";\")", explanation: "Leser hver rad med overskriftene som navn. Semikolon er vanlig i norske CSV-filer." },
+      { code: 'rad["temperatur"]', explanation: "Henter verdien i kolonnen temperatur fra én rad." },
+      { code: 'pd.read_csv("data.csv", sep=";")', explanation: "Kortere alternativ med pandas når du vil arbeide med en hel tabell." },
+    ],
+    example: `import csv
+
+dager = []
+temperaturer = []
+
+with open("maalinger.csv", encoding="utf-8-sig", newline="") as fil:
+    leser = csv.DictReader(fil, delimiter=";")
+    for rad in leser:
+        dager.append(rad["dag"])
+        temperaturer.append(float(rad["temperatur"]))
+
+print("Dager:", dager)
+print("Temperaturer:", temperaturer)
+print("Varmest dag:", dager[temperaturer.index(max(temperaturer))])`,
+    experiments: [
+      "Bruk eksempel-filen maalinger.csv ved editoren og se hvordan de to listene bygges.",
+      "Skriv ut alle dager med temperatur over 13 grader.",
+      "Importer pandas og sammenlign med pd.read_csv(\"maalinger.csv\", sep=\";\").",
+    ],
+    tip: "Sjekk første linje i filen. Den viser kolonnenavnene, og skilletegnet avslører om du trenger ; eller , som delimiter.",
   },
   {
     id: "funksjoner",
@@ -1159,8 +1276,8 @@ const curriculumGoals: CurriculumGoal[] = [
     goal: "bruke situasjoner, tabeller, grafer og uttrykk til å representere funksjoner og vise sammenhenger mellom representasjonene",
     fit: "Direkte",
     activity: "La samme funksjon vises som tekstsituasjon, uttrykk, verditabell og graf. Pek ut hvor samme informasjon finnes i alle fire.",
-    tools: ["funksjoner", "Pandas", "Matplotlib", "uttrykk"],
-    moduleIds: [4, 6, 9],
+    tools: ["funksjoner", "Pandas", "Matplotlib", "lister", "uttrykk"],
+    moduleIds: [4, 6, 9, 10],
   },
   {
     id: "8-algoritmer",
@@ -1231,17 +1348,17 @@ const curriculumGoals: CurriculumGoal[] = [
     goal: "tolke og kritisk vurdere statistiske framstillinger fra media og lokalsamfunnet",
     fit: "God støtte",
     activity: "Gjenskap en graf med Matplotlib, endre aksestart og skala og diskuter hvordan inntrykket forandres.",
-    tools: ["Matplotlib", "Pandas", "akser", "datasett"],
-    moduleIds: [4, 9],
+    tools: ["Matplotlib", "Pandas", "CSV", "akser", "datasett"],
+    moduleIds: [4, 9, 10],
   },
   {
     id: "9-sentral-spredning",
     grade: "9",
     goal: "regne på sentralmål og spredningsmål i egne og reelle datasett og bruke resultatene til å beskrive dataene",
     fit: "Direkte",
-    activity: "Importer eller skriv inn data og beregn gjennomsnitt, median, variasjonsbredde og standardavvik.",
-    tools: ["NumPy", "Pandas", "lister", "tabeller"],
-    moduleIds: [4],
+    activity: "Importer data fra .txt eller .csv og beregn gjennomsnitt, median, variasjonsbredde og standardavvik.",
+    tools: ["NumPy", "Pandas", "lister", "CSV", "tabeller"],
+    moduleIds: [4, 10],
   },
   {
     id: "9-framstillinger",
@@ -1249,8 +1366,8 @@ const curriculumGoals: CurriculumGoal[] = [
     goal: "sammenligne og argumentere for hvordan framstillinger av tall og data kan brukes for å fremme ulike synspunkter",
     fit: "Direkte",
     activity: "Lag to korrekte grafer av samme datasett med ulike utsnitt, diagramtyper eller skalaer og vurder budskapet.",
-    tools: ["Matplotlib", "Pandas", "grafer", "akser"],
-    moduleIds: [4, 9],
+    tools: ["Matplotlib", "Pandas", "CSV", "grafer", "akser"],
+    moduleIds: [4, 9, 10],
   },
   {
     id: "9-sannsynlighet",
@@ -2470,6 +2587,194 @@ const modules: Module[] = [
         "Tegn to modeller i samme koordinatsystem, finn skjæringspunktet og vurder i hvilket område hver modell er mest fordelaktig.",
     },
   },
+  {
+    id: 10,
+    title: "Lister og datafiler",
+    shortTitle: "Lister og datafiler",
+    eyebrow: "Fra mange verdier til nyttig informasjon",
+    question: "Hvordan kan én variabel holde mange verdier – og hvordan henter vi listene fra .txt- og .csv-filer?",
+    intro:
+      "Lister lar et program huske mange verdier i riktig rekkefølge. Det gjør det mulig å undersøke målinger, navn, poeng eller koordinater uten å lage én variabel for hver verdi. I denne modulen bygger vi listene selv, endrer dem og leser ekte datafiler som blir værende lokalt på maskinen.",
+    refresh: {
+      title: "En liste er en samling med rekkefølge",
+      body: "En vanlig variabel peker på én verdi. En liste samler mange verdier under ett navn. Hver plass har et indeksnummer. Python begynner å telle plassene på 0, selv om vi mennesker vanligvis kaller den første plassen nummer 1.",
+      examples: [
+        { code: "temperatur = 12", explanation: "Én variabel med én verdi." },
+        { code: "temperaturer = [12, 14, 11, 15]", explanation: "Én variabel med fire verdier i en bestemt rekkefølge." },
+        { code: "temperaturer[0]", explanation: "Henter den første verdien, altså 12." },
+      ],
+    },
+    theory: [
+      {
+        title: "Indeksen forteller hvilken plass vi vil bruke",
+        body: "Hakeparentesene etter listen betyr «hent denne plassen». Den første plassen har indeks 0, den andre har indeks 1, og den siste kan hentes med -1. Verdien og indeksen er ikke det samme: I listen [12, 14, 11] er verdien 14 på indeks 1.",
+        code: "tall = [12, 14, 11]\nprint(tall[0])\nprint(tall[-1])",
+        steps: ["Python lager listen og bevarer rekkefølgen.", "tall[0] går til første plass og henter 12.", "tall[-1] teller bakfra og henter 11.", "len(tall) gir antall verdier, her 3."],
+        reflection: "Hva tror du tall[1] og tall[len(tall) - 1] gir? Hvorfor peker det siste uttrykket på siste plass?",
+        why: "Når vi kan peke på én bestemt plass, kan vi sammenligne naboer, finne en tilhørende verdi i en annen liste eller endre bare én del av datasettet.",
+      },
+      {
+        title: "Listen kan vokse, endres og undersøkes",
+        body: "append legger én ny verdi bakerst. remove leter etter en bestemt verdi og fjerner den første forekomsten. pop bruker et indeksnummer og returnerer verdien som ble fjernet. Funksjonene len, sum, min og max gir informasjon om hele listen med korte, lesbare uttrykk.",
+        code: "poeng = [4, 7, 9]\npoeng.append(10)\npoeng[0] = 5\nprint(sum(poeng) / len(poeng))",
+        steps: ["Listen starter med tre verdier.", "append gjør listen én plass lengre.", "poeng[0] = 5 erstatter verdien på første plass.", "sum delt på len gir gjennomsnittet når listen ikke er tom."],
+        reflection: "Hvorfor må vi dele summen på antallet verdier? Hva skjer hvis listen er tom?",
+        why: "Lister gjør at samme kode virker for tre, tretti eller tre tusen verdier. Programmet trenger ikke vite antallet på forhånd.",
+      },
+      {
+        title: "En datafil inneholder tekst som må tolkes",
+        body: "Både .txt og .csv er tekstfiler. Når Python leser tegnene 12.5 fra en fil, er verdien først teksten \"12.5\". float gjør teksten om til et desimaltall. En CSV-fil har i tillegg rader, kolonner og et skilletegn. Norske regneark bruker ofte semikolon fordi komma brukes som desimaltegn.",
+        code: "tekst = \"12.5\"\ntall = float(tekst)\nprint(tall + 1)",
+        steps: ["Filvelgeren gjør filen tilgjengelig lokalt med det viste navnet.", "open åpner filen, og with sørger for at den lukkes etterpå.", "strip fjerner linjeskift rundt hver tekstlinje.", "int eller float brukes bare når teksten faktisk skal behandles som et tall."],
+        reflection: "Hvorfor gir \"12.5\" + 1 en feil, mens float(\"12.5\") + 1 gir 13.5?",
+        why: "Python gjetter ikke om tekst skal være navn, dato, kategori eller tall. Den tydelige omgjøringen gjør databehandlingen tryggere og lettere å kontrollere.",
+      },
+    ],
+    progression: {
+      intro: "Start med en liten liste skrevet i koden. Bruk deretter løkke og listeverktøy før de samme ideene flyttes over til eksterne tekst- og CSV-filer.",
+      steps: [
+        {
+          label: "Lag listen",
+          title: "Samle og hent verdier",
+          body: "Skriv verdiene mellom hakeparenteser. Bruk indeks når du trenger én bestemt plass.",
+          code: `temperaturer = [12, 14, 11, 15]
+
+print("Hele listen:", temperaturer)
+print("Første måling:", temperaturer[0])
+print("Siste måling:", temperaturer[-1])`,
+          tryThis: "Legg til en femte verdi med append. Hva blir len(temperaturer) før og etter?",
+        },
+        {
+          label: "Undersøk listen",
+          title: "Bruk funksjoner og løkke",
+          body: "Listefunksjonene gir et raskt sammendrag. En løkke lar deg undersøke hver verdi og velge dem som oppfyller et vilkår.",
+          code: `temperaturer = [12, 14, 11, 15]
+gjennomsnitt = sum(temperaturer) / len(temperaturer)
+
+print("Gjennomsnitt:", gjennomsnitt)
+
+for temperatur in temperaturer:
+    if temperatur > gjennomsnitt:
+        print("Over gjennomsnittet:", temperatur)`,
+          tryThis: "Tell hvor mange verdier som ligger under gjennomsnittet. Start en teller på 0 og bruk += 1.",
+        },
+        {
+          label: "Les .txt",
+          title: "Én linje blir én verdi",
+          body: "Trykk «Bruk eksempel .txt» ved editoren. Koden går gjennom filen linje for linje, fjerner linjeskift og bygger en liste.",
+          code: `temperaturer = []
+
+with open("temperaturer.txt", encoding="utf-8") as fil:
+    for linje in fil:
+        tekst = linje.strip()
+        if tekst:
+            temperaturer.append(float(tekst.replace(",", ".")))
+
+print("Fra fil:", temperaturer)
+print("Lavest:", min(temperaturer))
+print("Høyest:", max(temperaturer))`,
+          tryThis: "Lag eller velg en egen .txt-fil med én verdi per linje. Bytt bare filnavnet og kjør igjen.",
+          upgrade: {
+            title: "Kortere senere: list comprehension",
+            body: "Når arbeidsmåten er forstått, kan en enkel fil gjøres om til en liste på én linje. Den lange versjonen er ofte lettere å feilsøke i starten.",
+            code: `with open("temperaturer.txt", encoding="utf-8") as fil:
+    temperaturer = [float(linje.strip().replace(",", ".")) for linje in fil if linje.strip()]`,
+          },
+        },
+        {
+          label: "Les .csv",
+          title: "Bruk overskriftene som navn",
+          body: "Trykk «Bruk eksempel .csv». DictReader leser første rad som kolonnenavn, og hver senere rad blir en liten ordbok.",
+          code: `import csv
+
+dager = []
+temperaturer = []
+
+with open("maalinger.csv", encoding="utf-8-sig", newline="") as fil:
+    leser = csv.DictReader(fil, delimiter=";")
+    for rad in leser:
+        dager.append(rad["dag"])
+        temperaturer.append(float(rad["temperatur"]))
+
+print("Dager:", dager)
+print("Temperaturer:", temperaturer)`,
+          tryThis: "Skriv ut dag og temperatur sammen i en løkke. Hva må endres hvis filen bruker komma mellom kolonnene?",
+          upgrade: {
+            title: "Kortere senere: pandas",
+            body: "pandas er praktisk for større tabeller. sep forteller hvilket tegn som skiller kolonnene.",
+            code: `import pandas as pd
+
+tabell = pd.read_csv("maalinger.csv", sep=";")
+print(tabell.to_string(index=False))
+print("Gjennomsnitt:", tabell["temperatur"].mean())`,
+          },
+        },
+      ],
+    },
+    starterCode: `# 1. Trykk «Bruk eksempel .txt» ved editoren.
+# 2. Kjør koden og undersøk listen.
+
+temperaturer = []
+
+with open("temperaturer.txt", encoding="utf-8") as fil:
+    for linje in fil:
+        tekst = linje.strip()
+        if tekst:
+            temperaturer.append(float(tekst.replace(",", ".")))
+
+gjennomsnitt = sum(temperaturer) / len(temperaturer)
+
+print("Temperaturer:", temperaturer)
+print("Gjennomsnitt:", round(gjennomsnitt, 1))`,
+    typingSteps: [
+      { kind: "write", code: "temperaturer = []", explanation: "Dette lager en tom liste. Den er en beholder vi skal fylle med verdier fra filen.", think: "Hvorfor starter vi med en tom liste i stedet for tallet 0?", breakdown: ["Hver linje skal bli en egen verdi.", "Vi vet kanskje ikke på forhånd hvor mange linjer filen har.", "append kan utvide en liste én verdi om gangen."], why: "Datamengden kan endres uten at programmet må skrives om." },
+      { kind: "write", code: "with open(\"temperaturer.txt\", encoding=\"utf-8\") as fil:", explanation: "Filnavnet må være identisk med navnet ved editoren. with lukker filen automatisk når den innrykkede blokken er ferdig." },
+      { kind: "write", code: "    for linje in fil:", explanation: "Løkken gir linje én tekstlinje om gangen. Den har innrykk fordi den hører til while filen er åpen.", think: "Hva vil linje inneholde i første runde?", breakdown: ["Python begynner øverst i filen.", "Linjeskiftet følger vanligvis med.", "Neste runde henter neste linje."], why: "Løkken virker uansett om filen har fem eller fem tusen linjer." },
+      { kind: "write", code: "        tekst = linje.strip()", explanation: "strip fjerner linjeskiftet og tomrom rundt verdien. To innrykk viser at linjen hører til både with og for." },
+      { kind: "write", code: "        if tekst:\n            temperaturer.append(float(tekst.replace(\",\", \".\")))", explanation: "Tomme linjer hoppes over. Desimalkomma endres til punktum før float lager et tall.", think: "Hvorfor kan vi ikke legge teksten rett inn hvis vi senere skal bruke sum?", breakdown: ["open leser tegn, altså tekst.", "sum trenger tall.", "float gjør både 12 og 12.5 til desimaltall."], why: "Tydelig datavask hindrer at linjeskift, tomme rader eller desimalkomma ødelegger beregningen." },
+      { kind: "write", code: "gjennomsnitt = sum(temperaturer) / len(temperaturer)", explanation: "sum legger sammen tallene. len forteller hvor mange målinger vi deler på." },
+      { kind: "write", code: "print(\"Gjennomsnitt:\", round(gjennomsnitt, 1))", explanation: "round gjør svaret lettere å lese ved å vise én desimal." },
+    ],
+    polish: {
+      title: "Koble sammen to lister med samme indeks",
+      body: "I CSV-eksemplet hører hver dag sammen med temperaturen på samme plass. enumerate gir både indeks og verdi, slik at vi kan hente den tilhørende dagen.",
+      before: "for temperatur in temperaturer:\n    print(temperatur)",
+      after: `for indeks, temperatur in enumerate(temperaturer):
+    print(dager[indeks], "hadde", temperatur, "grader")`,
+      explanation: "Når indeks er 0, brukes både dager[0] og temperaturer[0]. Slik beholdes koblingen mellom kolonnene.",
+    },
+    observe: [
+      "Hvilken datatype har en linje rett etter at den er lest fra filen?",
+      "Hvorfor bruker Python indeks 0 for den første verdien?",
+      "Hva er forskjellen på append, remove og pop?",
+      "Hvilket skilletegn bruker CSV-filen, og stemmer det med delimiter i koden?",
+      "Hvordan kontrollerer du at antallet og noen av verdiene ble lest riktig før du regner videre?",
+    ],
+    task:
+      "Bruk eksempel-filen maalinger.csv eller en egen anonym CSV-fil. Lag listene dager og temperaturer, regn ut gjennomsnittet og skriv hvilken dag som var varmest. Forklar hvorfor de to listene må ha samme rekkefølge.",
+    taskHint: "Finn max(temperaturer). Bruk temperaturer.index(...) for å finne plassen, og hent dagen fra dager med den samme indeksen.",
+    expected: ["gjennomsnitt", "varmest"],
+    teacher: {
+      purpose:
+        "La elevene gå fra konkrete lister til enkel, etterprøvbar databehandling med lokale filer, samtidig som de øver på typer, løkker, vilkår og representasjon.",
+      before: [
+        "Vis en fysisk rad med lapper og nummerer plassene 0, 1, 2 og 3.",
+        "Åpne eksempelfilene som vanlig tekst før de leses med Python.",
+        "La elevene forutsi datatype og innhold etter hver linje i fil-løkken.",
+      ],
+      misconceptions: [
+        "Første verdi forventes på indeks 1 i stedet for 0.",
+        "Tall fra filer oppfattes som tall allerede før int eller float brukes.",
+        "Filnavn, store bokstaver eller skilletegn stemmer ikke med koden.",
+        "To parallelle lister sorteres hver for seg og mister koblingen mellom radene.",
+        "Eleven regner før det er kontrollert at listen faktisk inneholder verdier.",
+      ],
+      assess:
+        "Eleven kan forklare indeks, bygge og endre en liste, lese minst ett filformat, konvertere talltekst og kontrollere resultatet før videre beregning.",
+      extension:
+        "La elevene rense manglende verdier, tegne målingene som graf eller sammenligne den grunnleggende csv-løsningen med pandas.",
+    },
+  },
 ];
 
 const steps = ["Problem", "Oppfriskning", "Lær", "Prøv", "Forklar", "Oppgave"];
@@ -2481,6 +2786,19 @@ for tall in range(1, 6):
     print(navn, "utforsker", tall ** 2)`;
 
 const playgroundCode = "";
+
+const exampleDataFiles: Record<"txt" | "csv", PythonDataFile> = {
+  txt: {
+    name: "temperaturer.txt",
+    content: "12\n14\n11\n15\n13\n",
+    size: 15,
+  },
+  csv: {
+    name: "maalinger.csv",
+    content: "dag;temperatur\nmandag;12\ntirsdag;14\nonsdag;11\ntorsdag;15\nfredag;13\n",
+    size: 76,
+  },
+};
 
 const firstProject: LocalProject = {
   id: "mitt-forste-prosjekt",
@@ -2613,6 +2931,68 @@ function analyzePythonError(rawError: string, source: string): ErrorCoach {
       hint: assignmentInCondition
         ? "Ett likhetstegn gir en variabel en verdi. To likhetstegn sammenligner verdier. Finn selv hvilket av dem denne linjen trenger."
         : "Les den markerte linjen tegn for tegn og sammenlign med nærmeste fungerende eksempel. Python markerer ofte stedet der den ga opp, ikke nødvendigvis det første gale tegnet.",
+      technical,
+    };
+  }
+
+  if (/FileNotFoundError/.test(technical)) {
+    const missingFile = technical.match(/No such file or directory: ['"]([^'"]+)['"]/)?.[1];
+    return {
+      kind: "file",
+      title: "Python finner ikke datafilen",
+      summary: missingFile
+        ? `Programmet prøver å åpne «${missingFile}», men denne filen er ikke lagt til med nøyaktig samme navn.`
+        : "Programmet prøver å åpne en fil som ikke finnes i Python-miljøet ennå.",
+      lineNumber,
+      codeLine,
+      questions: [
+        "Vises filen i Datafiler-feltet over editoren?",
+        "Er filnavnet i open skrevet helt likt, også punktum, mellomrom og store bokstaver?",
+        "Har du valgt riktig .txt- eller .csv-fil etter at siden ble lastet på nytt?",
+      ],
+      hint: missingFile
+        ? `Legg til filen, og sammenlign navnet ved editoren med «${missingFile}» tegn for tegn. Filen sendes ikke til en server.`
+        : "Trykk «Legg til .txt eller .csv», og bruk filnavnet som vises ved editoren i open eller read_csv.",
+      technical,
+    };
+  }
+
+  if (/KeyError/.test(technical)) {
+    const missingKey = technical.match(/KeyError:\s*['"]([^'"]+)['"]/)?.[1];
+    return {
+      kind: "data",
+      title: "Python finner ikke kolonnenavnet",
+      summary: missingKey
+        ? `Koden spør etter kolonnen «${missingKey}», men CSV-leseren finner ikke en overskrift med nøyaktig dette navnet.`
+        : "Koden spør etter et navn som ikke finnes i raden eller ordboken.",
+      lineNumber,
+      codeLine,
+      questions: [
+        "Hva står det i den aller første raden i CSV-filen?",
+        "Er store bokstaver, mellomrom og norske tegn skrevet helt likt i rad[...]?",
+        "Ble riktig skilletegn valgt, eller ligger hele overskriftsraden i én kolonne?",
+      ],
+      hint: "Skriv midlertidig print(leser.fieldnames) rett etter DictReader-linjen. Da ser du navnene Python faktisk har lest, men du må selv velge riktig navn eller delimiter.",
+      technical,
+    };
+  }
+
+  if (/ValueError:[^\n]*could not convert string to float/i.test(technical)) {
+    const badValue = technical.match(/could not convert string to float:\s*['"]([^'"]*)['"]/)?.[1];
+    return {
+      kind: "data",
+      title: "En tekstverdi kan ikke gjøres om til tall",
+      summary: badValue
+        ? `float prøver å gjøre «${badValue}» om til et tall, men teksten har et tegn eller en form Python ikke forstår.`
+        : "float har fått tekst som ikke kan tolkes som et tall.",
+      lineNumber,
+      codeLine,
+      questions: [
+        "Er dette en overskrift, en tom celle eller en manglende verdi?",
+        "Bruker tallet desimalkomma som må erstattes med punktum?",
+        "Kan du skrive ut teksten rett før float-linjen for å se hva som faktisk ble lest?",
+      ],
+      hint: "Undersøk verdien med print(repr(tekst)). Bruk strip for tomrom og replace(\",\", \".\") for desimalkomma, men ikke slett data uten å forstå hva raden betyr.",
       technical,
     };
   }
@@ -3470,6 +3850,8 @@ export default function Home() {
   const [editorFontSize, setEditorFontSize] = useState(19);
   const [editorFullscreen, setEditorFullscreen] = useState(false);
   const [desktopFilePath, setDesktopFilePath] = useState("");
+  const [dataFiles, setDataFiles] = useState<PythonDataFile[]>([]);
+  const [dataFileStatus, setDataFileStatus] = useState("Ingen datafiler er lagt til ennå.");
   const [referenceQuery, setReferenceQuery] = useState("");
   const [referenceCategory, setReferenceCategory] = useState<ReferenceCategory>("Alle");
   const [referenceStatus, setReferenceStatus] = useState("");
@@ -3603,6 +3985,82 @@ export default function Home() {
     const next = Math.min(28, Math.max(15, editorFontSize + change));
     setEditorFontSize(next);
     window.localStorage.setItem("bjornsveen-editor-font-size", String(next));
+  }
+
+  async function importDataFiles(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const chosenFiles = Array.from(input.files ?? []);
+    if (!chosenFiles.length) return;
+
+    const accepted: PythonDataFile[] = [];
+    const rejected: string[] = [];
+    for (const file of chosenFiles) {
+      if (!/\.(?:txt|csv)$/i.test(file.name)) {
+        rejected.push(`${file.name} (må være .txt eller .csv)`);
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        rejected.push(`${file.name} (større enn 5 MB)`);
+        continue;
+      }
+      const safeName = file.name.replace(/[\\/\0]/g, "-").trim();
+      accepted.push({ name: safeName, content: await file.text(), size: file.size });
+    }
+
+    if (accepted.length) {
+      setDataFiles((current) => {
+        const names = new Set(accepted.map((file) => file.name.toLocaleLowerCase("nb")));
+        return [...current.filter((file) => !names.has(file.name.toLocaleLowerCase("nb"))), ...accepted];
+      });
+    }
+    const success = accepted.length
+      ? `${accepted.map((file) => `«${file.name}»`).join(", ")} er klar i Python.`
+      : "Ingen filer ble lagt til.";
+    const warning = rejected.length ? ` Ikke lagt til: ${rejected.join(", ")}.` : "";
+    setDataFileStatus(`${success}${warning} Filene blir bare behandlet lokalt på denne enheten.`);
+    input.value = "";
+  }
+
+  function addExampleDataFile(kind: "txt" | "csv") {
+    const example = exampleDataFiles[kind];
+    setDataFiles((current) => [
+      ...current.filter((file) => file.name.toLocaleLowerCase("nb") !== example.name.toLocaleLowerCase("nb")),
+      example,
+    ]);
+    setDataFileStatus(`Eksempelfilen «${example.name}» er klar. Bruk nøyaktig dette navnet i open eller read_csv.`);
+  }
+
+  function removeDataFile(name: string) {
+    setDataFiles((current) => current.filter((file) => file.name !== name));
+    setDataFileStatus(`«${name}» er fjernet fra Python-miljøet.`);
+  }
+
+  function dataFileShelf() {
+    return (
+      <div className="data-file-shelf" aria-label="Datafiler til Python-programmet">
+        <div className="data-file-actions">
+          <strong>Datafiler</strong>
+          <label className="data-file-button">
+            + Legg til .txt eller .csv
+            <input type="file" accept=".txt,.csv,text/plain,text/csv" multiple onChange={importDataFiles} />
+          </label>
+          <button type="button" onClick={() => addExampleDataFile("txt")}>Bruk eksempel .txt</button>
+          <button type="button" onClick={() => addExampleDataFile("csv")}>Bruk eksempel .csv</button>
+        </div>
+        {dataFiles.length > 0 && (
+          <div className="data-file-list" aria-label="Filer som er klare i Python">
+            {dataFiles.map((file) => (
+              <span key={file.name}>
+                <code>{file.name}</code>
+                <small>{file.size < 1024 ? `${file.size} B` : `${(file.size / 1024).toFixed(1)} KB`}</small>
+                <button type="button" onClick={() => removeDataFile(file.name)} aria-label={`Fjern ${file.name}`}>×</button>
+              </span>
+            ))}
+          </div>
+        )}
+        <p aria-live="polite">{dataFileStatus}</p>
+      </div>
+    );
   }
 
   async function toggleEditorFullscreen() {
@@ -3797,7 +4255,7 @@ export default function Home() {
       `Område: ${context}`,
       `Skole: ${feedbackSchool.trim() || "Ikke oppgitt"}`,
       `Navn: ${feedbackName.trim() || "Ikke oppgitt"}`,
-      "Versjon: 0.11.0",
+      "Versjon: 0.12.0",
     ].join("\n");
     setFeedbackDialogOpen(false);
     window.location.href = `mailto:skolepython@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -4326,8 +4784,8 @@ export default function Home() {
       if (data.type === "ready") {
         executionStarted = true;
         setRunnerStatus("running");
-        setOutput("Kjører …");
-        worker.postMessage({ code });
+        setOutput(dataFiles.length ? `Kjører med ${dataFiles.length} datafil${dataFiles.length === 1 ? "" : "er"} …` : "Kjører …");
+        worker.postMessage({ code, files: dataFiles.map(({ name, content }) => ({ name, content })) });
         timeoutRef.current = setTimeout(() => {
           worker.terminate();
           setRunnerStatus("error");
@@ -4481,6 +4939,7 @@ export default function Home() {
                       <button type="button" onClick={toggleEditorFullscreen} aria-pressed={editorFullscreen}>{editorFullscreen ? "Avslutt fullskjerm" : "Fullskjerm"}</button>
                     </span>
                   </div>
+                  {dataFileShelf()}
                   <label htmlFor="playground-code" className="sr-only">Skriv Python-kode</label>
                   <PythonEditor
                     id="playground-code"
@@ -4588,6 +5047,7 @@ export default function Home() {
                 <button type="button" onClick={() => updateCode('from turtle import *\n\ncolor("#f06f51", "#f4c95d")\npensize(5)\n\nbegin_fill()\nfor side in range(4):\n    forward(120)\n    left(90)\nend_fill()\n\ndone()')}>Tegn et Turtle-kvadrat</button>
                 <button type="button" onClick={() => updateCode('from turtle import *\n\nbgcolor("#fffdf8")\ncolor("#2f6b5f")\npensize(3)\n\nfor lengde in range(10, 190, 6):\n    forward(lengde)\n    left(91)\n\ndone()')}>Lag en geometrisk spiral</button>
                 <button type="button" onClick={() => updateCode('import pandas as pd\n\ndata = {"navn": ["Ada", "Bo", "Celine"], "poeng": [8, 12, 10]}\ntabell = pd.DataFrame(data)\nprint(tabell.to_string(index=False))')}>Lag en tabell</button>
+                <button type="button" onClick={() => { addExampleDataFile("txt"); updateCode('tall = []\n\nwith open("temperaturer.txt", encoding="utf-8") as fil:\n    for linje in fil:\n        tekst = linje.strip()\n        if tekst:\n            tall.append(float(tekst))\n\nprint("Tallene:", tall)\nprint("Gjennomsnitt:", sum(tall) / len(tall))'); }}>Les en liste fra fil</button>
                 <button type="button" onClick={() => updateCode('from spill import Snake\n\nspill = Snake(bredde=18, hoyde=12, fart=6)\nspill.start()')}>Start et Snake-spill</button>
                 <button type="button" onClick={() => updateCode("")}>Tøm kodefeltet</button>
               </div>
@@ -4702,6 +5162,8 @@ export default function Home() {
                   <li><code>IndentationError</code><span>Kontroller innrykket etter if, for, else og def.</span></li>
                   <li><code>NameError</code><span>Er navnet skrevet likt – og laget før det brukes?</span></li>
                   <li><code>TypeError</code><span>Blander du tekst og tall på en måte Python ikke forstår?</span></li>
+                  <li><code>FileNotFoundError</code><span>Er datafilen lagt til, og er filnavnet helt likt?</span></li>
+                  <li><code>KeyError</code><span>Stemmer kolonnenavnet og skilletegnet med CSV-filen?</span></li>
                 </ul>
               </div>
             </section>
@@ -5060,6 +5522,7 @@ export default function Home() {
                     <button type="button" onClick={toggleEditorFullscreen} aria-pressed={editorFullscreen}>{editorFullscreen ? "Avslutt fullskjerm" : "Fullskjerm"}</button>
                   </span>
                 </div>
+                {dataFileShelf()}
                 <label htmlFor="python-code" className="sr-only">Python-kode</label>
                 <PythonEditor
                   id="python-code"
