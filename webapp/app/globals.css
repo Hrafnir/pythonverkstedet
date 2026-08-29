@@ -343,6 +343,30 @@ p, li { text-wrap: pretty; }
 .status-dot.error { background: var(--coral); }
 @keyframes pulse { 50% { opacity: .35; } }
 .output-panel pre { flex: 1; min-height: 320px; margin: 0; padding: 28px; white-space: pre-wrap; overflow-wrap: anywhere; color: #b9efcb; font-family: var(--mono); font-size: 16px; line-height: 1.7; }
+.error-coach { margin: 16px; padding: 21px; border: 1px solid #e2bd62; border-radius: 12px; background: #fffaf0; color: #253b3a; box-shadow: 0 10px 24px #061d1a24; }
+.error-coach.is-indent { border-color: #77a995; }
+.error-coach.is-name, .error-coach.is-type { border-color: #92a7c8; }
+.error-coach-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.error-coach-label { display: block; margin-bottom: 4px; color: #9b6416; font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.error-coach h3 { margin: 0; color: var(--green-dark); font-size: 22px; line-height: 1.2; }
+.error-coach-heading button { flex: 0 0 auto; min-height: 38px; padding: 8px 11px; border: 1px solid #b97c24; border-radius: 8px; background: white; color: #805210; font-size: 12px; font-weight: 850; cursor: pointer; }
+.error-coach-heading button:hover { background: #fff1c8; }
+.error-coach-summary { margin: 14px 0; color: #465b56; font-size: 15px; line-height: 1.55; }
+.error-code-line { min-width: 0; display: grid; grid-template-columns: 40px minmax(0, 1fr); overflow: hidden; margin-bottom: 17px; border: 1px solid #d8c99d; border-radius: 8px; background: #102e2b; }
+.error-code-line > span { display: grid; place-items: center; padding: 11px 6px; border-right: 1px solid #3b5953; background: #193c37; color: var(--yellow); font-family: var(--mono); font-size: 13px; font-weight: 850; }
+.error-code-line code { overflow-x: auto; padding: 11px 13px; color: #f1f5f2; font-family: var(--mono); font-size: 14px; line-height: 1.55; white-space: pre; }
+.error-coach-questions { padding: 15px 16px; border-radius: 9px; background: #f3edda; }
+.error-coach-questions > strong { color: #69501f; font-size: 12px; letter-spacing: .07em; text-transform: uppercase; }
+.error-coach-questions ol { display: grid; gap: 7px; margin: 10px 0 0; padding-left: 22px; }
+.error-coach-questions li { padding-left: 3px; color: #3f514d; font-size: 14px; line-height: 1.5; }
+.error-coach-questions li::marker { color: #b6791c; font-family: var(--mono); font-weight: 900; }
+.error-coach details { margin-top: 10px; border: 1px solid #d9d0b8; border-radius: 8px; background: white; }
+.error-coach summary { padding: 11px 13px; color: #405954; font-size: 13px; font-weight: 850; cursor: pointer; }
+.error-coach details[open] summary { border-bottom: 1px solid #e2dccb; }
+.error-hint p { margin: 0; padding: 13px; color: #4b5e59; font-size: 14px; line-height: 1.55; }
+.output-panel .error-technical pre { min-height: 0; max-height: 230px; overflow: auto; margin: 0; padding: 13px; background: #0c2724; color: #b9cbc5; font-size: 12px; line-height: 1.55; }
+.error-coach-next { margin: 15px 1px 0; color: #4c5e59; font-size: 13px; line-height: 1.5; }
+.error-coach-next strong { color: var(--green-dark); }
 .output-tip { padding: 18px 22px; border-top: 1px solid #34514b; color: #a6bab4; font-size: 13px; line-height: 1.55; }
 .output-tip strong { color: #d5dfdb; }
 .code-workbench:fullscreen { width: 100vw; max-width: none; height: 100vh; grid-template-columns: minmax(0, 1.65fr) minmax(320px, .85fr); border: 0; border-radius: 0; background: #102e2b; }
@@ -760,6 +784,11 @@ p, li { text-wrap: pretty; }
   .editor-footer > span { display: none; }
   .editor-footer { justify-content: flex-end; }
   .output-panel pre { min-height: 180px; font-size: 15px; }
+  .error-coach { margin: 10px; padding: 16px; }
+  .error-coach-heading { display: grid; }
+  .error-coach-heading button { width: 100%; }
+  .error-code-line { grid-template-columns: 34px minmax(0, 1fr); }
+  .error-code-line code { font-size: 13px; }
   .turtle-heading { align-items: start; }
   .turtle-heading > span { margin-top: 2px; }
   .turtle-canvas-wrap { padding: 6px; }

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
+import vm from "node:vm";
+import ts from "typescript";
 
 const page = readFileSync("app/page.tsx", "utf8");
 const worker = readFileSync("public/pyodide-worker.mjs", "utf8");
@@ -9,6 +11,14 @@ const desktopMain = readFileSync("desktop/main.mjs", "utf8");
 const desktopBuild = readFileSync("scripts/build-macos.mjs", "utf8");
 const desktopPrepare = readFileSync("scripts/prepare-desktop-dev.mjs", "utf8");
 const offlinePackages = readFileSync("scripts/download-pyodide.mjs", "utf8");
+
+const analyzerSource = page.slice(page.indexOf("function analyzePythonError"), page.indexOf("const pythonTokens"));
+const analyzerJavaScript = ts.transpileModule(`${analyzerSource}\nglobalThis.analyzePythonError = analyzePythonError;`, {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None },
+}).outputText;
+const analyzerContext = vm.createContext({});
+vm.runInContext(analyzerJavaScript, analyzerContext);
+const analyzePythonError = analyzerContext.analyzePythonError;
 
 test("appen inneholder ni komplette læringsmoduler", () => {
   const moduleIds = page.match(/\n    id: [1-9],/g) ?? [];
@@ -90,6 +100,51 @@ test("kodeeditoren støtter innrykk, lesbar tekst og fullskjerm", () => {
   assert.match(page, /Fullskjerm/);
   assert.match(page, /const playgroundCode = ""/);
   assert.match(page, /code: ""/);
+});
+
+test("feildetektiven gjør Python-feil forståelige uten å rette koden", () => {
+  assert.match(page, /type ErrorCoach/);
+  assert.match(page, /function analyzePythonError/);
+  assert.match(page, /semicolonHeader/);
+  assert.match(page, /missingColon/);
+  assert.match(page, /Python venter på et kolon/);
+  assert.match(page, /Python finner ikke slutten på teksten/);
+  assert.match(page, /Python venter på innrykk/);
+  assert.match(page, /Python kjenner ikke igjen et navn/);
+  assert.match(page, /Undersøk før du endrer/);
+  assert.match(page, /Vis et tydeligere hint/);
+  assert.match(page, /Vis den tekniske Python-feilen/);
+  assert.match(page, /Gå til linje/);
+  assert.match(page, /setErrorCoach\(analyzePythonError\(error, code\)\)/);
+  assert.match(page, /Endre én liten ting, og kjør koden på nytt/);
+  assert.doesNotMatch(page, /setCode\([^)]*(?:replace|fixed|corrected)/);
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.error-coach/);
+  assert.match(css, /\.error-code-line/);
+  assert.match(css, /\.error-technical pre/);
+});
+
+test("feildetektiven kjenner igjen vanlige elevfeil fra ekte Python-format", () => {
+  const semicolon = analyzePythonError('File "<exec>", line 1\n    if x > 2;\n            ^\nSyntaxError: invalid syntax', "if x > 2;\n    print(x)");
+  assert.equal(semicolon.lineNumber, 1);
+  assert.equal(semicolon.title, "Et lite tegn står i veien");
+  assert.match(semicolon.hint, /kolon \(:\)/);
+  assert.equal("fixedCode" in semicolon, false);
+
+  const colon = analyzePythonError('File "<exec>", line 1\n    for n in range(3)\n                     ^\nSyntaxError: expected \':\'', "for n in range(3)\n    print(n)");
+  assert.equal(colon.title, "Python venter på et kolon");
+  assert.equal(colon.codeLine, "for n in range(3)");
+
+  const quote = analyzePythonError('File "<exec>", line 1\nSyntaxError: unterminated string literal', 'navn = "Ada\nprint(navn)');
+  assert.equal(quote.title, "Python finner ikke slutten på teksten");
+
+  const indent = analyzePythonError('File "<exec>", line 2\nIndentationError: expected an indented block after \'if\' statement on line 1', 'if True:\nprint("hei")');
+  assert.equal(indent.title, "Python venter på innrykk");
+  assert.equal(indent.lineNumber, 2);
+
+  const name = analyzePythonError('File "<exec>", line 1, in <module>\nNameError: name \'ukjent\' is not defined', "print(ukjent)");
+  assert.equal(name.kind, "name");
+  assert.match(name.summary, /ukjent/);
 });
 
 test("Python-rommet støtter datapakker, grafer og prosjektlagring", () => {

@@ -110,6 +110,17 @@ type SnakeGameConfig = {
   title: string;
 };
 
+type ErrorCoach = {
+  kind: "syntax" | "indent" | "name" | "type" | "runtime";
+  title: string;
+  summary: string;
+  lineNumber?: number;
+  codeLine?: string;
+  questions: string[];
+  hint: string;
+  technical: string;
+};
+
 type TurtleVectorMode = "centerline" | "edges" | "outline";
 
 type TurtleWorkshopSettings = {
@@ -2272,6 +2283,183 @@ function safeProjectName(name: string) {
   return name.trim().replace(/[\\/:*?"<>|]+/g, "-") || "python-prosjekt";
 }
 
+function analyzePythonError(rawError: string, source: string): ErrorCoach {
+  const technical = rawError.trim() || "Python stoppet uten en teknisk feilmelding.";
+  const lines = source.split("\n");
+  const userLineMatches = [...technical.matchAll(/File ["']<(?:exec|string)>["'], line (\d+)/g)];
+  const syntaxLineMatch = technical.match(/line (\d+)[\s\S]*?(?:SyntaxError|IndentationError|TabError)/);
+  const parsedLine = Number(userLineMatches.at(-1)?.[1] ?? syntaxLineMatch?.[1] ?? 0);
+  const lineNumber = parsedLine >= 1 && parsedLine <= lines.length ? parsedLine : undefined;
+  const codeLine = lineNumber ? lines[lineNumber - 1] : undefined;
+  const lineLabel = lineNumber ? `linje ${lineNumber}` : "koden";
+  const trimmedLine = codeLine?.trim() ?? "";
+  const blockHeader = /^\s*(?:if|elif|else|for|while|def|class|try|except|finally|with)\b/;
+  const semicolonHeader = blockHeader.test(codeLine ?? "") && /;\s*(?:#.*)?$/.test(codeLine ?? "");
+  const missingColon = blockHeader.test(codeLine ?? "") && !/:\s*(?:#.*)?$/.test(codeLine ?? "");
+  const errorName = technical.match(/\b(SyntaxError|IndentationError|TabError|NameError|TypeError|IndexError|ValueError|ZeroDivisionError|ModuleNotFoundError):\s*([^\n]*)/);
+  const detail = errorName?.[2]?.trim() ?? "";
+
+  if (semicolonHeader) {
+    return {
+      kind: "syntax",
+      title: "Et lite tegn står i veien",
+      summary: `Python stoppet ved ${lineLabel}. Linjen ser ut som starten på en kodeblokk, men avslutningstegnet passer ikke med Python-reglene.`,
+      lineNumber,
+      codeLine,
+      questions: [
+        "Starter linjen med if, for, while eller def?",
+        "Hvilket tegn bruker eksemplene i modulene rett før en innrykket blokk?",
+        "Er det et semikolon der du forventet dette tegnet?",
+      ],
+      hint: "I Python åpnes en blokk med kolon (:). Sammenlign det siste tegnet på linjen med et fungerende if- eller for-eksempel.",
+      technical,
+    };
+  }
+
+  if (/SyntaxError/.test(technical) && (missingColon || /expected ['\"]?:['\"]?/i.test(detail))) {
+    return {
+      kind: "syntax",
+      title: "Python venter på et kolon",
+      summary: `Se nøye på slutten av ${lineLabel}. Python tror linjen skal starte en innrykket kodeblokk.`,
+      lineNumber,
+      codeLine,
+      questions: [
+        "Er dette en if-, elif-, else-, for-, while- eller def-linje?",
+        "Skal de neste linjene ha innrykk og høre til denne linjen?",
+        "Hvilket tegn mangler helt til slutt?",
+      ],
+      hint: "En linje som starter en innrykket blokk, avsluttes med kolon (:). Du må selv plassere tegnet på riktig sted.",
+      technical,
+    };
+  }
+
+  if (/unterminated string|EOL while scanning|string literal/i.test(technical)) {
+    return {
+      kind: "syntax",
+      title: "Python finner ikke slutten på teksten",
+      summary: `På ${lineLabel} ser en tekst ut til å begynne uten å bli avsluttet på samme måte.`,
+      lineNumber,
+      codeLine,
+      questions: [
+        "Hvor begynner teksten med et anførselstegn?",
+        "Finnes det et tilsvarende anførselstegn etter siste bokstav?",
+        "Er samme type tegn brukt på begge sider – ' eller \"?",
+      ],
+      hint: "Tekst må ha et par anførselstegn. Tell tegnene på linjen og kontroller at det finnes en tydelig start og slutt.",
+      technical,
+    };
+  }
+
+  if (/was never closed|unmatched ['\")\]}]|closing parenthesis|does not match opening/i.test(technical)) {
+    return {
+      kind: "syntax",
+      title: "Et tegn mangler partneren sin",
+      summary: `Python tror en parentes, hakeparentes eller krøllparentes rundt ${lineLabel} ikke er lukket riktig.`,
+      lineNumber,
+      codeLine,
+      questions: [
+        "Kan du peke på hvert åpningstegn: (, [ eller {?",
+        "Har hvert åpningstegn et lukketegn av samme type?",
+        "Er tegnene lukket i motsatt rekkefølge av den de ble åpnet i?",
+      ],
+      hint: "Tell åpne og lukkede tegn. Parene er (), [] og {}. Begynn på den markerte linjen og se også på linjen rett over.",
+      technical,
+    };
+  }
+
+  if (/IndentationError|TabError/.test(technical)) {
+    const expectedBlock = /expected an indented block/i.test(technical);
+    return {
+      kind: "indent",
+      title: expectedBlock ? "Python venter på innrykk" : "Innrykket følger ikke mønsteret",
+      summary: expectedBlock
+        ? `Python fant ikke en innrykket handling ved ${lineLabel}.`
+        : `Ved ${lineLabel} er det sannsynligvis for mange, for få eller ulike typer innrykk.`,
+      lineNumber,
+      codeLine,
+      questions: [
+        "Hvilken if-, for-, while- eller def-linje skal denne linjen høre til?",
+        "Har alle linjene i samme blokk like mange mellomrom?",
+        "Kan Tab-knappen i editoren brukes til å lage fire mellomrom?",
+      ],
+      hint: expectedBlock
+        ? "Linjen etter kolon må vanligvis rykkes inn ett nivå. Bruk Tab én gang i editoren."
+        : "Marker linjene som skal høre sammen, og sammenlign hvor teksten begynner. Bruk Tab eller Shift+Tab for ett helt nivå.",
+      technical,
+    };
+  }
+
+  if (/SyntaxError/.test(technical)) {
+    const assignmentInCondition = /^\s*(?:if|elif|while)\b/.test(codeLine ?? "") && /(?<![<>=!])=(?!=)/.test(codeLine ?? "");
+    return {
+      kind: "syntax",
+      title: "Python forstår ikke skrivemåten ennå",
+      summary: `Python peker mot ${lineLabel}${trimmedLine ? ", men årsaken kan også stå like før stedet den peker på" : ""}.`,
+      lineNumber,
+      codeLine,
+      questions: assignmentInCondition
+        ? ["Prøver linjen å sammenligne to verdier?", "Hvor mange likhetstegn brukes når Python skal spørre «er lik»?", "Er kolon plassert helt til slutt?"]
+        : ["Er kolon, komma og anførselstegn på riktig plass?", "Har alle parenteser en partner?", "Ser linjen rett over ferdig ut?"],
+      hint: assignmentInCondition
+        ? "Ett likhetstegn gir en variabel en verdi. To likhetstegn sammenligner verdier. Finn selv hvilket av dem denne linjen trenger."
+        : "Les den markerte linjen tegn for tegn og sammenlign med nærmeste fungerende eksempel. Python markerer ofte stedet der den ga opp, ikke nødvendigvis det første gale tegnet.",
+      technical,
+    };
+  }
+
+  if (/NameError/.test(technical)) {
+    const unknownName = detail.match(/name ['\"]([^'\"]+)['\"] is not defined/)?.[1];
+    return {
+      kind: "name",
+      title: "Python kjenner ikke igjen et navn",
+      summary: unknownName
+        ? `Navnet «${unknownName}» brukes ved ${lineLabel}, men Python har ikke sett en verdi eller definisjon med nøyaktig samme navn.`
+        : `Et navn ved ${lineLabel} er ikke definert før det brukes.`,
+      lineNumber,
+      codeLine,
+      questions: [
+        "Er navnet skrevet helt likt hver gang, også store og små bokstaver?",
+        "Blir variabelen eller funksjonen laget før denne linjen kjøres?",
+        "Mangler det en import øverst i programmet?",
+      ],
+      hint: unknownName ? `Søk etter «${unknownName}» i koden. Sammenlign bokstav for bokstav med stedet der navnet skulle bli opprettet.` : "Finn første gang navnet brukes, og let etter en tidligere linje som gir det en verdi.",
+      technical,
+    };
+  }
+
+  if (/TypeError/.test(technical)) {
+    return {
+      kind: "type",
+      title: "Verdiene passer ikke til denne handlingen",
+      summary: `Programmet kom fram til ${lineLabel}, men verdiene der kan være av ulike typer – for eksempel tekst og tall.`,
+      lineNumber,
+      codeLine,
+      questions: [
+        "Hvilke verdier brukes på linjen, og er de tekst, heltall eller desimaltall?",
+        "Prøver koden å legge sammen tekst og tall direkte?",
+        "Kan print med komma brukes dersom målet bare er å vise verdiene?",
+      ],
+      hint: "Skriv eventuelt print(type(verdi)) rett før linjen for å undersøke typen. Endre deretter bare det som ikke passer til handlingen.",
+      technical,
+    };
+  }
+
+  return {
+    kind: "runtime",
+    title: "Programmet kom i gang, men stoppet underveis",
+    summary: lineNumber ? `Python stoppet ved linje ${lineNumber}. Undersøk verdiene på denne linjen og linjene som førte fram til den.` : "Python stoppet under kjøring. Del problemet opp og undersøk én verdi om gangen.",
+    lineNumber,
+    codeLine,
+    questions: [
+      "Hva var den siste linjen som virket?",
+      "Hvilke verdier har variablene rett før programmet stopper?",
+      "Kan du legge inn en midlertidig print-linje for å undersøke dem?",
+    ],
+    hint: "Kjør en mindre del av programmet, eller legg inn print rett før stedet som stopper. Målet er først å finne hvilken verdi som ikke er som forventet.",
+    technical,
+  };
+}
+
 const pythonTokens = /(#[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:False|None|True|and|as|break|class|continue|def|elif|else|for|from|if|import|in|is|not|or|pass|return|while)\b|\b(?:abs|float|int|len|max|min|print|range|round|str|sum)\b|\b\d+(?:\.\d+)?\b)/g;
 
 function colorPython(source: string): ReactNode[] {
@@ -3057,6 +3245,7 @@ export default function Home() {
   );
   const [output, setOutput] = useState("Trykk «Kjør kode» når du er klar.");
   const [runnerStatus, setRunnerStatus] = useState<"idle" | "loading" | "running" | "error">("idle");
+  const [errorCoach, setErrorCoach] = useState<ErrorCoach | null>(null);
   const [feedback, setFeedback] = useState("");
   const [completed, setCompleted] = useState<number[]>([]);
   const [projects, setProjects] = useState<LocalProject[]>([firstProject]);
@@ -3192,6 +3381,7 @@ export default function Home() {
     setCode(practiceCodes[module.id] ?? "");
     setOutput("Trykk «Kjør kode» når du er klar.");
     setFeedback("");
+    setErrorCoach(null);
     setPlotImages([]);
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
@@ -3208,6 +3398,7 @@ export default function Home() {
     setCode(project?.code ?? playgroundCode);
     setOutput("Skriv eller endre koden, og trykk «Kjør kode».");
     setFeedback("");
+    setErrorCoach(null);
     setPlotImages([]);
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
@@ -3221,6 +3412,7 @@ export default function Home() {
     setPlayground(false);
     setCurriculumView(true);
     setFeedback("");
+    setErrorCoach(null);
     setShareStatus("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -3260,6 +3452,7 @@ export default function Home() {
     setDesktopFilePath("");
     setCode(project.code);
     setOutput(`«${reference.title}» er åpnet som et nytt prosjekt. Forutsi resultatet før du kjører.`);
+    setErrorCoach(null);
     setPlotImages([]);
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
@@ -3309,6 +3502,7 @@ export default function Home() {
     setCode(nextTab === "practice" ? (practiceCodes[active.id] ?? "") : (solutionCodes[active.id] ?? active.starterCode));
     setOutput("Trykk «Kjør kode» når du er klar.");
     setFeedback("");
+    setErrorCoach(null);
     setPlotImages([]);
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
@@ -3322,6 +3516,7 @@ export default function Home() {
     if (labTab === "practice") setPracticeCodes((current) => ({ ...current, [active.id]: nextCode }));
     else setSolutionCodes((current) => ({ ...current, [active.id]: nextCode }));
     setFeedback("");
+    setErrorCoach(null);
     setOutput("Trykk «Kjør kode» når du er klar.");
   }
 
@@ -3331,6 +3526,7 @@ export default function Home() {
     setPracticeCodes((current) => ({ ...current, [active.id]: nextCode }));
     setOutput("Forutsi resultatet, og trykk «Kjør kode» når du er klar.");
     setFeedback("");
+    setErrorCoach(null);
     setPlotImages([]);
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
@@ -3346,6 +3542,7 @@ export default function Home() {
     setDesktopFilePath("");
     setCode(project.code);
     setOutput("Prosjektet er åpnet. Trykk «Kjør kode» når du er klar.");
+    setErrorCoach(null);
     setPlotImages([]);
     setExpandedPlotIndex(null);
     setTurtleDrawing(null);
@@ -3370,6 +3567,7 @@ export default function Home() {
     setDesktopFilePath("");
     setCode(project.code);
     setOutput("Nytt prosjekt opprettet lokalt på denne enheten.");
+    setErrorCoach(null);
     window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
     window.localStorage.setItem("bjornsveen-python-active-project", project.id);
   }
@@ -3395,6 +3593,7 @@ export default function Home() {
     setProjects(next);
     setActiveProjectId(next[0].id);
     setCode(next[0].code);
+    setErrorCoach(null);
     window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
     window.localStorage.setItem("bjornsveen-python-active-project", next[0].id);
   }
@@ -3425,6 +3624,7 @@ export default function Home() {
     setDesktopFilePath(opened.filePath);
     setCode(opened.code);
     setOutput("Prosjektet er åpnet fra Mac-en.");
+    setErrorCoach(null);
     window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
   }
 
@@ -3459,6 +3659,7 @@ export default function Home() {
     setDesktopFilePath("");
     setCode(importedCode);
     setOutput("Python-filen er importert som et lokalt prosjekt.");
+    setErrorCoach(null);
     window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
     window.localStorage.setItem("bjornsveen-python-active-project", project.id);
     event.target.value = "";
@@ -3613,6 +3814,59 @@ export default function Home() {
     setShareStatus(`SVG med ${modeNames[settings.mode]} er lagret i riktig millimeterstørrelse.`);
   }
 
+  function focusErrorLine(lineNumber: number) {
+    const editorId = playground ? "playground-code" : "python-code";
+    const input = document.getElementById(editorId) as HTMLTextAreaElement | null;
+    if (!input) return;
+    const lines = code.split("\n");
+    const lineIndex = Math.max(0, Math.min(lines.length - 1, lineNumber - 1));
+    const start = lines.slice(0, lineIndex).reduce((sum, line) => sum + line.length + 1, 0);
+    const end = start + (lines[lineIndex]?.length ?? 0);
+    input.focus();
+    input.setSelectionRange(start, end);
+    const lineHeight = Number.parseFloat(window.getComputedStyle(input).lineHeight) || 30;
+    input.scrollTop = Math.max(0, (lineIndex - 3) * lineHeight);
+  }
+
+  function errorCoachPanel() {
+    if (!errorCoach) return null;
+    return (
+      <section className={`error-coach is-${errorCoach.kind}`} aria-labelledby="error-coach-title">
+        <header className="error-coach-heading">
+          <div>
+            <span className="error-coach-label">Feildetektiv</span>
+            <h3 id="error-coach-title">{errorCoach.title}</h3>
+          </div>
+          {errorCoach.lineNumber && (
+            <button type="button" onClick={() => focusErrorLine(errorCoach.lineNumber!)}>
+              Gå til linje {errorCoach.lineNumber}
+            </button>
+          )}
+        </header>
+        <p className="error-coach-summary">{errorCoach.summary}</p>
+        {errorCoach.lineNumber && (
+          <div className="error-code-line" aria-label={`Kode på linje ${errorCoach.lineNumber}`}>
+            <span>{errorCoach.lineNumber}</span>
+            <code>{errorCoach.codeLine || "(tom linje)"}</code>
+          </div>
+        )}
+        <div className="error-coach-questions">
+          <strong>Undersøk før du endrer</strong>
+          <ol>{errorCoach.questions.map((question) => <li key={question}>{question}</li>)}</ol>
+        </div>
+        <details className="error-hint">
+          <summary>Vis et tydeligere hint</summary>
+          <p>{errorCoach.hint}</p>
+        </details>
+        <details className="error-technical">
+          <summary>Vis den tekniske Python-feilen</summary>
+          <pre>{errorCoach.technical}</pre>
+        </details>
+        <p className="error-coach-next"><strong>Neste steg:</strong> Endre én liten ting, og kjør koden på nytt.</p>
+      </section>
+    );
+  }
+
   function plotGallery() {
     if (!plotImages.length && !turtleDrawing && !snakeGame) return null;
     return (
@@ -3656,6 +3910,7 @@ export default function Home() {
   async function runCode() {
     setRunnerStatus("loading");
     setOutput("Starter Python … Første kjøring kan ta litt tid.");
+    setErrorCoach(null);
     setFeedback("");
     setPlotImages([]);
     setExpandedPlotIndex(null);
@@ -3683,6 +3938,7 @@ export default function Home() {
       if (data.type === "result") {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         setRunnerStatus("idle");
+        setErrorCoach(null);
         const nextPlots = data.plots ?? [];
         const nextTurtle = data.turtle ?? null;
         const nextGame = data.game ?? null;
@@ -3696,7 +3952,9 @@ export default function Home() {
       if (data.type === "error") {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         setRunnerStatus("error");
-        setOutput(data.error || "Noe gikk galt.");
+        const error = data.error || "Python stoppet uten en teknisk feilmelding.";
+        setErrorCoach(analyzePythonError(error, code));
+        setOutput("Python trenger litt hjelp før programmet kan kjøre ferdig.");
         worker.terminate();
       }
     };
@@ -3704,6 +3962,7 @@ export default function Home() {
     worker.onerror = (event) => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       setRunnerStatus("error");
+      setErrorCoach(null);
       const detail = event.message ? ` Teknisk detalj: ${event.message}` : "";
       setOutput(
         executionStarted
@@ -3839,7 +4098,7 @@ export default function Home() {
                     <strong>Resultat</strong>
                     <span className={`status-dot ${runnerStatus}`} />
                   </div>
-                  <pre>{output}</pre>
+                  {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                   {plotGallery()}
                   <div className="output-tip"><strong>Neste spørsmål:</strong> Hva kan dere endre for å få et annet resultat?</div>
                 </div>
@@ -4030,8 +4289,8 @@ export default function Home() {
               <div className="debug-guide">
                 <div>
                   <p className="section-label"><span>!</span> Når koden ikke virker</p>
-                  <h3>Les feilmeldingen nedenfra</h3>
-                  <p>Den siste linjen forteller vanligvis hva Python reagerte på. Finn linjenummeret, og kontroller én ting om gangen.</p>
+                  <h3>Feildetektiven hjelper – du retter</h3>
+                  <p>Etter en feil får du sannsynlig linje, spørsmål og et valgfritt hint. Appen endrer aldri koden automatisk: Undersøk ett tegn eller én verdi om gangen, og kjør på nytt.</p>
                 </div>
                 <ul>
                   <li><code>SyntaxError</code><span>Se etter manglende kolon, parentes eller anførselstegn.</span></li>
@@ -4416,7 +4675,7 @@ export default function Home() {
                   <strong>Resultat</strong>
                   <span className={`status-dot ${runnerStatus}`} />
                 </div>
-                <pre>{output}</pre>
+                {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                 {plotGallery()}
                 <div className="output-tip"><strong>Observer:</strong> Stemmer resultatet med det du forventet?</div>
               </div>
