@@ -5,6 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 
 const page = readFileSync("app/page.tsx", "utf8");
+const commandLibrary = readFileSync("app/pythonCommands.ts", "utf8");
 const worker = readFileSync("public/pyodide-worker.mjs", "utf8");
 const workflow = readFileSync("../.github/workflows/deploy-pages.yml", "utf8");
 const desktopMain = readFileSync("desktop/main.mjs", "utf8");
@@ -47,6 +48,27 @@ test("Python er første område, standardvisning og har ikke sidepanel", () => {
   assert.doesNotMatch(page, /<aside/);
   const pickerSource = page.slice(page.indexOf('id="module-select"'), page.indexOf('<nav className="top-actions"'));
   assert.ok(pickerSource.indexOf('<option value="playground">Python</option>') < pickerSource.indexOf("{modules.map"));
+});
+
+test("kommandobiblioteket er omfattende, søkbart på norsk og tilgjengelig i editoren", () => {
+  assert.ok((commandLibrary.match(/^    id:/gm) ?? []).length >= 100);
+  for (const entry of [
+    "= gir en verdi til en variabel",
+    "== undersøker om to verdier er like",
+    ">= betyr større enn eller lik",
+    "<= betyr mindre enn eller lik",
+    "!= undersøker om verdier er ulike",
+    "append legger til bakerst",
+    "for gjentar kode for hver verdi",
+    "plot tegner en linjegraf",
+  ]) assert.match(commandLibrary, new RegExp(entry.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(commandLibrary, /keywords: \["større enn"/);
+  assert.match(page, /normalizeCommandSearch/);
+  assert.match(page, /filteredCommands/);
+  assert.match(page, /Kommandobibliotek/);
+  assert.match(page, /⌘ Kommandoer/);
+  assert.match(page, /Søk etter tegn, kommando eller det du vil gjøre/);
+  assert.match(page, /Sett inn ved markøren/);
 });
 
 test("modulene har tom skrivelab, redigerbar fasit, kodefarger og ekstratriks", () => {

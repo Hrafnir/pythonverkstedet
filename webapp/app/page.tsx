@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, KeyboardEvent, ReactNode } from "react";
+import { commandCategories, pythonCommands } from "./pythonCommands";
+import type { CommandCategory, PythonCommand } from "./pythonCommands";
 
 type Module = {
   id: number;
@@ -126,6 +128,17 @@ type ErrorCoach = {
   hint: string;
   technical: string;
 };
+
+function normalizeCommandSearch(value: string) {
+  return value
+    .toLocaleLowerCase("nb")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ø/g, "o")
+    .replace(/æ/g, "ae")
+    .replace(/å/g, "a")
+    .trim();
+}
 
 type TurtleVectorMode = "centerline" | "edges" | "outline";
 
@@ -3862,6 +3875,11 @@ export default function Home() {
   const [tutorialCategory, setTutorialCategory] = useState<TutorialCategory>("Alle");
   const [selectedTutorialId, setSelectedTutorialId] = useState("print-mix");
   const [tutorialStatus, setTutorialStatus] = useState("");
+  const [commandLibraryOpen, setCommandLibraryOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState("");
+  const [commandCategory, setCommandCategory] = useState<CommandCategory>("Alle");
+  const [selectedCommandId, setSelectedCommandId] = useState("assign");
+  const [commandStatus, setCommandStatus] = useState("");
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [feedbackKind, setFeedbackKind] = useState("Forslag");
   const [feedbackMessage, setFeedbackMessage] = useState("");
@@ -3917,6 +3935,40 @@ export default function Home() {
       return searchable.includes(query);
     });
   }, [tutorialCategory, tutorialQuery]);
+
+  const filteredCommands = useMemo(() => {
+    const query = normalizeCommandSearch(commandQuery);
+    const terms = query.split(/\s+/).filter(Boolean);
+    return pythonCommands
+      .filter((command) => commandCategory === "Alle" || command.category === commandCategory)
+      .map((command, index) => {
+        const normalizedTitle = normalizeCommandSearch(command.title);
+        const normalizedSyntax = normalizeCommandSearch(command.syntax);
+        const normalizedKeywords = command.keywords.map(normalizeCommandSearch);
+        const searchable = normalizeCommandSearch([
+          command.syntax,
+          command.title,
+          command.summary,
+          command.explanation,
+          command.example,
+          command.result ?? "",
+          command.commonMistake ?? "",
+          command.category,
+          ...command.keywords,
+        ].join(" "));
+        const matches = !terms.length || terms.every((term) => searchable.includes(term));
+        let score = -index / 1000;
+        if (query && normalizedSyntax === query) score += 120;
+        if (query && normalizedTitle.includes(query)) score += 80;
+        if (query && normalizedKeywords.includes(query)) score += 95;
+        score += terms.filter((term) => normalizedSyntax.includes(term)).length * 20;
+        score += terms.filter((term) => normalizedTitle.includes(term)).length * 12;
+        return { command, matches, score };
+      })
+      .filter((item) => item.matches)
+      .sort((a, b) => b.score - a.score)
+      .map((item) => item.command);
+  }, [commandCategory, commandQuery]);
 
   const filteredCurriculumGoals = useMemo(
     () => curriculumGoals.filter((goal) =>
@@ -3975,11 +4027,12 @@ export default function Home() {
     function closeOverlay(event: globalThis.KeyboardEvent) {
       if (event.key !== "Escape") return;
       if (feedbackDialogOpen) setFeedbackDialogOpen(false);
+      else if (commandLibraryOpen) setCommandLibraryOpen(false);
       else if (tutorialOpen) setTutorialOpen(false);
     }
     document.addEventListener("keydown", closeOverlay);
     return () => document.removeEventListener("keydown", closeOverlay);
-  }, [feedbackDialogOpen, tutorialOpen]);
+  }, [commandLibraryOpen, feedbackDialogOpen, tutorialOpen]);
 
   function changeEditorFontSize(change: number) {
     const next = Math.min(28, Math.max(15, editorFontSize + change));
@@ -4201,6 +4254,7 @@ export default function Home() {
   }
 
   function openTutorial() {
+    setCommandLibraryOpen(false);
     setTutorialOpen(true);
     setTutorialStatus("");
   }
@@ -4237,6 +4291,70 @@ export default function Home() {
       setTutorialStatus(`Koden til «${tutorial.title}» er kopiert.`);
     } catch {
       setTutorialStatus("Nettleseren tillot ikke kopiering. Marker koden i hjelpevinduet og kopier manuelt.");
+    }
+  }
+
+  function openCommandLibrary(initialQuery = "") {
+    setTutorialOpen(false);
+    setCommandQuery(initialQuery);
+    setCommandCategory("Alle");
+    setCommandStatus("");
+    setCommandLibraryOpen(true);
+  }
+
+  function chooseCommand(command: PythonCommand) {
+    setSelectedCommandId(command.id);
+    setCommandStatus("");
+  }
+
+  function insertCommandExample(command: PythonCommand) {
+    if (curriculumView) {
+      const project: LocalProject = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        name: safeProjectName(`Eksempel ${command.title.replace(/^[^\p{L}]+/u, "")}`),
+        code: command.example,
+        updatedAt: new Date().toISOString(),
+      };
+      const nextProjects = [...projects, project];
+      setProjects(nextProjects);
+      setActiveProjectId(project.id);
+      setPlayground(true);
+      setCurriculumView(false);
+      setCode(project.code);
+      setOutput(`Eksemplet «${command.title}» er klart. Endre det og kjør når du vil.`);
+      setCommandLibraryOpen(false);
+      window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(nextProjects));
+      window.localStorage.setItem("bjornsveen-python-active-project", project.id);
+      requestAnimationFrame(() => workbenchRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      return;
+    }
+
+    const editorId = playground ? "playground-code" : "python-code";
+    const editor = document.getElementById(editorId) as HTMLTextAreaElement | null;
+    const start = editor?.selectionStart ?? code.length;
+    const end = editor?.selectionEnd ?? start;
+    const before = code.slice(0, start);
+    const after = code.slice(end);
+    const prefix = before && !before.endsWith("\n\n") ? (before.endsWith("\n") ? "\n" : "\n\n") : "";
+    const suffix = after && !after.startsWith("\n") ? "\n\n" : "";
+    const insertion = `${prefix}${command.example}${suffix}`;
+    const nextCode = `${before}${insertion}${after}`;
+    const caret = before.length + insertion.length;
+    updateCode(nextCode);
+    setCommandStatus(`Eksemplet «${command.title}» er satt inn ved markøren. Endre verdiene slik at koden blir deres egen.`);
+    requestAnimationFrame(() => {
+      const nextEditor = document.getElementById(editorId) as HTMLTextAreaElement | null;
+      nextEditor?.focus();
+      nextEditor?.setSelectionRange(caret, caret);
+    });
+  }
+
+  async function copyCommandExample(command: PythonCommand) {
+    try {
+      await navigator.clipboard.writeText(command.example);
+      setCommandStatus(`Eksemplet til «${command.title}» er kopiert.`);
+    } catch {
+      setCommandStatus("Nettleseren tillot ikke kopiering. Marker koden i oppslagsverket og kopier manuelt.");
     }
   }
 
@@ -4725,6 +4843,120 @@ export default function Home() {
     );
   }
 
+  function commandLibraryPanel() {
+    if (!commandLibraryOpen) return null;
+    const command = filteredCommands.find((item) => item.id === selectedCommandId) ?? filteredCommands[0];
+    return (
+      <div className="command-library-overlay" role="presentation" onMouseDown={() => setCommandLibraryOpen(false)}>
+        <section className="command-library" role="dialog" aria-modal="true" aria-labelledby="command-library-title" onMouseDown={(event) => event.stopPropagation()}>
+          <header className="command-library-header">
+            <div>
+              <span>Python på vanlig norsk</span>
+              <h2 id="command-library-title">Kommandobibliotek</h2>
+            </div>
+            <div className="command-library-total"><strong>{pythonCommands.length}</strong><small>oppslag</small></div>
+            <button type="button" onClick={() => setCommandLibraryOpen(false)} aria-label="Lukk kommandobiblioteket">Lukk</button>
+          </header>
+
+          <div className="command-library-intro">
+            <p><strong>Du trenger ikke vite hva kommandoen heter.</strong> Søk etter det du vil gjøre med vanlige ord.</p>
+            <div aria-label="Eksempler på søk">
+              {["større enn", "legg til i liste", "gjenta", "to desimaler", "tegn graf"].map((suggestion) => (
+                <button type="button" onClick={() => { setCommandQuery(suggestion); setCommandCategory("Alle"); }} key={suggestion}>{suggestion}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="command-library-controls">
+            <label htmlFor="command-search">
+              <span>Søk etter tegn, kommando eller det du vil gjøre</span>
+              <div>
+                <span aria-hidden="true">⌕</span>
+                <input
+                  id="command-search"
+                  type="search"
+                  value={commandQuery}
+                  onChange={(event) => setCommandQuery(event.target.value)}
+                  placeholder="Prøv: større enn, variabel, gjennomsnitt …"
+                  autoComplete="off"
+                  autoFocus
+                />
+                {commandQuery && <button type="button" onClick={() => setCommandQuery("")}>Tøm</button>}
+              </div>
+            </label>
+            <label htmlFor="command-category">
+              <span>Vis emne</span>
+              <select id="command-category" value={commandCategory} onChange={(event) => setCommandCategory(event.target.value as CommandCategory)}>
+                {commandCategories.map((category) => <option value={category} key={category}>{category}</option>)}
+              </select>
+            </label>
+          </div>
+
+          {command ? (
+            <div className="command-library-body">
+              <nav className="command-result-list" aria-label="Søkeresultater i kommandobiblioteket">
+                <small>{filteredCommands.length} treff</small>
+                {filteredCommands.map((item) => (
+                  <button
+                    type="button"
+                    className={command.id === item.id ? "is-active" : ""}
+                    aria-pressed={command.id === item.id}
+                    onClick={() => chooseCommand(item)}
+                    key={item.id}
+                  >
+                    <code>{item.syntax}</code>
+                    <strong>{item.title}</strong>
+                    <span>{item.category}</span>
+                  </button>
+                ))}
+              </nav>
+
+              <article className="command-detail" key={command.id}>
+                <p className="command-detail-category">{command.category}</p>
+                <h3>{command.title}</h3>
+                <code className="command-syntax">{command.syntax}</code>
+                <p className="command-summary">{command.summary}</p>
+
+                <section className="command-explanation">
+                  <strong>Hva betyr det?</strong>
+                  <p>{command.explanation}</p>
+                </section>
+
+                <section className="command-example">
+                  <div><strong>Eksempel som virker</strong><span>Du kan endre alt</span></div>
+                  <pre><code>{command.example}</code></pre>
+                  {command.result && <div className="command-result"><strong>Dette vises</strong><pre>{command.result}</pre></div>}
+                  <div className="command-example-actions">
+                    <button type="button" className="command-insert" onClick={() => insertCommandExample(command)}>
+                      {curriculumView ? "Åpne i Python" : "+ Sett inn ved markøren"}
+                    </button>
+                    <button type="button" onClick={() => copyCommandExample(command)}>Kopier eksempel</button>
+                  </div>
+                </section>
+
+                {command.commonMistake && (
+                  <div className="command-mistake"><strong>Vanlig feil</strong><p>{command.commonMistake}</p></div>
+                )}
+
+                <div className="command-related-searches">
+                  <strong>Du kan også søke etter</strong>
+                  <div>{command.keywords.slice(0, 7).map((keyword) => <button type="button" onClick={() => { setCommandQuery(keyword); setCommandCategory("Alle"); }} key={keyword}>{keyword}</button>)}</div>
+                </div>
+                {commandStatus && <p className="command-status" role="status">{commandStatus}</p>}
+              </article>
+            </div>
+          ) : (
+            <div className="command-library-empty">
+              <strong>Ingen oppslag traff alle søkeordene.</strong>
+              <p>Prøv ett kortere ord. Du kan for eksempel søke «større», «liste», «tilfeldig» eller selve tegnet <code>&gt;=</code>.</p>
+              <button type="button" onClick={() => { setCommandQuery(""); setCommandCategory("Alle"); }}>Vis hele biblioteket</button>
+            </div>
+          )}
+        </section>
+      </div>
+    );
+  }
+
   function plotGallery() {
     if (!plotImages.length && !turtleDrawing && !snakeGame) return null;
     return (
@@ -4889,6 +5121,9 @@ export default function Home() {
           <span className="module-position">{playground ? "Python-editor" : curriculumView ? "MAT01-06" : `${completed.length} av ${modules.length} fullført`}</span>
         </div>
         <nav className="top-actions" aria-label="Verktøy">
+          <button className="text-button command-library-button" type="button" onClick={() => openCommandLibrary()} aria-pressed={commandLibraryOpen}>
+            <span aria-hidden="true">⌘</span> Kommandoer
+          </button>
           <button className="text-button feedback-button" type="button" onClick={() => setFeedbackDialogOpen(true)}>
             Gi tilbakemelding
           </button>
@@ -4928,6 +5163,7 @@ export default function Home() {
                     <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
                     <strong>{safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py</strong>
                     <span className="panel-tools">
+                      <button type="button" className="command-help-button" onClick={() => openCommandLibrary()} aria-pressed={commandLibraryOpen}>⌘ Kommandoer</button>
                       <button type="button" className="coding-help-button" onClick={openTutorial} aria-pressed={tutorialOpen}>? Hjelp mens du koder</button>
                       <button type="button" onClick={copyCodeAsText}>Kopier kode + svar</button>
                       <button type="button" onClick={() => copyCodeAsImage(`${safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py`)}>Bilde av kode + svar</button>
@@ -5510,6 +5746,7 @@ export default function Home() {
                   <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
                   <strong>verksted.py</strong>
                   <span className="panel-tools">
+                    <button type="button" className="command-help-button" onClick={() => openCommandLibrary()} aria-pressed={commandLibraryOpen}>⌘ Kommandoer</button>
                     <button type="button" className="coding-help-button" onClick={openTutorial} aria-pressed={tutorialOpen}>? Hjelp mens du koder</button>
                     <button type="button" onClick={copyCodeAsText}>Kopier kode + svar</button>
                     <button type="button" onClick={() => copyCodeAsImage("verksted.py")}>Bilde av kode + svar</button>
@@ -5638,6 +5875,7 @@ export default function Home() {
         </article>
         )}
       </div>
+      {commandLibraryPanel()}
       {turtleExpanded && turtleDrawing && (
         <div className="plot-modal turtle-modal" role="dialog" aria-modal="true" aria-label="Turtle-tegning i stor visning" onClick={() => setTurtleExpanded(false)}>
           <div className="plot-modal-card turtle-modal-card" onClick={(event) => event.stopPropagation()}>
