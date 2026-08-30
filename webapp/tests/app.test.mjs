@@ -28,13 +28,21 @@ const analyzerContext = vm.createContext({});
 vm.runInContext(analyzerJavaScript, analyzerContext);
 const analyzePythonError = analyzerContext.analyzePythonError;
 
+const libraryHelperSource = page.slice(page.indexOf("type PythonLibraryDefinition"), page.indexOf("const pythonTokens"));
+const libraryHelperJavaScript = ts.transpileModule(`${libraryHelperSource}\nglobalThis.analyzePythonImports = analyzePythonImports;`, {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None },
+}).outputText;
+const libraryHelperContext = vm.createContext({});
+vm.runInContext(libraryHelperJavaScript, libraryHelperContext);
+const { analyzePythonImports } = libraryHelperContext;
+
 const editorHelperSource = page.slice(page.indexOf("type EditorDiagnostic"), page.indexOf("function PythonEditor"));
-const editorHelperJavaScript = ts.transpileModule(`${editorHelperSource}\nglobalThis.pythonRangePreview = pythonRangePreview;\nglobalThis.pythonLineDiagnostic = pythonLineDiagnostic;\nglobalThis.startsPythonBlockWithoutColon = startsPythonBlockWithoutColon;`, {
+const editorHelperJavaScript = ts.transpileModule(`${editorHelperSource}\nglobalThis.pythonRangePreview = pythonRangePreview;\nglobalThis.pythonLineDiagnostic = pythonLineDiagnostic;\nglobalThis.startsPythonBlockWithoutColon = startsPythonBlockWithoutColon;\nglobalThis.findPythonBlockSuggestion = findPythonBlockSuggestion;\nglobalThis.pythonPairedEnter = pythonPairedEnter;`, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None },
 }).outputText;
 const editorHelperContext = vm.createContext({});
 vm.runInContext(editorHelperJavaScript, editorHelperContext);
-const { pythonRangePreview, pythonLineDiagnostic, startsPythonBlockWithoutColon } = editorHelperContext;
+const { pythonRangePreview, pythonLineDiagnostic, startsPythonBlockWithoutColon, findPythonBlockSuggestion, pythonPairedEnter } = editorHelperContext;
 
 test("appen inneholder ti komplette læringsmoduler", () => {
   const moduleIds = page.match(/\n    id: (?:[1-9]|10),/g) ?? [];
@@ -283,7 +291,7 @@ test("kodeeditoren støtter innrykk, lesbar tekst og fullskjerm", () => {
   assert.match(page, /event\.key === "Enter"/);
   assert.match(page, /codeBeforeComment\.endsWith\(":"\)/);
   assert.match(page, /Legg til : og lag innrykk/);
-  assert.match(page, /const pairMap/);
+  assert.match(page, /const pythonPairMap/);
   assert.match(page, /Linje \{lineNumber\}, kolonne \{columnNumber\}/);
   assert.match(page, /Løkken teller slik/);
   assert.match(page, /indent-guide-layer/);
@@ -295,10 +303,39 @@ test("kodeeditoren støtter innrykk, lesbar tekst og fullskjerm", () => {
   assert.match(page, /code: ""/);
 });
 
+test("editoren bekrefter tilgjengelige biblioteker og varsler om ukjente importer", () => {
+  const imports = analyzePythonImports("import numpy as np\nimport math\nfrom matplotlib import pyplot\nimport requests");
+  assert.equal(imports.length, 4);
+  assert.equal(imports[0].label, "NumPy");
+  assert.equal(imports[0].alias, "np");
+  assert.equal(imports[0].available, true);
+  assert.equal(imports[0].availability, "offline");
+  assert.equal(imports[1].availability, "standard");
+  assert.equal(imports[2].label, "Matplotlib");
+  assert.equal(imports[3].available, false);
+  assert.match(page, /editor-library-status/);
+  assert.match(page, /kind = "library"/);
+  assert.match(page, /er ikke bekreftet i offline-pakken/);
+});
+
+test("editoren lager og rydder par og åpner tomme klammer over flere linjer", () => {
+  assert.match(page, /"\{": "\}"/);
+  assert.match(page, /event\.key === "Backspace"/);
+  assert.match(page, /pythonClosingCharacters\.has/);
+  const braces = pythonPairedEnter("data = {}", 8);
+  assert.equal(braces.insertion, "\n    \n");
+  assert.equal(braces.nextCursor, 13);
+  const indented = pythonPairedEnter("if sant:\n    data = []", 21);
+  assert.equal(indented.insertion, "\n        \n    ");
+  assert.equal(pythonPairedEnter('tekst = ""', 9), null);
+});
+
 test("editorhjelpen varsler presist og forklarer range uten å løse oppgaven", () => {
   assert.equal(startsPythonBlockWithoutColon("for n in range(1, 6)"), true);
   assert.equal(startsPythonBlockWithoutColon("for n in range(1, 6):"), false);
   assert.equal(startsPythonBlockWithoutColon("print('hei')"), false);
+  assert.equal(findPythonBlockSuggestion("for n in range(4)", 17).position, 17);
+  assert.equal(findPythonBlockSuggestion("for n in range(4)\n    ", 22).hasFollowingNewline, true);
   assert.match(pythonRangePreview("for n in range(1, 6):"), /1, 2, 3, 4, 5/);
   assert.match(pythonRangePreview("for n in range(5, 0, -2):"), /5, 3, 1/);
   assert.match(pythonRangePreview("for n in range(1, 6):"), /Stopptallet 6 er ikke med/);

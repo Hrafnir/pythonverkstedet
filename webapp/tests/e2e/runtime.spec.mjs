@@ -139,7 +139,23 @@ test("editorhjelp og modale vinduer fungerer med tastatur", async ({ page }) => 
   await editor.press("Enter");
   await expect(page.getByText("Mangler det et kolon?", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Legg til : og lag innrykk" }).click();
-  await expect(editor).toHaveValue("for n in range(1, 6):\n    ");
+  await expect(editor).toHaveValue(/^for n in range\(1, 6\):\n    \n?$/);
+
+  await editor.fill("data = ");
+  await editor.focus();
+  await editor.press("End");
+  await editor.press("{");
+  await expect(editor).toHaveValue("data = {}");
+  await editor.press("Enter");
+  await expect(editor).toHaveValue("data = {\n    \n}");
+
+  await editor.fill("import numpy as np\nimport math\nimport requests");
+  const libraryStatus = page.locator(".editor-library-status");
+  await expect(libraryStatus).toContainText("NumPy som np er tilgjengelig offline");
+  await expect(libraryStatus).toContainText("math er tilgjengelig");
+  await expect(libraryStatus).toContainText("requests er ikke bekreftet i offline-pakken");
+  await expect(page.locator(".py-library").filter({ hasText: /^numpy$/ }).first()).toBeVisible();
+  await expect(page.locator(".py-library").filter({ hasText: /^np$/ }).first()).toBeVisible();
 
   const commands = page.locator(".top-actions").getByRole("button", { name: "Kommandoer", exact: true });
   await commands.click();

@@ -3189,21 +3189,114 @@ function analyzePythonError(rawError: string, source: string): ErrorCoach {
   };
 }
 
-const pythonTokens = /(#[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:False|None|True|and|as|break|class|continue|def|elif|else|for|from|if|import|in|is|not|or|pass|return|while)\b|\b(?:abs|float|int|len|max|min|print|range|round|str|sum)\b|\b\d+(?:\.\d+)?\b)/g;
+type PythonLibraryDefinition = {
+  label: string;
+  availability: "standard" | "offline" | "local";
+  highlightedNames: string[];
+};
 
-function colorPython(source: string): ReactNode[] {
+type PythonImportStatus = {
+  module: string;
+  label: string;
+  alias?: string;
+  available: boolean;
+  availability?: PythonLibraryDefinition["availability"];
+};
+
+const pythonLibraryCatalog: Record<string, PythonLibraryDefinition> = {
+  math: { label: "math", availability: "standard", highlightedNames: ["math"] },
+  statistics: { label: "statistics", availability: "standard", highlightedNames: ["statistics"] },
+  fractions: { label: "fractions", availability: "standard", highlightedNames: ["fractions", "Fraction"] },
+  decimal: { label: "decimal", availability: "standard", highlightedNames: ["decimal", "Decimal"] },
+  random: { label: "random", availability: "standard", highlightedNames: ["random"] },
+  csv: { label: "csv", availability: "standard", highlightedNames: ["csv"] },
+  collections: { label: "collections", availability: "standard", highlightedNames: ["collections", "Counter"] },
+  itertools: { label: "itertools", availability: "standard", highlightedNames: ["itertools"] },
+  datetime: { label: "datetime", availability: "standard", highlightedNames: ["datetime", "date", "timedelta"] },
+  json: { label: "json", availability: "standard", highlightedNames: ["json"] },
+  re: { label: "re", availability: "standard", highlightedNames: ["re"] },
+  time: { label: "time", availability: "standard", highlightedNames: ["time"] },
+  pathlib: { label: "pathlib", availability: "standard", highlightedNames: ["pathlib", "Path"] },
+  os: { label: "os", availability: "standard", highlightedNames: ["os"] },
+  sys: { label: "sys", availability: "standard", highlightedNames: ["sys"] },
+  string: { label: "string", availability: "standard", highlightedNames: ["string"] },
+  textwrap: { label: "textwrap", availability: "standard", highlightedNames: ["textwrap"] },
+  copy: { label: "copy", availability: "standard", highlightedNames: ["copy"] },
+  functools: { label: "functools", availability: "standard", highlightedNames: ["functools"] },
+  operator: { label: "operator", availability: "standard", highlightedNames: ["operator"] },
+  bisect: { label: "bisect", availability: "standard", highlightedNames: ["bisect"] },
+  heapq: { label: "heapq", availability: "standard", highlightedNames: ["heapq"] },
+  array: { label: "array", availability: "standard", highlightedNames: ["array"] },
+  enum: { label: "enum", availability: "standard", highlightedNames: ["enum"] },
+  typing: { label: "typing", availability: "standard", highlightedNames: ["typing"] },
+  unicodedata: { label: "unicodedata", availability: "standard", highlightedNames: ["unicodedata"] },
+  numpy: { label: "NumPy", availability: "offline", highlightedNames: ["numpy", "np"] },
+  pandas: { label: "pandas", availability: "offline", highlightedNames: ["pandas", "pd"] },
+  matplotlib: { label: "Matplotlib", availability: "offline", highlightedNames: ["matplotlib", "pyplot", "plt"] },
+  scipy: { label: "SciPy", availability: "offline", highlightedNames: ["scipy", "stats"] },
+  sympy: { label: "SymPy", availability: "offline", highlightedNames: ["sympy", "sp"] },
+  sklearn: { label: "scikit-learn", availability: "offline", highlightedNames: ["sklearn", "LinearRegression"] },
+  PIL: { label: "Pillow", availability: "offline", highlightedNames: ["PIL", "Image", "ImageDraw"] },
+  networkx: { label: "NetworkX", availability: "offline", highlightedNames: ["networkx", "nx"] },
+  shapely: { label: "Shapely", availability: "offline", highlightedNames: ["shapely", "Polygon"] },
+  turtle: { label: "Turtle", availability: "local", highlightedNames: ["turtle"] },
+  spill: { label: "Spill", availability: "local", highlightedNames: ["spill", "Snake"] },
+};
+
+const pythonLibraryNames = new Set(Object.values(pythonLibraryCatalog).flatMap((library) => library.highlightedNames));
+
+function analyzePythonImports(source: string): PythonImportStatus[] {
+  const imports: PythonImportStatus[] = [];
+  const seen = new Set<string>();
+  const addImport = (module: string, alias?: string) => {
+    const root = module.split(".")[0];
+    const definition = pythonLibraryCatalog[root];
+    const key = `${module}:${alias ?? ""}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    imports.push({
+      module,
+      alias,
+      label: definition?.label ?? module,
+      available: Boolean(definition),
+      availability: definition?.availability,
+    });
+  };
+
+  for (const line of source.split("\n")) {
+    const code = line.replace(/#.*$/, "").trim();
+    const fromMatch = code.match(/^from\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s+import\s+/);
+    if (fromMatch) {
+      addImport(fromMatch[1]);
+      continue;
+    }
+    const importMatch = code.match(/^import\s+(.+)$/);
+    if (!importMatch) continue;
+    for (const part of importMatch[1].split(",")) {
+      const moduleMatch = part.trim().match(/^([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)(?:\s+as\s+([A-Za-z_]\w*))?$/);
+      if (moduleMatch) addImport(moduleMatch[1], moduleMatch[2]);
+    }
+  }
+  return imports;
+}
+
+const pythonTokens = /(#[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:False|None|True|and|as|break|class|continue|def|elif|else|for|from|if|import|in|is|not|or|pass|return|while)\b|\b(?:abs|float|int|len|max|min|print|range|round|str|sum)\b|\b\d+(?:\.\d+)?\b|\b[A-Za-z_]\w*\b)/g;
+
+function colorPython(source: string, importedAliases = new Set<string>()): ReactNode[] {
   return source.split(pythonTokens).map((token, index) => {
     let kind = "plain";
     if (token.startsWith("#")) kind = "comment";
     else if (token.startsWith('"') || token.startsWith("'")) kind = "string";
     else if (/^(?:False|None|True|and|as|break|class|continue|def|elif|else|for|from|if|import|in|is|not|or|pass|return|while)$/.test(token)) kind = "keyword";
     else if (/^(?:abs|float|int|len|max|min|print|range|round|str|sum)$/.test(token)) kind = "builtin";
+    else if (pythonLibraryNames.has(token) || importedAliases.has(token)) kind = "library";
     else if (/^\d+(?:\.\d+)?$/.test(token)) kind = "number";
     return <span className={`py-${kind}`} key={`${index}-${token}`}>{token}</span>;
   });
 }
 
 function colorPythonLines(source: string) {
+  const importedAliases = new Set(analyzePythonImports(source).flatMap((status) => status.available && status.alias ? [status.alias] : []));
   return source.split("\n").map((line, lineIndex) => {
     const leadingSpaces = line.match(/^ */)?.[0].length ?? 0;
     const indentLevels = Math.floor(leadingSpaces / 4);
@@ -3214,7 +3307,7 @@ function colorPythonLines(source: string) {
             <i key={level} style={{ left: `${(level + 1) * 4}ch` }} />
           ))}
         </span>
-        {colorPython(line)}
+        {colorPython(line, importedAliases)}
       </span>
     );
   });
@@ -3307,6 +3400,48 @@ function startsPythonBlockWithoutColon(line: string) {
     && !/[([{]$/.test(code);
 }
 
+type PythonBlockSuggestion = { position: number; indent: string; hasFollowingNewline: boolean };
+
+function findPythonBlockSuggestion(value: string, cursor: number): PythonBlockSuggestion | null {
+  const safeCursor = Math.min(cursor, value.length);
+  const currentStart = value.lastIndexOf("\n", Math.max(0, safeCursor - 1)) + 1;
+  const nextNewline = value.indexOf("\n", safeCursor);
+  const currentEnd = nextNewline === -1 ? value.length : nextNewline;
+  const currentLine = value.slice(currentStart, currentEnd);
+  if (startsPythonBlockWithoutColon(currentLine)) {
+    return {
+      position: currentEnd,
+      indent: currentLine.match(/^\s*/)?.[0] ?? "",
+      hasFollowingNewline: value[currentEnd] === "\n",
+    };
+  }
+  if (currentLine.trim() || currentStart === 0) return null;
+  const previousEnd = currentStart - 1;
+  const previousStart = value.lastIndexOf("\n", Math.max(0, previousEnd - 1)) + 1;
+  const previousLine = value.slice(previousStart, previousEnd);
+  if (!startsPythonBlockWithoutColon(previousLine)) return null;
+  return {
+    position: previousEnd,
+    indent: previousLine.match(/^\s*/)?.[0] ?? "",
+    hasFollowingNewline: true,
+  };
+}
+
+const pythonPairMap: Record<string, string> = { "(": ")", "[": "]", "{": "}", "\"": "\"", "'": "'" };
+const pythonClosingCharacters = new Set(Object.values(pythonPairMap));
+
+function pythonPairedEnter(value: string, cursor: number) {
+  const opening = value[cursor - 1];
+  const closing = value[cursor];
+  if (!opening || pythonPairMap[opening] !== closing || opening === "\"" || opening === "'") return null;
+  const lineStart = value.lastIndexOf("\n", Math.max(0, cursor - 1)) + 1;
+  const indent = value.slice(lineStart, cursor).match(/^\s*/)?.[0] ?? "";
+  return {
+    insertion: `\n${indent}    \n${indent}`,
+    nextCursor: cursor + indent.length + 5,
+  };
+}
+
 function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false }: {
   id: string;
   value: string;
@@ -3332,6 +3467,10 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
   const columnNumber = cursor - lineStart + 1;
   const rangePreview = pythonRangePreview(currentLine);
   const lineDiagnostic = pythonLineDiagnostic(currentLine);
+  const importStatuses = analyzePythonImports(value);
+  const blockSuggestion = pendingBlock
+    ? { ...pendingBlock, hasFollowingNewline: false }
+    : findPythonBlockSuggestion(value, cursor);
 
   function moveCursor(next: number) {
     requestAnimationFrame(() => {
@@ -3363,16 +3502,26 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
   }
 
   function continueBlock(addColon: boolean) {
-    if (!pendingBlock) return;
-    const insertion = `${addColon ? ":" : ""}\n${pendingBlock.indent}${addColon ? "    " : ""}`;
-    replaceSelection(pendingBlock.position, pendingBlock.position, insertion);
+    if (!blockSuggestion) return;
+    if (blockSuggestion.hasFollowingNewline) {
+      if (addColon) replaceSelection(blockSuggestion.position, blockSuggestion.position, ":", cursor >= blockSuggestion.position ? cursor + 1 : cursor);
+      setPendingBlock(null);
+      return;
+    }
+    const insertion = `${addColon ? ":" : ""}\n${blockSuggestion.indent}${addColon ? "    " : ""}`;
+    replaceSelection(blockSuggestion.position, blockSuggestion.position, insertion);
     setPendingBlock(null);
   }
 
   function handleEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     const input = event.currentTarget;
+    const liveValue = input.value;
     const start = input.selectionStart;
     const end = input.selectionEnd;
+    const replaceLiveSelection = (replacement: string, nextCursor = start + replacement.length, selectionStart = start, selectionEnd = end) => {
+      onChange(`${liveValue.slice(0, selectionStart)}${replacement}${liveValue.slice(selectionEnd)}`);
+      moveCursor(nextCursor);
+    };
 
     if (event.key === "Escape" && pendingBlock) {
       event.preventDefault();
@@ -3382,41 +3531,45 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
 
     if (event.key === "Enter" && !event.shiftKey && !event.metaKey && !event.ctrlKey && start === end) {
       event.preventDefault();
-      const activeLineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
-      const beforeCursor = value.slice(activeLineStart, start);
+      const pairedEnter = pythonPairedEnter(liveValue, start);
+      if (pairedEnter) {
+        replaceLiveSelection(pairedEnter.insertion, pairedEnter.nextCursor);
+        setPendingBlock(null);
+        return;
+      }
+      const activeLineStart = liveValue.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+      const beforeCursor = liveValue.slice(activeLineStart, start);
       const indent = beforeCursor.match(/^\s*/)?.[0] ?? "";
       if (startsPythonBlockWithoutColon(beforeCursor)) {
         setPendingBlock({ position: start, indent });
         return;
       }
       const codeBeforeComment = beforeCursor.replace(/#.*$/, "").trimEnd();
-      replaceSelection(start, end, `\n${indent}${codeBeforeComment.endsWith(":") ? "    " : ""}`);
+      replaceLiveSelection(`\n${indent}${codeBeforeComment.endsWith(":") ? "    " : ""}`);
       setPendingBlock(null);
       return;
     }
 
-    const pairMap: Record<string, string> = { "(": ")", "[": "]", "{": "}", "\"": "\"", "'": "'" };
-    const closingCharacters = new Set([")", "]", "}", "\"", "'"]);
-    if (pairMap[event.key] && !event.ctrlKey && !event.metaKey && !event.altKey) {
-      if ((event.key === "\"" || event.key === "'") && start === end && value[start] === event.key) {
+    if (pythonPairMap[event.key] && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if ((event.key === "\"" || event.key === "'") && start === end && liveValue[start] === event.key) {
         event.preventDefault();
         moveCursor(start + 1);
         return;
       }
       event.preventDefault();
-      const selected = value.slice(start, end);
-      replaceSelection(start, end, `${event.key}${selected}${pairMap[event.key]}`, start + 1 + selected.length);
+      const selected = liveValue.slice(start, end);
+      replaceLiveSelection(`${event.key}${selected}${pythonPairMap[event.key]}`, start + 1 + selected.length);
       setPendingBlock(null);
       return;
     }
-    if (closingCharacters.has(event.key) && start === end && value[start] === event.key) {
+    if (pythonClosingCharacters.has(event.key) && start === end && liveValue[start] === event.key) {
       event.preventDefault();
       moveCursor(start + 1);
       return;
     }
-    if (event.key === "Backspace" && start === end && start > 0 && pairMap[value[start - 1]] === value[start]) {
+    if (event.key === "Backspace" && start === end && start > 0 && pythonPairMap[liveValue[start - 1]] === liveValue[start]) {
       event.preventDefault();
-      replaceSelection(start - 1, start + 1, "", start - 1);
+      replaceLiveSelection("", start - 1, start - 1, start + 1);
       setPendingBlock(null);
       return;
     }
@@ -3426,11 +3579,11 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
       return;
     }
     event.preventDefault();
-    const selectedLineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+    const selectedLineStart = liveValue.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
 
     if (event.shiftKey) {
-      const blockEnd = end > start ? end : value.indexOf("\n", start) === -1 ? value.length : value.indexOf("\n", start);
-      const block = value.slice(selectedLineStart, blockEnd);
+      const blockEnd = end > start ? end : liveValue.indexOf("\n", start) === -1 ? liveValue.length : liveValue.indexOf("\n", start);
+      const block = liveValue.slice(selectedLineStart, blockEnd);
       let removedBeforeStart = 0;
       let removedTotal = 0;
       const unindented = block.replace(/^(?: {1,4}|\t)/gm, (indent, offset) => {
@@ -3438,7 +3591,7 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
         removedTotal += indent.length;
         return "";
       });
-      onChange(`${value.slice(0, selectedLineStart)}${unindented}${value.slice(blockEnd)}`);
+      onChange(`${liveValue.slice(0, selectedLineStart)}${unindented}${liveValue.slice(blockEnd)}`);
       requestAnimationFrame(() => {
         input.selectionStart = Math.max(selectedLineStart, start - removedBeforeStart);
         input.selectionEnd = Math.max(selectedLineStart, end - removedTotal);
@@ -3448,11 +3601,11 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
     }
 
     if (end > start) {
-      const blockEnd = value[end - 1] === "\n" ? end - 1 : end;
-      const block = value.slice(selectedLineStart, blockEnd);
+      const blockEnd = liveValue[end - 1] === "\n" ? end - 1 : end;
+      const block = liveValue.slice(selectedLineStart, blockEnd);
       const indented = block.replace(/^/gm, "    ");
       const lineCount = (block.match(/^/gm) ?? []).length;
-      onChange(`${value.slice(0, selectedLineStart)}${indented}${value.slice(blockEnd)}`);
+      onChange(`${liveValue.slice(0, selectedLineStart)}${indented}${liveValue.slice(blockEnd)}`);
       requestAnimationFrame(() => {
         input.selectionStart = start + 4;
         input.selectionEnd = end + lineCount * 4;
@@ -3461,7 +3614,7 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
       return;
     }
 
-    onChange(`${value.slice(0, start)}    ${value.slice(end)}`);
+    onChange(`${liveValue.slice(0, start)}    ${liveValue.slice(end)}`);
     requestAnimationFrame(() => {
       input.selectionStart = input.selectionEnd = start + 4;
       setCursor(start + 4);
@@ -3496,9 +3649,21 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
           aria-describedby={`${describedBy} ${id}-assist`}
         />
       </div>
+      {importStatuses.length > 0 && (
+        <div className="editor-library-status" aria-label="Biblioteker i programmet" aria-live="polite">
+          {importStatuses.map((status) => (
+            <span className={status.available ? "is-available" : "is-unknown"} key={`${status.module}-${status.alias ?? ""}`}>
+              <strong aria-hidden="true">{status.available ? "✓" : "?"}</strong>
+              {status.available
+                ? `${status.label}${status.alias ? ` som ${status.alias}` : ""} er tilgjengelig${status.availability === "offline" || status.availability === "local" ? " offline" : ""}`
+                : `${status.module} er ikke bekreftet i offline-pakken`}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="editor-assist-bar" id={`${id}-assist`} aria-live="polite">
         <span className="editor-position">Linje {lineNumber}, kolonne {columnNumber}</span>
-        {pendingBlock ? (
+        {blockSuggestion ? (
           <span className="editor-inline-help is-warning">
             <strong>Mangler det et kolon?</strong> Denne linjen ser ut som starten på en løkke eller et kodeblokk.
             <span>
@@ -3514,7 +3679,7 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
         ) : rangePreview ? (
           <span className="editor-inline-help is-range"><strong>Løkken teller slik:</strong> {rangePreview}</span>
         ) : (
-          <span className="editor-inline-help is-quiet">Enter lager riktig innrykk etter kolon. Tab flytter koden fire mellomrom.</span>
+          <span className="editor-inline-help is-quiet">Enter lager innrykk. (), [], {`{}`} og anførselstegn lukkes automatisk. Tab flytter koden fire mellomrom.</span>
         )}
       </div>
     </div>
