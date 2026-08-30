@@ -1013,6 +1013,7 @@ p, li { text-wrap: pretty; }
 .challenge-check-results { display: grid; gap: 7px; margin: 13px 0 0; padding: 0; list-style: none; }
 .challenge-check-results li { padding: 9px 10px; border-radius: 7px; background: #fff6d9; color: #6c571f; font-size: 11px; line-height: 1.45; }
 .challenge-check-results li.is-pass { background: #dcefe4; color: #245c48; }
+.challenge-check-results li.is-advice { background: #e8f0f7; color: #31586f; }
 .challenge-concepts-box { margin-top: 18px; padding-top: 16px; border-top: 1px solid #ccd9d3; }
 .challenge-concepts-box > strong { color: #5f6f69; font-size: 9px; letter-spacing: .07em; text-transform: uppercase; }
 .challenge-concepts-box > div { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
@@ -1184,6 +1185,7 @@ p, li { text-wrap: pretty; }
 .exam-sensor-check > p:not(.section-label) { margin: 10px 0 16px; color: #5d6e68; font-size: 13px; line-height: 1.55; }
 .exam-sensor-check > button { width: 100%; min-height: 45px; padding: 9px 12px; border: 1px solid var(--green); border-radius: 8px; background: var(--green); color: white; font-size: 12px; font-weight: 850; cursor: pointer; }
 .exam-sensor-check > button:hover { border-color: var(--coral); background: var(--coral); }
+.exam-sensor-check > button:disabled { border-color: #9daaa5; background: #9daaa5; cursor: wait; }
 .exam-sensor-check blockquote { margin: 18px 0 0; padding: 14px 15px; border-left: 4px solid var(--yellow); background: #fff8dc; color: #625d4e; font-size: 12px; line-height: 1.55; }
 .exam-solution { padding-top: 0; padding-bottom: 67px; }
 .exam-solution > details { overflow: hidden; border: 1px solid #cbd5d0; border-radius: 15px; background: #faf9f5; }

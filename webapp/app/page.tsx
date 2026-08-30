@@ -6,7 +6,7 @@ import { commandCategories, pythonCommands } from "./pythonCommands";
 import type { CommandCategory, PythonCommand } from "./pythonCommands";
 import { challengeDifficulties, evaluateChallengeAttempt, pythonChallenges } from "./challenges";
 import type { ChallengeDifficulty, PythonChallenge } from "./challenges";
-import { examLevels, examTasks } from "./examTraining";
+import { evaluateExamAttempt, examLevels, examTasks } from "./examTraining";
 import type { ExamLevel, ExamTask } from "./examTraining";
 
 type Module = {
@@ -4652,16 +4652,7 @@ export default function Home() {
       setExamCheckFeedback(["○ Kodefeltet er tomt. Skriv ett lite steg eller hent startpunktet først."]);
       return;
     }
-    const normalizedCode = code.toLocaleLowerCase("nb");
-    const normalizedOutput = output.toLocaleLowerCase("nb");
-    const results = task.checks.map((check) => {
-      const codePass = !check.codeIncludes || check.codeIncludes.every((part) => normalizedCode.includes(part.toLocaleLowerCase("nb")));
-      const outputPass = !check.outputIncludes || check.outputIncludes.every((part) => normalizedOutput.includes(part.toLocaleLowerCase("nb")));
-      return `${codePass && outputPass ? "✓" : "○"} ${check.label}`;
-    });
-    if (results.every((result) => result.startsWith("✓"))) results.push("✓ Koden viser viktige deler av løsningen. Nå må du også kunne forklare valgene og vurdere svaret.");
-    else results.push("○ Bruk punktene som sensorblikk: Finn ett manglende spor, endre én ting og kjør på nytt.");
-    setExamCheckFeedback(results);
+    setExamCheckFeedback(evaluateExamAttempt(task, code, output));
   }
 
   function markExamTaskComplete(task: ExamTask) {
@@ -5931,9 +5922,9 @@ export default function Home() {
                 <section className="exam-sensor-check">
                   <p className="section-label"><span>8</span> Sensorblikk</p>
                   <h2>Vis mer enn et riktig tall</h2>
-                  <p>Sjekken finner synlige spor i kode og resultat. Den kan ikke erstatte forklaringen og vurderingen din.</p>
-                  <button type="button" onClick={() => checkExamAttempt(activeExamTask)}>Sjekk besvarelsen min</button>
-                  {examCheckFeedback.length > 0 && <ul className="challenge-check-results" aria-live="polite">{examCheckFeedback.map((item) => <li className={item.startsWith("✓") ? "is-pass" : ""} key={item}>{item}</li>)}</ul>}
+                  <p>Sjekken godtar ulike variabelnavn og flere faglig riktige framgangsmåter. <strong>Rundt punkt</strong> betyr at et nødvendig krav ikke er synlig. <strong>Trekant</strong> er bare et forbedringsråd.</p>
+                  <button type="button" onClick={() => checkExamAttempt(activeExamTask)} disabled={runnerStatus === "loading" || runnerStatus === "running"}>{runnerStatus === "loading" || runnerStatus === "running" ? "Vent til koden er kjørt …" : "Sjekk besvarelsen min"}</button>
+                  {examCheckFeedback.length > 0 && <ul className="challenge-check-results" aria-live="polite">{examCheckFeedback.map((item) => <li className={item.startsWith("✓") ? "is-pass" : item.startsWith("△") ? "is-advice" : ""} key={item}>{item}</li>)}</ul>}
                   <blockquote>{activeExamTask.sensorTip}</blockquote>
                 </section>
               </section>

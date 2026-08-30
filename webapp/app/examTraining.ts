@@ -20,6 +20,16 @@ export type ExamHint = {
   code?: string;
 };
 
+export type ExamCheck = {
+  label: string;
+  kind?: "required" | "advice";
+  codeIncludes?: string[];
+  codeIncludesAny?: string[];
+  codeExcludes?: string[];
+  outputIncludes?: string[];
+  outputIncludesAny?: string[];
+};
+
 export type ExamTask = {
   id: string;
   level: Exclude<ExamLevel, "Alle">;
@@ -43,8 +53,41 @@ export type ExamTask = {
   solutionNotes: string[];
   sensorTip: string;
   reflection: string;
-  checks: { label: string; codeIncludes?: string[]; outputIncludes?: string[] }[];
+  checks: ExamCheck[];
 };
+
+export function evaluateExamAttempt(task: ExamTask, code: string, output: string) {
+  const executableCode = code
+    .split("\n")
+    .map((line) => line.replace(/#.*$/, ""))
+    .join("\n");
+  const compactCode = executableCode.toLocaleLowerCase("nb").replace(/\s+/g, "");
+  const normalizedOutput = output.toLocaleLowerCase("nb");
+  const hasCodePart = (part: string) => compactCode.includes(part.toLocaleLowerCase("nb").replace(/\s+/g, ""));
+
+  const evaluated = task.checks.map((check) => {
+    const codeAllPass = !check.codeIncludes || check.codeIncludes.every(hasCodePart);
+    const codeAnyPass = !check.codeIncludesAny || check.codeIncludesAny.some(hasCodePart);
+    const codeExcludesPass = !check.codeExcludes || check.codeExcludes.every((part) => !hasCodePart(part));
+    const outputAllPass = !check.outputIncludes || check.outputIncludes.every((part) => normalizedOutput.includes(part.toLocaleLowerCase("nb")));
+    const outputAnyPass = !check.outputIncludesAny || check.outputIncludesAny.some((part) => normalizedOutput.includes(part.toLocaleLowerCase("nb")));
+    const passed = codeAllPass && codeAnyPass && codeExcludesPass && outputAllPass && outputAnyPass;
+    return { ...check, passed };
+  });
+
+  const results = evaluated.map((check) => `${check.passed ? "✓" : check.kind === "advice" ? "△" : "○"} ${check.label}`);
+  const requiredPassed = evaluated.filter((check) => check.kind !== "advice").every((check) => check.passed);
+  const missingAdvice = evaluated.some((check) => check.kind === "advice" && !check.passed);
+
+  if (requiredPassed) {
+    results.push(missingAdvice
+      ? "✓ Oppgaven er faglig løst. Trekantene er forbedringsråd som kan gjøre besvarelsen tydeligere eller mer robust."
+      : "✓ Koden viser viktige deler av løsningen. Nå må du også kunne forklare valgene og vurdere svaret.");
+  } else {
+    results.push("○ Ett eller flere nødvendige krav mangler ennå. En annen framgangsmåte kan likevel være riktig – sammenlign resultatet med oppgaveteksten.");
+  }
+  return results;
+}
 
 export const examTasks: ExamTask[] = [
   {
@@ -102,7 +145,7 @@ export const examTasks: ExamTask[] = [
     solutionNotes: ["rabattbelop finner 30 % av den gamle prisen", "1 - rabatt finner andelen kunden skal betale", ":.0f viser kroner uten unødvendige desimaler"],
     sensorTip: "En sterk besvarelse viser både regningen og hva tallene betyr. Det er bedre å skrive «840 kr er prisen etter rabatt» enn bare «840».",
     reflection: "Hvorfor er programmet mer troverdig når du tester det med en annen pris og rabatt?",
-    checks: [{ label: "Rabattbeløpet beregnes", codeIncludes: ["pris * rabatt"] }, { label: "Vekstfaktoren er synlig", codeIncludes: ["1 - rabatt"] }, { label: "Begge beløp vises", outputIncludes: ["360", "840"] }],
+    checks: [{ label: "Koden beregner både det som trekkes fra og det som står igjen", codeIncludes: ["*"], codeIncludesAny: ["1 - rabatt", "0.70", "pris -", "- rabattbelop", "* 0.30"] }, { label: "Resultatet viser både 360 kr og 840 kr", outputIncludes: ["360", "840", "kr"] }, { label: "Forbedring: utskriften forklarer hva minst ett av beløpene betyr", kind: "advice", outputIncludesAny: ["spar", "rabatt", "ny pris", "prisen"] }],
   },
   {
     id: "taxi-linear-model",
@@ -160,7 +203,7 @@ export const examTasks: ExamTask[] = [
     solutionNotes: ["parameteren km kan få ulike verdier", "17 er endring per enhet", "85 er startverdien", "løkken dokumenterer tre testtilfeller"],
     sensorTip: "Forklar alltid hva stigningstallet og konstantleddet betyr i situasjonen – ikke bare hva symbolene heter.",
     reflection: "Når kan denne enkle modellen være mindre gyldig, for eksempel ved ventetid eller ulike takster?",
-    checks: [{ label: "En funksjon med km er laget", codeIncludes: ["def taxi_pris", "km"] }, { label: "Den lineære modellen er synlig", codeIncludes: ["85", "17", "*"] }, { label: "Alle tre testprisene vises", outputIncludes: ["85", "170", "289"] }],
+    checks: [{ label: "En funksjon tar imot en kjørelengde og returnerer en pris", codeIncludes: ["def", "return"] }, { label: "Den lineære modellen bruker startpris 85 og 17 kr per kilometer", codeIncludes: ["85", "17", "*"] }, { label: "Resultatet viser prisene for alle tre testavstandene", outputIncludes: ["85", "170", "289"] }, { label: "Forbedring: utskriften har med km og kr", kind: "advice", outputIncludes: ["km", "kr"] }],
   },
   {
     id: "savings-growth",
@@ -217,7 +260,7 @@ export const examTasks: ExamTask[] = [
     solutionNotes: ["saldo <= mal beskriver når programmet skal fortsette", "saldo *= 1.04 bruker den nye saldoen som grunnlag hvert år", "årstelleren følger samme antall oppdateringer som saldoen"],
     sensorTip: "Et svar med full uttelling forklarer at renten beregnes av en saldo som vokser. Det er derfor utviklingen er eksponentiell, ikke lineær.",
     reflection: "Modellen antar samme rente hvert år. Hvordan påvirker det hvor gyldig svaret er?",
-    checks: [{ label: "Programmet bruker while og målet", codeIncludes: ["while", "mal"] }, { label: "Saldo og år oppdateres", codeIncludes: ["saldo", "+= 1"] }, { label: "Riktig år finnes", outputIncludes: ["6", "15183"] }],
+    checks: [{ label: "Programmet bruker while for å fortsette fram til målet", codeIncludes: ["while"] }, { label: "Saldo og år oppdateres i løkken", codeIncludes: ["*"], codeIncludesAny: ["+= 1", "+ 1"] }, { label: "Resultatet finner 6 år og omtrent 15 183,83 kr", outputIncludes: ["6", "15183"] }, { label: "Forbedring: målet ligger i en egen variabel og er lett å endre", kind: "advice", codeIncludesAny: ["mal =", "mål =", "grense ="] }],
   },
   {
     id: "statistics-outlier",
@@ -274,7 +317,7 @@ export const examTasks: ExamTask[] = [
     solutionNotes: ["sum / len finner gjennomsnittet", "abs gjør forskjellen om til en positiv avstand", "if-testen bruker den valgte grensen på 20 cm"],
     sensorTip: "Sensor ser etter vurdering, ikke bare kode. Forklar hvorfor 182 bør undersøkes, og at det ikke automatisk kan slettes.",
     reflection: "Ville medianen vært et bedre sentralmål her? Begrunn uten å bare svare ja eller nei.",
-    checks: [{ label: "Gjennomsnittet beregnes", codeIncludes: ["sum(", "len("] }, { label: "Avstanden undersøkes", codeIncludes: ["abs(", "> 20"] }, { label: "Avviket oppdages", outputIncludes: ["182"] }],
+    checks: [{ label: "Koden beregner et gjennomsnitt fra målingene", codeIncludesAny: ["sum(", "mean(", "statistics.mean("] }, { label: "Alle målingene undersøkes", codeIncludes: ["for"] }, { label: "Avstanden fra gjennomsnittet sammenlignes med 20", codeIncludesAny: ["abs(", "> 20", "+ 20", "- 20"] }, { label: "Resultatet peker ut 182 som mulig avvik", outputIncludes: ["182"] }, { label: "Forbedring: gjennomsnittet vises slik at vurderingen kan etterprøves", kind: "advice", outputIncludesAny: ["133.83", "133,83", "gjennomsnitt"] }],
   },
   {
     id: "dice-simulation",
@@ -331,7 +374,7 @@ export const examTasks: ExamTask[] = [
     solutionNotes: ["løkka gjør 10 000 uavhengige forsøk", "treff er en teller", "andelen vil variere litt mellom kjøringer", "6 av 36 mulige kombinasjoner gir sum 7"],
     sensorTip: "Ikke påstå at simuleringen beviser den eksakte sannsynligheten. Sammenlign resultatet med 1/6 og kommenter tilfeldig variasjon.",
     reflection: "Hvorfor blir ikke resultatet nødvendigvis nøyaktig 16,7 %, selv med 10 000 forsøk?",
-    checks: [{ label: "To terninger simuleres", codeIncludes: ["random.randint", "a", "b"] }, { label: "Sum 7 telles", codeIncludes: ["a + b == 7", "+= 1"] }, { label: "Resultatet viser prosent", outputIncludes: ["prosent", "%"] }],
+    checks: [{ label: "Tilfeldige terningkast gjentas i en løkke", codeIncludes: ["for", "randint"] }, { label: "Programmet undersøker om summen er 7", codeIncludes: ["== 7"] }, { label: "En teller økes ved treff", codeIncludesAny: ["+= 1", "+ 1"] }, { label: "Andelen regnes ut fra treff og antall forsøk", codeIncludes: ["/"] }, { label: "Resultatet viser prosent", outputIncludes: ["%"] }, { label: "Forbedring: utskriften skiller mellom treff, andel og prosent", kind: "advice", outputIncludesAny: ["andel", "prosent"] }],
   },
   {
     id: "right-triangle-exam",
@@ -388,7 +431,7 @@ export const examTasks: ExamTask[] = [
     solutionNotes: ["sortering sikrer at c er lengst", "Pytagoras sammenlignes som én forskjell", "toleransen er et modellvalg som må begrunnes"],
     sensorTip: "Toleransen 25 er ikke en universell sannhet. Full uttelling krever at du forklarer at grensen må passe målemetode og enhet.",
     reflection: "Hvordan ville konklusjonen endret seg hvis måleutstyret bare var nøyaktig til nærmeste centimeter?",
-    checks: [{ label: "Sidene sorteres", codeIncludes: ["sort"] }, { label: "Avviket fra Pytagoras beregnes", codeIncludes: ["abs(", "** 2"] }, { label: "Programmet konkluderer", outputIncludes: ["rettvinklet", "avvik"] }],
+    checks: [{ label: "Den lengste siden velges på en trygg måte", codeIncludesAny: ["sort", "sorted(", "max("] }, { label: "Pytagoras beregnes med kvadrerte sidelengder", codeIncludesAny: ["** 2", "* a", "* b", "* c"] }, { label: "Et måleavvik sammenlignes med en toleranse", codeIncludesAny: ["abs(", "<= 25", "<= toleranse", "<= grense"] }, { label: "Programmet skriver en forståelig konklusjon", outputIncludes: ["rettvinklet"] }, { label: "Forbedring: størrelsen på avviket vises eller forklares", kind: "advice", outputIncludesAny: ["avvik", "forskjell"] }],
   },
   {
     id: "ticket-equation-search",
@@ -445,7 +488,7 @@ export const examTasks: ExamTask[] = [
     solutionNotes: ["range dekker alle ikke-negative heltallsløsninger", "første krav brukes til å finne barn", "andre krav kontrolleres i if-testen", "break stopper når løsningen er funnet"],
     sensorTip: "Koden alene er ikke hele svaret. Forklar hvordan de to kravene fra teksten finnes igjen i programmet.",
     reflection: "Hva er fordelen og ulempen med systematisk søk sammenlignet med å løse ligningssettet algebraisk?",
-    checks: [{ label: "Alle kandidater kan testes", codeIncludes: ["for", "range"] }, { label: "Begge kravene brukes", codeIncludes: ["120", "14400"] }, { label: "Riktig fordeling vises", outputIncludes: ["60", "60"] }],
+    checks: [{ label: "Mulige billettfordelinger undersøkes systematisk", codeIncludes: ["for", "range"] }, { label: "Både billettantall og inntekt brukes i beregningen", codeIncludes: ["120", "14400"] }, { label: "Resultatet viser 60 voksne og 60 barn", outputIncludes: ["60", "voksen", "barn"] }, { label: "Forbedring: programmet teller eller forklarer hvor mange kandidater som ble undersøkt", kind: "advice", codeIncludesAny: ["+= 1", "+ 1"], outputIncludesAny: ["kandidat", "undersøkt", "undersokt"] }],
   },
   {
     id: "water-model-validity",
@@ -503,6 +546,6 @@ export const examTasks: ExamTask[] = [
     solutionNotes: ["den lineære formelen beholdes slik at tankegangen er synlig", "max hindrer fysisk meningsløse negative svar", "den andre løkken finner grensen for modellens gyldighet"],
     sensorTip: "Et eksamenssvar bør skille mellom «formelen gir -10» og «tanken har 0 liter». Det viser at du vurderer modellen, ikke bare regner.",
     reflection: "Hvilke andre antakelser gjør modellen – for eksempel om pumpefarten – og hvordan kan de svikte i virkeligheten?",
-    checks: [{ label: "Funksjonen bruker modellen", codeIncludes: ["def vann", "900 - 65 * t"] }, { label: "Negativt vann hindres", codeIncludes: ["max(0"] }, { label: "Gyldighetsgrensen forklares", outputIncludes: ["14", "negativ"] }],
+    checks: [{ label: "En funksjon bruker modellen 900 − 65 · t", codeIncludes: ["def", "900 - 65 *"] }, { label: "Programmet hindrer negativ vannmengde", codeIncludesAny: ["max(0", "max(modell, 0", "< 0"] }, { label: "En løkke lager eller undersøker tabellen", codeIncludes: ["for"] }, { label: "Resultatet finner modellbruddet ved 14 minutter", outputIncludes: ["14"], outputIncludesAny: ["negativ", "-10"] }, { label: "Forbedring: utskriften skiller mellom modellverdien og fysisk vannmengde", kind: "advice", outputIncludesAny: ["modell", "0 liter", "-10"] }],
   },
 ];

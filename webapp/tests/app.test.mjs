@@ -15,6 +15,7 @@ const desktopBuild = readFileSync("scripts/build-macos.mjs", "utf8");
 const desktopPrepare = readFileSync("scripts/prepare-desktop-dev.mjs", "utf8");
 const offlinePackages = readFileSync("scripts/download-pyodide.mjs", "utf8");
 const { evaluateChallengeAttempt, pythonChallenges } = await import("../app/challenges.ts");
+const { evaluateExamAttempt, examTasks } = await import("../app/examTraining.ts");
 
 const analyzerSource = page.slice(page.indexOf("function analyzePythonError"), page.indexOf("const pythonTokens"));
 const analyzerJavaScript = ts.transpileModule(`${analyzerSource}\nglobalThis.analyzePythonError = analyzePythonError;`, {
@@ -153,6 +154,32 @@ test("eksamenstreningen kobler læreplantolking, flervalg og kjørbar Python", (
   assert.match(page, /id="exam-code"/);
   assert.match(page, /skolepython-completed-exam-tasks/);
   assert.match(page, /Sensorblikk/);
+  assert.match(page, /Trekant.*forbedringsråd|Trekant.*forbedring/is);
+});
+
+test("sensorsjekken godtar fasiter og skiller riktige svar fra forbedringsråd", () => {
+  const outputs = {
+    "discount-code-reading": "Du sparer 360 kr. Ny pris er 840 kr.",
+    "taxi-linear-model": "0 km koster 85 kr. 5 km koster 170 kr. 12 km koster 289 kr.",
+    "savings-growth": "Saldoen passerer målet etter 6 år. Da er saldoen 15183.83 kr.",
+    "statistics-outlier": "Gjennomsnitt: 133.83 cm. Mulig avvik: 182 cm.",
+    "dice-simulation": "Treff: 1667. Andel: 0.167. Prosent: 16.7 %.",
+    "right-triangle-exam": "Trekanten kan regnes som rettvinklet. Avvik: 0.",
+    "ticket-equation-search": "60 voksenbilletter og 60 barnebilletter. Programmet undersøkte 61 kandidater.",
+    "water-model-validity": "14 min: 0 liter. Modellen blir negativ ved 14 minutter (-10 liter).",
+  };
+
+  for (const task of examTasks) {
+    const results = evaluateExamAttempt(task, task.solutionCode, outputs[task.id] ?? "");
+    assert.ok(results.every((result) => !result.startsWith("○") && !result.startsWith("△")), `${task.id}: ${results.join(" | ")}`);
+  }
+
+  const savings = examTasks.find((task) => task.id === "savings-growth");
+  const validAlternative = "saldo = 12000\nrente = 0.04\når = 0\n\nwhile saldo <= 15000:\n    saldo = saldo * (1 + rente)\n    år += 1\n\nprint(f\"Saldoen er {saldo:.2f} kr etter {år:.2f} år\")";
+  const results = evaluateExamAttempt(savings, validAlternative, "Saldoen er 15183.83 kr etter 6.00 år");
+  assert.ok(results.every((result) => !result.startsWith("○")), results.join(" | "));
+  assert.ok(results.some((result) => result.startsWith("△") && result.includes("egen variabel")));
+  assert.ok(results.at(-1).startsWith("✓ Oppgaven er faglig løst"));
 });
 
 test("modulene har tom skrivelab, redigerbar fasit, kodefarger og ekstratriks", () => {
