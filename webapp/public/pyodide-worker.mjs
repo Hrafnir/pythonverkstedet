@@ -36,15 +36,44 @@ async function start() {
   }
 }
 
+let pendingInputResolve = null;
+let executionActive = false;
+
 self.onmessage = async (event) => {
+  if (event.data?.type === "input-response") {
+    const resolve = pendingInputResolve;
+    if (!resolve) return;
+    pendingInputResolve = null;
+    resolve(String(event.data.value ?? ""));
+    return;
+  }
+  if (event.data?.type && event.data.type !== "run") return;
+  if (executionActive) {
+    self.postMessage({ type: "error", error: "Python kjører allerede et program." });
+    return;
+  }
+  executionActive = true;
   const pyodide = await pyodideReady;
   const code = event.data.code;
   const files = Array.isArray(event.data.files) ? event.data.files : [];
-  const inputValues = Array.isArray(event.data.inputs) ? event.data.inputs.map((value) => String(value)) : [];
   let stdout = "";
   let stderr = "";
-  let inputTranscript = "";
+  let inputIndex = 0;
   let globals = null;
+
+  globalThis._skolepython_request_input = (prompt = "") => new Promise((resolve, reject) => {
+    if (pendingInputResolve) {
+      reject(new Error("Python ba om et nytt svar før det forrige var ferdig."));
+      return;
+    }
+    const promptText = String(prompt);
+    pendingInputResolve = (answer) => {
+      stdout += `${promptText}${answer}\n`;
+      inputIndex += 1;
+      resolve(answer);
+    };
+    self.postMessage({ type: "input", prompt: promptText, index: inputIndex, output: `${stdout}${stderr}` });
+  });
 
   async function releaseGlobals() {
     if (!globals) return;
@@ -80,29 +109,21 @@ if hasattr(_skolepython_builtins, "_skolepython_original_input"):
     stdout = "";
     stderr = "";
     globals = pyodide.globals.get("dict")();
-    globals.set("_skolepython_input_values_json", JSON.stringify(inputValues));
     await pyodide.runPythonAsync(`
 import builtins as _skolepython_builtins
-import json as _skolepython_json
+from js import _skolepython_request_input
+from pyodide.ffi import run_sync as _skolepython_run_sync
 
 if not hasattr(_skolepython_builtins, "_skolepython_original_input"):
     _skolepython_builtins._skolepython_original_input = _skolepython_builtins.input
 
-_skolepython_input_values = _skolepython_json.loads(_skolepython_input_values_json)
-_skolepython_input_index = 0
-_skolepython_input_transcript = []
-_skolepython_pending_prompt = ""
-
 def _skolepython_input(prompt=""):
-    global _skolepython_input_index, _skolepython_pending_prompt
-    prompt_text = str(prompt)
-    if _skolepython_input_index >= len(_skolepython_input_values):
-        _skolepython_pending_prompt = prompt_text
-        raise RuntimeError("__SKOLEPYTHON_INPUT_REQUIRED__")
-    answer = str(_skolepython_input_values[_skolepython_input_index])
-    _skolepython_input_index += 1
-    _skolepython_input_transcript.append(f"{prompt_text}{answer}")
-    return answer
+    try:
+        return str(_skolepython_run_sync(_skolepython_request_input(str(prompt))))
+    except RuntimeError as error:
+        if "stack switch" in str(error).lower() or "jspi" in str(error).lower():
+            raise RuntimeError("__SKOLEPYTHON_INPUT_BROWSER_UNSUPPORTED__") from error
+        raise
 
 _skolepython_builtins.input = _skolepython_input
 `, { globals });
@@ -511,13 +532,6 @@ plt.show = _bjornsveen_show
     stdout = "";
     stderr = "";
     await pyodide.runPythonAsync(code, { globals });
-    try {
-      inputTranscript = await pyodide.runPythonAsync(`
-"\\n".join(_skolepython_input_transcript) + ("\\n" if _skolepython_input_transcript else "")
-`, { globals });
-    } catch {
-      inputTranscript = "";
-    }
     let turtle = null;
     if (usesTurtle) try {
       const encodedTurtle = await pyodide.runPythonAsync(`
@@ -623,22 +637,22 @@ _skolepython_json.dumps(_skolepython_variables[:30], ensure_ascii=False)
       variables = [];
     }
     await releaseGlobals();
-    self.postMessage({ type: "result", output: `${inputTranscript}${stdout}${stderr}`, plots, turtle, game, variables });
+    self.postMessage({ type: "result", output: `${stdout}${stderr}`, plots, turtle, game, variables });
   } catch (error) {
     const message = String(error?.message ?? error);
-    if (globals && message.includes("__SKOLEPYTHON_INPUT_REQUIRED__")) {
-      let prompt = "Skriv et svar:";
-      try {
-        prompt = String(globals.get("_skolepython_pending_prompt") || prompt);
-      } catch {
-        // Standardteksten er tydelig nok dersom prompten ikke kan leses.
-      }
-      await releaseGlobals();
-      self.postMessage({ type: "input", prompt, index: inputValues.length, output: `${stdout}${stderr}` });
-      return;
-    }
     await releaseGlobals();
-    self.postMessage({ type: "error", error: message });
+    if (message.includes("__SKOLEPYTHON_INPUT_BROWSER_UNSUPPORTED__")) {
+      self.postMessage({
+        type: "error",
+        error: "Denne nettleseren kan ikke pause Python trygt ved input(). Bruk den oppdaterte Skolepython-appen eller en nyere nettleser.",
+      });
+    } else {
+      self.postMessage({ type: "error", error: message });
+    }
+  } finally {
+    pendingInputResolve = null;
+    executionActive = false;
+    delete globalThis._skolepython_request_input;
   }
 };
 

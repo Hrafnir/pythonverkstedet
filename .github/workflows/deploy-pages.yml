@@ -31,6 +31,12 @@ jobs:
           cache-dependency-path: webapp/package-lock.json
       - name: Installer
         run: npm ci
+      - name: Kjør kilde- og byggetester
+        run: npm test
+      - name: Installer testnettleser
+        run: npx playwright install --with-deps chromium
+      - name: Kjør ekte nettlesertester
+        run: npm run test:e2e
       - name: Bygg statisk app
         run: npm run build:github
       - name: Last opp nettstedet

@@ -341,7 +341,7 @@ test("Python kan lese lokale tekst- og CSV-filer uten opplasting", () => {
   assert.match(page, /Bruk eksempel \.txt/);
   assert.match(page, /Bruk eksempel \.csv/);
   assert.match(page, /accept="\.txt,\.csv,text\/plain,text\/csv"/);
-  assert.match(page, /worker\.postMessage\(executionRef\.current\)/);
+  assert.match(page, /worker\.postMessage\(\{ type: "run", \.\.\.executionRef\.current \}\)/);
   assert.match(worker, /event\.data\.files/);
   assert.match(worker, /FS\.writeFile/);
   assert.match(worker, /\/home\/pyodide/);
@@ -369,15 +369,22 @@ test("Python kan lese lokale tekst- og CSV-filer uten opplasting", () => {
 });
 
 test("input åpner en pedagogisk svar-dialog og kan fortsette gjennom flere spørsmål", () => {
-  assert.match(worker, /event\.data\.inputs/);
-  assert.match(worker, /__SKOLEPYTHON_INPUT_REQUIRED__/);
+  assert.match(worker, /event\.data\?\.type === "input-response"/);
+  assert.match(worker, /pendingInputResolve/);
+  assert.match(worker, /_skolepython_run_sync\(_skolepython_request_input/);
   assert.match(worker, /type: "input", prompt/);
-  assert.match(worker, /_skolepython_input_transcript/);
+  assert.doesNotMatch(worker, /event\.data\.inputs/);
+  assert.doesNotMatch(worker, /__SKOLEPYTHON_INPUT_REQUIRED__/);
   assert.match(page, /Skriv et svar til Python/);
   assert.match(page, /function submitPythonInput/);
+  assert.match(page, /type: "input-response", value: answer/);
   assert.match(page, /function cancelPythonInput/);
   assert.match(page, /input\(\)<\/code> gir alltid tekst/);
   assert.match(page, /Programmet ba om mer enn 20 svar/);
+  assert.match(page, /handleModalKeyboard/);
+  assert.match(page, /event\.key === "Escape"/);
+  assert.match(page, /resultIsStale/);
+  assert.match(page, /Dette er resultatet fra forrige kjøring/);
   const css = readFileSync("app/globals.css", "utf8");
   assert.match(css, /\.python-input-modal/);
   assert.match(css, /\.python-input-card/);
@@ -543,7 +550,7 @@ test("Turtle kan spilles av stegvis uten komprimerte mellombilder", () => {
   assert.match(worker, /_turtle_events/);
   assert.match(worker, /"line" if self\._down else "move"/);
   assert.match(worker, /canvasWidth/);
-  assert.match(worker, /self\.postMessage\(\{ type: "result", output: `\$\{inputTranscript\}\$\{stdout\}\$\{stderr\}`, plots, turtle, game, variables \}\)/);
+  assert.match(worker, /self\.postMessage\(\{ type: "result", output: `\$\{stdout\}\$\{stderr\}`, plots, turtle, game, variables \}\)/);
   assert.match(page, /function renderTurtleFrame/);
   assert.match(page, /function TurtlePlayer/);
   assert.match(page, /Steg \$\{frame\} av \$\{lastFrame\}/);
@@ -624,7 +631,9 @@ test("GitHub Pages-pakken er komplett", () => {
 
 test("Mac-utgaven er offline, ARM64 og kan pakkes for IT", () => {
   assert.match(desktopMain, /Skolepython · Bjørnsveen/);
-  assert.match(desktopMain, /legacyUserDataPath/);
+  assert.match(desktopMain, /smokeTestMode/);
+  assert.match(desktopMain, /skolepython-smoke-/);
+  assert.match(desktopMain, /app\.setPath\("userData", userDataPath\)/);
   assert.match(desktopMain, /Bjørnsveen Pythonverksted/);
   assert.match(desktopMain, /cancel: !allowed/);
   assert.match(desktopMain, /project:open/);

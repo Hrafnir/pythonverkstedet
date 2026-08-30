@@ -6,8 +6,11 @@ import { fileURLToPath } from "node:url";
 const desktopDir = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(desktopDir, "..");
 const webRoot = path.join(appRoot, "github-dist");
-const legacyUserDataPath = path.join(app.getPath("appData"), "Bjørnsveen Pythonverksted");
-app.setPath("userData", legacyUserDataPath);
+const smokeTestMode = process.env.BJORNSVEEN_SMOKE_TEST === "1";
+const userDataPath = smokeTestMode
+  ? path.join(app.getPath("temp"), `skolepython-smoke-${process.pid}`)
+  : path.join(app.getPath("appData"), "Bjørnsveen Pythonverksted");
+app.setPath("userData", userDataPath);
 
 async function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -37,7 +40,7 @@ async function createWindow() {
   });
   await mainWindow.loadFile(path.join(webRoot, "index.html"));
 
-  if (process.env.BJORNSVEEN_SMOKE_TEST === "1") {
+  if (smokeTestMode) {
     mainWindow.webContents.on("console-message", (_event, level, message, line, sourceId) => {
       process.stdout.write(`BJORNSVEEN_CONSOLE[${level}]: ${message} (${sourceId}:${line})\n`);
     });
@@ -54,17 +57,21 @@ async function createWindow() {
       await waitFor("Boolean(document.querySelector('#module-select'))", 15000);
       process.stdout.write("BJORNSVEEN_SMOKE_STAGE: app-loaded\n");
       await mainWindow.webContents.executeJavaScript(`
-        const select = document.querySelector('#module-select');
-        select.value = 'playground';
-        select.dispatchEvent(new Event('change', { bubbles: true }));
+        (() => {
+          const select = document.querySelector('#module-select');
+          select.value = 'playground';
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        })()
       `);
       await waitFor("Boolean(document.querySelector('#playground-code'))", 15000);
       process.stdout.write("BJORNSVEEN_SMOKE_STAGE: playground-loaded\n");
       await mainWindow.webContents.executeJavaScript(`
-        const editor = document.querySelector('#playground-code');
-        const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
-        setter.call(editor, 'import numpy as np\\nimport matplotlib.pyplot as plt\\n\\nprint(int(np.array([2, 3, 5]).sum()))\\nx = np.linspace(-5, 5, 100)\\nplt.plot(x, x ** 2)\\nplt.title("Offline Matplotlib-test")\\nplt.grid()\\nplt.show()');
-        editor.dispatchEvent(new Event('input', { bubbles: true }));
+        (() => {
+          const editor = document.querySelector('#playground-code');
+          const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+          setter.call(editor, 'import numpy as np\\nimport pandas as pd\\nimport matplotlib.pyplot as plt\\nimport scipy\\nimport sympy\\nimport sklearn\\nfrom PIL import Image\\nimport networkx\\nimport shapely\\n\\nprint("OFFLINE_PAKKER_OK", int(np.array([2, 3, 5]).sum()))\\nx = np.linspace(-5, 5, 100)\\nplt.plot(x, x ** 2)\\nplt.title("Offline Matplotlib-test")\\nplt.grid()\\nplt.show()');
+          editor.dispatchEvent(new Event('input', { bubbles: true }));
+        })()
       `);
       await new Promise((resolve) => setTimeout(resolve, 100));
       await mainWindow.webContents.executeJavaScript("document.querySelector('.run-button').click()");
@@ -79,7 +86,7 @@ async function createWindow() {
         (() => {
           const value = document.querySelector('.output-panel pre')?.textContent || '';
           const plot = document.querySelector('.plot-card img');
-          const complete = value.trim().startsWith('10') && plot?.complete && plot?.naturalWidth > 0;
+          const complete = value.includes('OFFLINE_PAKKER_OK 10') && plot?.complete && plot?.naturalWidth > 0;
           return complete
             ? JSON.stringify({ value, plotWidth: plot.naturalWidth })
             : value.includes('Kunne ikke')
@@ -91,7 +98,45 @@ async function createWindow() {
       `);
       const smokeResult = JSON.parse(result);
       if (smokeResult.error || !smokeResult.plotWidth) throw new Error(smokeResult.value.trim());
-      process.stdout.write(`BJORNSVEEN_SMOKE_OK: 10 + matplotlib (${smokeResult.plotWidth}px)\n`);
+      process.stdout.write(`BJORNSVEEN_SMOKE_STAGE: packages + matplotlib (${smokeResult.plotWidth}px)\n`);
+
+      await mainWindow.webContents.executeJavaScript(`
+        (() => {
+          const editor = document.querySelector('#playground-code');
+          const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+          setter.call(editor, 'import random\\ntall = random.random()\\nprint("INPUT_FOR", tall)\\nsvar = input("Skriv test: ")\\nprint("INPUT_ETTER", tall, svar)');
+          editor.dispatchEvent(new Event('input', { bubbles: true }));
+          document.querySelector('.run-button').click();
+        })()
+      `);
+      const inputBefore = await waitFor(`
+        (() => {
+          const value = document.querySelector('.output-panel pre')?.textContent || '';
+          const answer = document.querySelector('#python-input-answer');
+          const match = value.match(/INPUT_FOR\\s+([0-9.]+)/);
+          return answer && match ? JSON.stringify({ value, random: match[1] }) : '';
+        })()
+      `);
+      const inputState = JSON.parse(inputBefore);
+      await mainWindow.webContents.executeJavaScript(`
+        (() => {
+          const answer = document.querySelector('#python-input-answer');
+          const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+          setter.call(answer, 'offline');
+          answer.dispatchEvent(new Event('input', { bubbles: true }));
+          document.querySelector('.python-input-submit').click();
+        })()
+      `);
+      const inputAfter = await waitFor(`
+        (() => {
+          const value = document.querySelector('.output-panel pre')?.textContent || '';
+          return value.includes('INPUT_ETTER') ? value : '';
+        })()
+      `);
+      if (!inputAfter.includes(`INPUT_ETTER ${inputState.random} offline`)) {
+        throw new Error(`input() mistet Python-tilstanden. Før: ${inputState.value}. Etter: ${inputAfter}`);
+      }
+      process.stdout.write("BJORNSVEEN_SMOKE_OK: offline-pakker, matplotlib og input-tilstand\n");
       app.exit(0);
     } catch (error) {
       process.stderr.write(`BJORNSVEEN_SMOKE_FAILED: ${error.message}\n`);

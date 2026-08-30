@@ -4175,6 +4175,7 @@ export default function Home() {
     Object.fromEntries(modules.map((module) => [module.id, module.starterCode])),
   );
   const [output, setOutput] = useState("Trykk «Kjør kode» når du er klar.");
+  const [executedCode, setExecutedCode] = useState<string | null>(null);
   const [runnerStatus, setRunnerStatus] = useState<"idle" | "loading" | "running" | "input" | "error">("idle");
   const [pythonInputRequest, setPythonInputRequest] = useState<{ prompt: string; index: number } | null>(null);
   const [pythonInputValue, setPythonInputValue] = useState("");
@@ -4219,8 +4220,14 @@ export default function Home() {
   const workbenchRef = useRef<HTMLDivElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const executionRef = useRef<{ code: string; files: { name: string; content: string }[]; inputs: string[] } | null>(null);
+  const executionRef = useRef<{ code: string; files: { name: string; content: string }[] } | null>(null);
+  const inputDialogRef = useRef<HTMLFormElement | null>(null);
+  const commandDialogRef = useRef<HTMLElement | null>(null);
+  const feedbackDialogRef = useRef<HTMLElement | null>(null);
+  const turtleDialogRef = useRef<HTMLDivElement | null>(null);
+  const plotDialogRef = useRef<HTMLDivElement | null>(null);
   const runnerBusy = runnerStatus === "loading" || runnerStatus === "running" || runnerStatus === "input";
+  const resultIsStale = executedCode !== null && code !== executedCode && !runnerBusy;
   const runButtonLabel = runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : runnerStatus === "input" ? "Venter på svar …" : "Kjør kode";
 
   const active = useMemo(
@@ -4400,15 +4407,73 @@ export default function Home() {
   }, [code]);
 
   useEffect(() => {
-    function closeOverlay(event: globalThis.KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      if (feedbackDialogOpen) setFeedbackDialogOpen(false);
-      else if (commandLibraryOpen) setCommandLibraryOpen(false);
-      else if (tutorialOpen) setTutorialOpen(false);
+    const activeDialog = pythonInputRequest
+      ? inputDialogRef.current
+      : feedbackDialogOpen
+        ? feedbackDialogRef.current
+        : commandLibraryOpen
+          ? commandDialogRef.current
+          : turtleExpanded
+            ? turtleDialogRef.current
+            : expandedPlotIndex !== null
+              ? plotDialogRef.current
+              : null;
+    if (!activeDialog) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusableSelector = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
+    const focusFirst = () => {
+      if (pythonInputRequest) {
+        (activeDialog.querySelector("input") as HTMLElement | null)?.focus();
+        return;
+      }
+      (activeDialog.querySelector(focusableSelector) as HTMLElement | null)?.focus();
+    };
+    requestAnimationFrame(focusFirst);
+
+    function handleModalKeyboard(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (pythonInputRequest) cancelPythonInput();
+        else if (feedbackDialogOpen) setFeedbackDialogOpen(false);
+        else if (commandLibraryOpen) setCommandLibraryOpen(false);
+        else if (turtleExpanded) setTurtleExpanded(false);
+        else if (expandedPlotIndex !== null) setExpandedPlotIndex(null);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(activeDialog.querySelectorAll<HTMLElement>(focusableSelector));
+      if (!focusable.length) {
+        event.preventDefault();
+        activeDialog.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
-    document.addEventListener("keydown", closeOverlay);
-    return () => document.removeEventListener("keydown", closeOverlay);
-  }, [commandLibraryOpen, feedbackDialogOpen, tutorialOpen]);
+
+    document.addEventListener("keydown", handleModalKeyboard);
+    return () => {
+      document.removeEventListener("keydown", handleModalKeyboard);
+      if (previouslyFocused?.isConnected) requestAnimationFrame(() => previouslyFocused.focus());
+    };
+  }, [commandLibraryOpen, expandedPlotIndex, feedbackDialogOpen, pythonInputRequest, turtleExpanded]);
+
+  useEffect(() => {
+    function closeTutorial(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape" && tutorialOpen && !pythonInputRequest && !feedbackDialogOpen && !commandLibraryOpen && !turtleExpanded && expandedPlotIndex === null) {
+        setTutorialOpen(false);
+      }
+    }
+    document.addEventListener("keydown", closeTutorial);
+    return () => document.removeEventListener("keydown", closeTutorial);
+  }, [commandLibraryOpen, expandedPlotIndex, feedbackDialogOpen, pythonInputRequest, turtleExpanded, tutorialOpen]);
 
   function changeEditorFontSize(change: number) {
     const next = Math.min(28, Math.max(15, editorFontSize + change));
@@ -5425,7 +5490,7 @@ export default function Home() {
     const command = filteredCommands.find((item) => item.id === selectedCommandId) ?? filteredCommands[0];
     return (
       <div className="command-library-overlay" role="presentation" onMouseDown={() => setCommandLibraryOpen(false)}>
-        <section className="command-library" role="dialog" aria-modal="true" aria-labelledby="command-library-title" onMouseDown={(event) => event.stopPropagation()}>
+        <section ref={commandDialogRef} className="command-library" role="dialog" aria-modal="true" aria-labelledby="command-library-title" onMouseDown={(event) => event.stopPropagation()}>
           <header className="command-library-header">
             <div>
               <span>Python på vanlig norsk</span>
@@ -5631,13 +5696,12 @@ export default function Home() {
     const worker = workerRef.current;
     const execution = executionRef.current;
     if (!worker || !execution || !pythonInputRequest) return;
-    const nextInputs = [...execution.inputs, pythonInputValue];
-    executionRef.current = { ...execution, inputs: nextInputs };
+    const answer = pythonInputValue;
     setPythonInputRequest(null);
     setPythonInputValue("");
     setRunnerStatus("running");
-    setOutput(`Svaret er sendt til input nummer ${nextInputs.length}. Python fortsetter …`);
-    worker.postMessage({ ...execution, inputs: nextInputs });
+    setOutput(`Svaret er sendt til Python. Programmet fortsetter fra samme sted …`);
+    worker.postMessage({ type: "input-response", value: answer });
     armExecutionTimeout(worker);
   }
 
@@ -5653,6 +5717,7 @@ export default function Home() {
   }
 
   async function runCode() {
+    setExecutedCode(code);
     setRunnerStatus("loading");
     setOutput("Starter Python … Første kjøring kan ta litt tid.");
     setPythonVariables([]);
@@ -5670,7 +5735,6 @@ export default function Home() {
     executionRef.current = {
       code,
       files: dataFiles.map(({ name, content }) => ({ name, content })),
-      inputs: [],
     };
     let executionStarted = false;
 
@@ -5680,14 +5744,14 @@ export default function Home() {
         executionStarted = true;
         setRunnerStatus("running");
         setOutput(dataFiles.length ? `Kjører med ${dataFiles.length} datafil${dataFiles.length === 1 ? "" : "er"} …` : "Kjører …");
-        worker.postMessage(executionRef.current);
+        worker.postMessage({ type: "run", ...executionRef.current });
         armExecutionTimeout(worker);
       }
 
       if (data.type === "input") {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         const execution = executionRef.current;
-        if (!execution || execution.inputs.length >= 20) {
+        if (!execution || (data.index ?? 0) >= 20) {
           worker.terminate();
           workerRef.current = null;
           executionRef.current = null;
@@ -5698,7 +5762,7 @@ export default function Home() {
         const prompt = data.prompt?.trim() || "Skriv et svar:";
         setRunnerStatus("input");
         setPythonInputValue("");
-        setPythonInputRequest({ prompt, index: data.index ?? execution.inputs.length });
+        setPythonInputRequest({ prompt, index: data.index ?? 0 });
         const partialOutput = data.output?.trim();
         setOutput(partialOutput ? `${partialOutput}\n\nProgrammet venter nå på et svar.` : `Programmet spør: ${prompt}`);
       }
@@ -5891,11 +5955,12 @@ export default function Home() {
                     </button>
                   </div>
                 </div>
-                <div className="output-panel" aria-live="polite">
+                <div className={`output-panel ${resultIsStale ? "is-stale" : ""}`} aria-live="polite">
                   <div className="panel-bar output-bar">
                     <strong>Resultat</strong>
                     <span className={`status-dot ${runnerStatus}`} />
                   </div>
+                  {resultIsStale && <p className="stale-result-notice" role="status"><strong>Koden er endret.</strong> Dette er resultatet fra forrige kjøring. Trykk «Kjør kode» for å oppdatere.</p>}
                   {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                   {plotGallery()}
                   {variableInspector()}
@@ -6335,8 +6400,9 @@ export default function Home() {
                       <button type="button" className="run-button" onClick={runCode} disabled={runnerBusy}><span>▶</span>{runButtonLabel}</button>
                     </div>
                   </div>
-                  <div className="output-panel" aria-live="polite">
+                  <div className={`output-panel ${resultIsStale ? "is-stale" : ""}`} aria-live="polite">
                     <div className="panel-bar output-bar"><strong>Resultat</strong><span className={`status-dot ${runnerStatus}`} /></div>
+                    {resultIsStale && <p className="stale-result-notice" role="status"><strong>Koden er endret.</strong> Dette er resultatet fra forrige kjøring. Trykk «Kjør kode» for å oppdatere.</p>}
                     {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                     {plotGallery()}
                     {variableInspector()}
@@ -6561,8 +6627,9 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                  <div className="output-panel" aria-live="polite">
+                  <div className={`output-panel ${resultIsStale ? "is-stale" : ""}`} aria-live="polite">
                     <div className="panel-bar output-bar"><strong>Resultat</strong><span className={`status-dot ${runnerStatus}`} /></div>
+                    {resultIsStale && <p className="stale-result-notice" role="status"><strong>Koden er endret.</strong> Dette er resultatet fra forrige kjøring. Trykk «Kjør kode» for å oppdatere.</p>}
                     {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                     {plotGallery()}
                     {variableInspector()}
@@ -6976,11 +7043,12 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="output-panel" aria-live="polite">
+              <div className={`output-panel ${resultIsStale ? "is-stale" : ""}`} aria-live="polite">
                 <div className="panel-bar output-bar">
                   <strong>Resultat</strong>
                   <span className={`status-dot ${runnerStatus}`} />
                 </div>
+                {resultIsStale && <p className="stale-result-notice" role="status"><strong>Koden er endret.</strong> Dette er resultatet fra forrige kjøring. Trykk «Kjør kode» for å oppdatere.</p>}
                 {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                 {plotGallery()}
                 {variableInspector()}
@@ -7078,7 +7146,7 @@ export default function Home() {
       </div>
       {commandLibraryPanel()}
       {turtleExpanded && turtleDrawing && (
-        <div className="plot-modal turtle-modal" role="dialog" aria-modal="true" aria-label="Turtle-tegning i stor visning" onClick={() => setTurtleExpanded(false)}>
+        <div ref={turtleDialogRef} className="plot-modal turtle-modal" role="dialog" aria-modal="true" aria-label="Turtle-tegning i stor visning" onClick={() => setTurtleExpanded(false)} tabIndex={-1}>
           <div className="plot-modal-card turtle-modal-card" onClick={(event) => event.stopPropagation()}>
             <div className="plot-modal-bar">
               <strong>Stegvis Turtle-tegning</strong>
@@ -7096,7 +7164,7 @@ export default function Home() {
         </div>
       )}
       {expandedPlotIndex !== null && plotImages[expandedPlotIndex] && (
-        <div className="plot-modal" role="dialog" aria-modal="true" aria-label={`Graf ${expandedPlotIndex + 1} i stor visning`} onClick={() => setExpandedPlotIndex(null)}>
+        <div ref={plotDialogRef} className="plot-modal" role="dialog" aria-modal="true" aria-label={`Graf ${expandedPlotIndex + 1} i stor visning`} onClick={() => setExpandedPlotIndex(null)} tabIndex={-1}>
           <div className="plot-modal-card" onClick={(event) => event.stopPropagation()}>
             <div className="plot-modal-bar">
               <strong>{plotImages.length === 1 ? "Graf" : `Graf ${expandedPlotIndex + 1}`}</strong>
@@ -7111,7 +7179,7 @@ export default function Home() {
       )}
       {pythonInputRequest && (
         <div className="python-input-modal" role="presentation">
-          <form className="python-input-card" role="dialog" aria-modal="true" aria-labelledby="python-input-title" onSubmit={submitPythonInput}>
+          <form ref={inputDialogRef} className="python-input-card" role="dialog" aria-modal="true" aria-labelledby="python-input-title" onSubmit={submitPythonInput}>
             <header>
               <span>Programmet ditt spør · input {pythonInputRequest.index + 1}</span>
               <h2 id="python-input-title">Skriv et svar til Python</h2>
@@ -7138,7 +7206,7 @@ export default function Home() {
       )}
       {feedbackDialogOpen && (
         <div className="feedback-modal" role="presentation" onMouseDown={() => setFeedbackDialogOpen(false)}>
-          <section className="feedback-card" role="dialog" aria-modal="true" aria-labelledby="feedback-title" onMouseDown={(event) => event.stopPropagation()}>
+          <section ref={feedbackDialogRef} className="feedback-card" role="dialog" aria-modal="true" aria-labelledby="feedback-title" onMouseDown={(event) => event.stopPropagation()}>
             <header>
               <div>
                 <span>Hjelp oss å bli bedre</span>
