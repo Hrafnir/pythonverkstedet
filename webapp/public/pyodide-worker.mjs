@@ -540,8 +540,39 @@ json.dumps(_bjornsveen_spill._game._as_dict() if _bjornsveen_spill._game is not 
     } catch {
       game = null;
     }
+    let variables = [];
+    try {
+      const encodedVariables = await pyodide.runPythonAsync(`
+import json as _skolepython_json
+import types as _skolepython_types
+
+_skolepython_variables = []
+for _skolepython_name, _skolepython_value in list(globals().items()):
+    if _skolepython_name.startswith("_"):
+        continue
+    if isinstance(_skolepython_value, _skolepython_types.ModuleType) or callable(_skolepython_value):
+        continue
+    _skolepython_type = type(_skolepython_value).__name__
+    try:
+        _skolepython_display = repr(_skolepython_value)
+    except Exception:
+        _skolepython_display = f"<{_skolepython_type}>"
+    if len(_skolepython_display) > 140:
+        _skolepython_display = _skolepython_display[:137] + "..."
+    _skolepython_variables.append({
+        "name": _skolepython_name,
+        "type": _skolepython_type,
+        "value": _skolepython_display,
+    })
+
+_skolepython_json.dumps(_skolepython_variables[:30], ensure_ascii=False)
+`, { globals });
+      variables = JSON.parse(encodedVariables);
+    } catch {
+      variables = [];
+    }
     globals.destroy();
-    self.postMessage({ type: "result", output: `${stdout}${stderr}`, plots, turtle, game });
+    self.postMessage({ type: "result", output: `${stdout}${stderr}`, plots, turtle, game, variables });
   } catch (error) {
     self.postMessage({ type: "error", error: error.message });
   }

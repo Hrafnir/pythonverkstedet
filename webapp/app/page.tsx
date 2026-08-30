@@ -82,6 +82,12 @@ type PythonDataFile = {
   size: number;
 };
 
+type PythonVariable = {
+  name: string;
+  type: string;
+  value: string;
+};
+
 type TurtleEvent = {
   kind: "line" | "move" | "turn" | "fill" | "dot" | "text" | "visibility" | "clear" | "background" | "title" | "screen";
   x?: number;
@@ -3081,6 +3087,110 @@ function colorPython(source: string): ReactNode[] {
   });
 }
 
+function colorPythonLines(source: string) {
+  return source.split("\n").map((line, lineIndex) => {
+    const leadingSpaces = line.match(/^ */)?.[0].length ?? 0;
+    const indentLevels = Math.floor(leadingSpaces / 4);
+    return (
+      <span className="syntax-line" key={`${lineIndex}-${line}`}>
+        <span className="indent-guide-layer" aria-hidden="true">
+          {Array.from({ length: indentLevels }, (_, level) => (
+            <i key={level} style={{ left: `${(level + 1) * 4}ch` }} />
+          ))}
+        </span>
+        {colorPython(line)}
+      </span>
+    );
+  });
+}
+
+type EditorDiagnostic = {
+  kind: "tip" | "warning";
+  message: string;
+  fixLabel?: string;
+  find?: string;
+  fixPattern?: RegExp;
+  replacement?: string;
+};
+
+function pythonRangePreview(line: string) {
+  const match = line.match(/\brange\(\s*(-?\d+)\s*(?:,\s*(-?\d+)\s*)?(?:,\s*(-?\d+)\s*)?\)/);
+  if (!match) return "";
+  const first = Number(match[1]);
+  const second = match[2] === undefined ? undefined : Number(match[2]);
+  const third = match[3] === undefined ? undefined : Number(match[3]);
+  const start = second === undefined ? 0 : first;
+  const stop = second === undefined ? first : second;
+  const step = third ?? 1;
+  if (step === 0) return "range kan ikke ha 0 som steg.";
+  const values: number[] = [];
+  for (let number = start; step > 0 ? number < stop : number > stop; number += step) {
+    values.push(number);
+    if (values.length === 9) break;
+  }
+  const hasMore = values.length === 9 && (step > 0 ? values[8] + step < stop : values[8] + step > stop);
+  const expression = match[0];
+  return values.length
+    ? `${expression} gir ${values.join(", ")}${hasMore ? ", …" : ""}. Stopptallet ${stop} er ikke med.`
+    : `${expression} gir ingen tall. Start, stopp og steg peker ikke mot hverandre.`;
+}
+
+function pythonLineDiagnostic(line: string): EditorDiagnostic | null {
+  const code = line.replace(/#.*$/, "").trim();
+  if (!code) return null;
+  if (/[“”‘’]/.test(code)) return {
+    kind: "warning",
+    message: "Disse anførselstegnene kommer ofte fra et dokument. Python trenger rette anførselstegn.",
+    fixLabel: "Bytt til rette tegn",
+    find: code.match(/[“”‘’]/)?.[0],
+    replacement: /[“”]/.test(code.match(/[“”‘’]/)?.[0] ?? "") ? "\"" : "'",
+  };
+  if (/^(?:if|elif|while)\b.*(?:&&|\|\|)/.test(code)) {
+    const find = code.includes("&&") ? "&&" : "||";
+    return {
+      kind: "warning",
+      message: `Python skriver ${find === "&&" ? "og" : "eller"} med ord: ${find === "&&" ? "and" : "or"}.`,
+      fixLabel: `Bytt ${find} til ${find === "&&" ? "and" : "or"}`,
+      find,
+      replacement: find === "&&" ? "and" : "or",
+    };
+  }
+  if (/^(?:if|elif|while)\b[^#]*(?<![<>=!:])=(?!=)/.test(code)) return {
+    kind: "warning",
+    message: "I en betingelse gir = en verdi. Når du vil sammenligne to verdier, bruker Python ==.",
+    fixLabel: "Bytt = til ==",
+    fixPattern: /(?<![<>=!:])=(?!=)/,
+    replacement: "==",
+  };
+  if (/^(?:if|elif|else|for|while|def|class|with|try|except|finally|match|case)\b.*;\s*$/.test(code)) return {
+    kind: "warning",
+    message: "En linje som starter en løkke eller et kodeblokk avsluttes med kolon (:), ikke semikolon (;).",
+    fixLabel: "Bytt ; til :",
+    find: ";",
+    replacement: ":",
+  };
+  if (/\d\s*\^\s*\d/.test(code)) return {
+    kind: "tip",
+    message: "I Python betyr ^ noe annet enn potens. Bruk ** når du vil opphøye et tall.",
+    fixLabel: "Bytt ^ til **",
+    find: "^",
+    replacement: "**",
+  };
+  if (/\b\d+,\d+\b/.test(code) && !/range\s*\(/.test(code)) return {
+    kind: "tip",
+    message: "Ser dette ut som et desimaltall? Python bruker punktum: 2.5. Komma lager to separate verdier.",
+  };
+  return null;
+}
+
+function startsPythonBlockWithoutColon(line: string) {
+  const code = line.replace(/#.*$/, "").trimEnd();
+  return /^(?:if|elif|else|for|while|def|class|with|try|except|finally|match|case)\b/.test(code)
+    && !code.endsWith(":")
+    && !code.endsWith(";")
+    && !/[([{]$/.test(code);
+}
+
 function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false }: {
   id: string;
   value: string;
@@ -3090,41 +3200,147 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
   tall?: boolean;
 }) {
   const highlightRef = useRef<HTMLPreElement | null>(null);
-  function changeIndent(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key !== "Tab") return;
-    event.preventDefault();
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const [cursor, setCursor] = useState(0);
+  const [pendingBlock, setPendingBlock] = useState<{ position: number; indent: string } | null>(null);
+
+  useEffect(() => {
+    if (cursor > value.length) setCursor(value.length);
+  }, [cursor, value.length]);
+
+  const lineStart = value.lastIndexOf("\n", Math.max(0, cursor - 1)) + 1;
+  const lineEndIndex = value.indexOf("\n", cursor);
+  const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
+  const currentLine = value.slice(lineStart, lineEnd);
+  const lineNumber = value.slice(0, cursor).split("\n").length;
+  const columnNumber = cursor - lineStart + 1;
+  const rangePreview = pythonRangePreview(currentLine);
+  const lineDiagnostic = pythonLineDiagnostic(currentLine);
+
+  function moveCursor(next: number) {
+    requestAnimationFrame(() => {
+      const input = inputRef.current;
+      if (!input) return;
+      input.selectionStart = input.selectionEnd = next;
+      setCursor(next);
+      input.focus();
+    });
+  }
+
+  function replaceSelection(start: number, end: number, replacement: string, nextCursor = start + replacement.length) {
+    onChange(`${value.slice(0, start)}${replacement}${value.slice(end)}`);
+    moveCursor(nextCursor);
+  }
+
+  function applyLineFix() {
+    if (!lineDiagnostic || lineDiagnostic.replacement === undefined) return;
+    const matchedText = lineDiagnostic.fixPattern
+      ? currentLine.match(lineDiagnostic.fixPattern)?.[0]
+      : lineDiagnostic.find;
+    if (!matchedText) return;
+    const localIndex = lineDiagnostic.fixPattern
+      ? currentLine.search(lineDiagnostic.fixPattern)
+      : currentLine.indexOf(matchedText);
+    if (localIndex === -1) return;
+    const start = lineStart + localIndex;
+    replaceSelection(start, start + matchedText.length, lineDiagnostic.replacement, cursor + lineDiagnostic.replacement.length - matchedText.length);
+  }
+
+  function continueBlock(addColon: boolean) {
+    if (!pendingBlock) return;
+    const insertion = `${addColon ? ":" : ""}\n${pendingBlock.indent}${addColon ? "    " : ""}`;
+    replaceSelection(pendingBlock.position, pendingBlock.position, insertion);
+    setPendingBlock(null);
+  }
+
+  function handleEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     const input = event.currentTarget;
     const start = input.selectionStart;
     const end = input.selectionEnd;
-    const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+
+    if (event.key === "Escape" && pendingBlock) {
+      event.preventDefault();
+      setPendingBlock(null);
+      return;
+    }
+
+    if (event.key === "Enter" && !event.shiftKey && !event.metaKey && !event.ctrlKey && start === end) {
+      event.preventDefault();
+      const activeLineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+      const beforeCursor = value.slice(activeLineStart, start);
+      const indent = beforeCursor.match(/^\s*/)?.[0] ?? "";
+      if (startsPythonBlockWithoutColon(beforeCursor)) {
+        setPendingBlock({ position: start, indent });
+        return;
+      }
+      const codeBeforeComment = beforeCursor.replace(/#.*$/, "").trimEnd();
+      replaceSelection(start, end, `\n${indent}${codeBeforeComment.endsWith(":") ? "    " : ""}`);
+      setPendingBlock(null);
+      return;
+    }
+
+    const pairMap: Record<string, string> = { "(": ")", "[": "]", "{": "}", "\"": "\"", "'": "'" };
+    const closingCharacters = new Set([")", "]", "}", "\"", "'"]);
+    if (pairMap[event.key] && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if ((event.key === "\"" || event.key === "'") && start === end && value[start] === event.key) {
+        event.preventDefault();
+        moveCursor(start + 1);
+        return;
+      }
+      event.preventDefault();
+      const selected = value.slice(start, end);
+      replaceSelection(start, end, `${event.key}${selected}${pairMap[event.key]}`, start + 1 + selected.length);
+      setPendingBlock(null);
+      return;
+    }
+    if (closingCharacters.has(event.key) && start === end && value[start] === event.key) {
+      event.preventDefault();
+      moveCursor(start + 1);
+      return;
+    }
+    if (event.key === "Backspace" && start === end && start > 0 && pairMap[value[start - 1]] === value[start]) {
+      event.preventDefault();
+      replaceSelection(start - 1, start + 1, "", start - 1);
+      setPendingBlock(null);
+      return;
+    }
+
+    if (event.key !== "Tab") {
+      if (pendingBlock) setPendingBlock(null);
+      return;
+    }
+    event.preventDefault();
+    const selectedLineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
 
     if (event.shiftKey) {
       const blockEnd = end > start ? end : value.indexOf("\n", start) === -1 ? value.length : value.indexOf("\n", start);
-      const block = value.slice(lineStart, blockEnd);
+      const block = value.slice(selectedLineStart, blockEnd);
       let removedBeforeStart = 0;
       let removedTotal = 0;
       const unindented = block.replace(/^(?: {1,4}|\t)/gm, (indent, offset) => {
-        if (lineStart + offset < start) removedBeforeStart += indent.length;
+        if (selectedLineStart + offset < start) removedBeforeStart += indent.length;
         removedTotal += indent.length;
         return "";
       });
-      onChange(`${value.slice(0, lineStart)}${unindented}${value.slice(blockEnd)}`);
+      onChange(`${value.slice(0, selectedLineStart)}${unindented}${value.slice(blockEnd)}`);
       requestAnimationFrame(() => {
-        input.selectionStart = Math.max(lineStart, start - removedBeforeStart);
-        input.selectionEnd = Math.max(lineStart, end - removedTotal);
+        input.selectionStart = Math.max(selectedLineStart, start - removedBeforeStart);
+        input.selectionEnd = Math.max(selectedLineStart, end - removedTotal);
+        setCursor(input.selectionEnd);
       });
       return;
     }
 
     if (end > start) {
       const blockEnd = value[end - 1] === "\n" ? end - 1 : end;
-      const block = value.slice(lineStart, blockEnd);
+      const block = value.slice(selectedLineStart, blockEnd);
       const indented = block.replace(/^/gm, "    ");
       const lineCount = (block.match(/^/gm) ?? []).length;
-      onChange(`${value.slice(0, lineStart)}${indented}${value.slice(blockEnd)}`);
+      onChange(`${value.slice(0, selectedLineStart)}${indented}${value.slice(blockEnd)}`);
       requestAnimationFrame(() => {
         input.selectionStart = start + 4;
         input.selectionEnd = end + lineCount * 4;
+        setCursor(input.selectionEnd);
       });
       return;
     }
@@ -3132,27 +3348,59 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
     onChange(`${value.slice(0, start)}    ${value.slice(end)}`);
     requestAnimationFrame(() => {
       input.selectionStart = input.selectionEnd = start + 4;
+      setCursor(start + 4);
     });
   }
   return (
     <div className={`python-editor ${tall ? "is-tall" : ""}`} style={{ "--editor-font-size": `${fontSize}px` } as CSSProperties}>
-      <pre className="syntax-layer" ref={highlightRef} aria-hidden="true">{colorPython(`${value}\n`)}</pre>
-      <textarea
-        id={id}
-        className="syntax-input"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={changeIndent}
-        onScroll={(event) => {
-          if (!highlightRef.current) return;
-          highlightRef.current.scrollTop = event.currentTarget.scrollTop;
-          highlightRef.current.scrollLeft = event.currentTarget.scrollLeft;
-        }}
-        spellCheck={false}
-        autoCapitalize="off"
-        autoCorrect="off"
-        aria-describedby={describedBy}
-      />
+      <div className="python-editor-surface">
+        <pre className="syntax-layer" ref={highlightRef} aria-hidden="true">{colorPythonLines(`${value}\n`)}</pre>
+        <textarea
+          ref={inputRef}
+          id={id}
+          className="syntax-input"
+          value={value}
+          onChange={(event) => {
+            onChange(event.target.value);
+            setCursor(event.target.selectionStart);
+            setPendingBlock(null);
+          }}
+          onKeyDown={handleEditorKeyDown}
+          onSelect={(event) => setCursor(event.currentTarget.selectionStart)}
+          onClick={(event) => setCursor(event.currentTarget.selectionStart)}
+          onKeyUp={(event) => setCursor(event.currentTarget.selectionStart)}
+          onScroll={(event) => {
+            if (!highlightRef.current) return;
+            highlightRef.current.scrollTop = event.currentTarget.scrollTop;
+            highlightRef.current.scrollLeft = event.currentTarget.scrollLeft;
+          }}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          aria-describedby={`${describedBy} ${id}-assist`}
+        />
+      </div>
+      <div className="editor-assist-bar" id={`${id}-assist`} aria-live="polite">
+        <span className="editor-position">Linje {lineNumber}, kolonne {columnNumber}</span>
+        {pendingBlock ? (
+          <span className="editor-inline-help is-warning">
+            <strong>Mangler det et kolon?</strong> Denne linjen ser ut som starten på en løkke eller et kodeblokk.
+            <span>
+              <button type="button" onClick={() => continueBlock(true)}>Legg til : og lag innrykk</button>
+              <button type="button" onClick={() => continueBlock(false)}>Ny linje uten kolon</button>
+            </span>
+          </span>
+        ) : lineDiagnostic ? (
+          <span className={`editor-inline-help is-${lineDiagnostic.kind}`}>
+            <strong>{lineDiagnostic.kind === "warning" ? "Sjekk denne linjen:" : "Lite Python-tips:"}</strong> {lineDiagnostic.message}
+            {lineDiagnostic.fixLabel && <button type="button" onClick={applyLineFix}>{lineDiagnostic.fixLabel}</button>}
+          </span>
+        ) : rangePreview ? (
+          <span className="editor-inline-help is-range"><strong>Løkken teller slik:</strong> {rangePreview}</span>
+        ) : (
+          <span className="editor-inline-help is-quiet">Enter lager riktig innrykk etter kolon. Tab flytter koden fire mellomrom.</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -3875,6 +4123,7 @@ export default function Home() {
   const [activeProjectId, setActiveProjectId] = useState(firstProject.id);
   const [shareStatus, setShareStatus] = useState("");
   const [plotImages, setPlotImages] = useState<string[]>([]);
+  const [pythonVariables, setPythonVariables] = useState<PythonVariable[]>([]);
   const [expandedPlotIndex, setExpandedPlotIndex] = useState<number | null>(null);
   const [turtleDrawing, setTurtleDrawing] = useState<TurtleDrawing | null>(null);
   const [snakeGame, setSnakeGame] = useState<SnakeGameConfig | null>(null);
@@ -4078,6 +4327,12 @@ export default function Home() {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    // Variabelvisningen beskriver alltid den koden som faktisk ble kjørt.
+    // Så snart eleven endrer eller henter ny kode, skjules gamle verdier.
+    setPythonVariables([]);
+  }, [code]);
 
   useEffect(() => {
     function closeOverlay(event: globalThis.KeyboardEvent) {
@@ -4339,6 +4594,7 @@ export default function Home() {
 
   function updateCode(nextCode: string) {
     setCode(nextCode);
+    setPythonVariables([]);
     if (examTrainingView && activeExamTask) {
       const nextExamCodes = { ...examCodes, [activeExamTask.id]: nextCode };
       setExamCodes(nextExamCodes);
@@ -5244,6 +5500,46 @@ export default function Home() {
     );
   }
 
+  function variableInspector() {
+    if (!pythonVariables.length) return null;
+    const typeNames: Record<string, string> = {
+      int: "heltall",
+      float: "desimaltall",
+      str: "tekst",
+      bool: "sann/usann",
+      list: "liste",
+      tuple: "tuppel",
+      dict: "ordbok",
+      set: "mengde",
+      ndarray: "NumPy-tabell",
+      DataFrame: "tabell",
+      Series: "kolonne",
+    };
+    return (
+      <section className="variable-inspector" aria-label="Variabler etter kjøring">
+        <div className="variable-inspector-heading">
+          <div><span>Etter kjøring</span><strong>Dette husker Python nå</strong></div>
+          <small>{pythonVariables.length} {pythonVariables.length === 1 ? "variabel" : "variabler"}</small>
+        </div>
+        <div className="variable-table-wrap">
+          <table>
+            <thead><tr><th>Navn</th><th>Type</th><th>Siste verdi</th></tr></thead>
+            <tbody>
+              {pythonVariables.map((variable) => (
+                <tr key={variable.name}>
+                  <th scope="row"><code>{variable.name}</code></th>
+                  <td>{typeNames[variable.type] ?? variable.type}</td>
+                  <td><code>{variable.value}</code></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p>Løkkevariabler viser den siste verdien de fikk. Endre koden og kjør igjen for å se hva som forandrer seg.</p>
+      </section>
+    );
+  }
+
   function makeWorker() {
     workerRef.current?.terminate();
     const worker = new Worker(new URL("pyodide-worker.mjs", document.baseURI), {
@@ -5256,6 +5552,7 @@ export default function Home() {
   async function runCode() {
     setRunnerStatus("loading");
     setOutput("Starter Python … Første kjøring kan ta litt tid.");
+    setPythonVariables([]);
     setErrorCoach(null);
     setFeedback("");
     setPlotImages([]);
@@ -5268,7 +5565,7 @@ export default function Home() {
     let executionStarted = false;
 
     worker.onmessage = (event) => {
-      const data = event.data as { type: string; output?: string; error?: string; plots?: string[]; turtle?: TurtleDrawing | null; game?: SnakeGameConfig | null };
+      const data = event.data as { type: string; output?: string; error?: string; plots?: string[]; turtle?: TurtleDrawing | null; game?: SnakeGameConfig | null; variables?: PythonVariable[] };
       if (data.type === "ready") {
         executionStarted = true;
         setRunnerStatus("running");
@@ -5290,6 +5587,7 @@ export default function Home() {
         const nextGame = data.game ?? null;
         setOutput(data.output?.trim() || (nextGame ? "Snake-spillet er klart. Trykk Start og bruk piltastene." : nextTurtle ? "Turtle-tegningen kan spilles av steg for steg under." : nextPlots.length ? `${nextPlots.length === 1 ? "Grafen" : `${nextPlots.length} grafer`} vises under.` : "Koden kjørte ferdig uten utskrift."));
         setPlotImages(nextPlots);
+        setPythonVariables(data.variables ?? []);
         setTurtleDrawing(nextTurtle);
         setSnakeGame(nextGame);
         worker.terminate();
@@ -5300,6 +5598,7 @@ export default function Home() {
         setRunnerStatus("error");
         const error = data.error || "Python stoppet uten en teknisk feilmelding.";
         setErrorCoach(analyzePythonError(error, code));
+        setPythonVariables([]);
         setOutput("Python trenger litt hjelp før programmet kan kjøre ferdig.");
         worker.terminate();
       }
@@ -5309,6 +5608,7 @@ export default function Home() {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       setRunnerStatus("error");
       setErrorCoach(null);
+      setPythonVariables([]);
       const detail = event.message ? ` Teknisk detalj: ${event.message}` : "";
       setOutput(
         executionStarted
@@ -5464,6 +5764,7 @@ export default function Home() {
                   </div>
                   {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                   {plotGallery()}
+                  {variableInspector()}
                   <div className="output-tip"><strong>Neste spørsmål:</strong> Hva kan dere endre for å få et annet resultat?</div>
                 </div>
                 {codingTutorialPanel()}
@@ -5904,6 +6205,7 @@ export default function Home() {
                     <div className="panel-bar output-bar"><strong>Resultat</strong><span className={`status-dot ${runnerStatus}`} /></div>
                     {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                     {plotGallery()}
+                    {variableInspector()}
                     <div className="output-tip"><strong>Eksamenstanke:</strong> Stemmer svaret med enheten, situasjonen og overslaget ditt?</div>
                   </div>
                   {codingTutorialPanel()}
@@ -6129,6 +6431,7 @@ export default function Home() {
                     <div className="panel-bar output-bar"><strong>Resultat</strong><span className={`status-dot ${runnerStatus}`} /></div>
                     {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                     {plotGallery()}
+                    {variableInspector()}
                     <div className="output-tip"><strong>Observer:</strong> Stemte resultatet med det du trodde før du kjørte?</div>
                   </div>
                   {codingTutorialPanel()}
@@ -6546,6 +6849,7 @@ export default function Home() {
                 </div>
                 {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                 {plotGallery()}
+                {variableInspector()}
                 <div className="output-tip"><strong>Observer:</strong> Stemmer resultatet med det du forventet?</div>
               </div>
               {codingTutorialPanel()}

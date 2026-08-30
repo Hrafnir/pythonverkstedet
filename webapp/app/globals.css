@@ -446,12 +446,28 @@ p, li { text-wrap: pretty; }
 .dot.coral { background: var(--coral); }
 .dot.cream { background: var(--yellow); }
 .dot.green { background: #6fd79f; }
-.python-editor { position: relative; min-height: 390px; background: #102e2b; }
+.python-editor { position: relative; min-height: 390px; display: flex; flex-direction: column; background: #102e2b; }
+.python-editor-surface { position: relative; min-height: 390px; flex: 1; }
 .syntax-layer, .syntax-input { width: 100%; min-height: 390px; margin: 0; padding: 28px; border: 0; font-family: var(--mono); font-size: var(--editor-font-size, 19px); font-weight: 500; font-style: normal; font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; letter-spacing: 0; line-height: 1.7; tab-size: 4; white-space: pre; overflow-wrap: normal; word-break: normal; }
 .syntax-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: #102e2b; color: #e7eee9; }
 .syntax-input { position: relative; display: block; overflow: auto; resize: vertical; outline: 0; background: transparent; color: transparent; caret-color: #ff8a6e; }
 .syntax-input::selection { background: #6fd79f45; }
 .python-editor:focus-within { box-shadow: inset 0 0 0 2px #f06f5180; }
+.syntax-line { position: relative; display: block; min-height: 1.7em; }
+.indent-guide-layer { position: absolute; inset: 0; pointer-events: none; }
+.indent-guide-layer i { position: absolute; top: 0; bottom: 0; width: 1px; background: #8eb7aa35; transform: translateX(-.5ch); }
+.editor-assist-bar { position: relative; z-index: 2; min-height: 43px; display: flex; align-items: stretch; border-top: 1px solid #34514b; background: #0d2926; color: #b9cbc5; font-size: 12px; line-height: 1.45; }
+.editor-position { flex: 0 0 auto; min-width: 135px; display: flex; align-items: center; padding: 8px 14px; border-right: 1px solid #34514b; color: #87a59c; font-family: var(--mono); font-size: 11px; white-space: nowrap; }
+.editor-inline-help { min-width: 0; flex: 1; display: flex; align-items: center; gap: 7px; padding: 7px 13px; }
+.editor-inline-help strong { color: #dce8e3; white-space: nowrap; }
+.editor-inline-help.is-quiet { color: #829d95; }
+.editor-inline-help.is-range { background: #153a35; color: #bcebd4; }
+.editor-inline-help.is-range strong { color: var(--yellow); }
+.editor-inline-help.is-warning { background: #4b351a; color: #ffe8b1; }
+.editor-inline-help.is-tip { background: #173b42; color: #cae9ef; }
+.editor-inline-help > span { display: inline-flex; gap: 6px; margin-left: auto; }
+.editor-inline-help button { flex: 0 0 auto; min-height: 29px; padding: 5px 9px; border: 1px solid #ffffff45; border-radius: 6px; background: #ffffff0d; color: white; font: inherit; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.editor-inline-help button:hover { border-color: var(--yellow); color: var(--yellow); }
 .py-keyword { color: #f28b72; }
 .py-builtin { color: #78d5e3; }
 .py-string { color: #f4c95d; }
@@ -496,6 +512,20 @@ p, li { text-wrap: pretty; }
 .error-coach-next strong { color: var(--green-dark); }
 .output-tip { padding: 18px 22px; border-top: 1px solid #34514b; color: #a6bab4; font-size: 13px; line-height: 1.55; }
 .output-tip strong { color: #d5dfdb; }
+.variable-inspector { margin: 0 16px 16px; overflow: hidden; border: 1px solid #55766d; border-radius: 10px; background: #153a35; color: #dce9e4; }
+.variable-inspector-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border-bottom: 1px solid #55766d; background: #193f3a; }
+.variable-inspector-heading > div { display: grid; gap: 1px; }
+.variable-inspector-heading span { color: var(--yellow); font-size: 9px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.variable-inspector-heading strong { font-size: 14px; }
+.variable-inspector-heading small { padding: 4px 7px; border-radius: 99px; background: #ffffff12; color: #b9cbc5; font-size: 10px; white-space: nowrap; }
+.variable-table-wrap { max-height: 220px; overflow: auto; }
+.variable-inspector table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.variable-inspector th, .variable-inspector td { padding: 8px 12px; border-bottom: 1px solid #ffffff12; text-align: left; vertical-align: top; }
+.variable-inspector thead th { position: sticky; top: 0; z-index: 1; background: #21483f; color: #9db5ad; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.variable-inspector tbody th { color: #f3ca60; font-weight: 800; }
+.variable-inspector td:nth-child(2) { color: #a9c6bc; white-space: nowrap; }
+.variable-inspector code { color: inherit; font-family: var(--mono); font-size: 11px; overflow-wrap: anywhere; }
+.variable-inspector > p { margin: 0; padding: 9px 13px; color: #91aaa2; font-size: 10px; line-height: 1.45; }
 .coding-help-drawer { position: absolute; inset: 0 0 0 auto; z-index: 20; width: clamp(500px, 50%, 640px); min-width: 500px; display: flex; flex-direction: column; overflow: hidden; border-left: 1px solid #769087; background: #fffdf8; color: var(--ink); box-shadow: -20px 0 55px #061d1a70; }
 .coding-help-header { flex: 0 0 auto; min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 13px 18px 13px 22px; border-bottom: 1px solid #d5d8d1; background: var(--green-dark); color: white; }
 .coding-help-header > div { display: grid; }
@@ -549,6 +579,7 @@ p, li { text-wrap: pretty; }
 .code-workbench:fullscreen { width: 100vw; max-width: none; height: 100vh; grid-template-columns: minmax(0, 1.65fr) minmax(320px, .85fr); border: 0; border-radius: 0; background: #102e2b; }
 .code-workbench:fullscreen .editor-panel { min-height: 0; display: flex; flex-direction: column; }
 .code-workbench:fullscreen .python-editor { flex: 1; min-height: 0; }
+.code-workbench:fullscreen .python-editor-surface { min-height: 0; }
 .code-workbench:fullscreen .syntax-layer,
 .code-workbench:fullscreen .syntax-input { min-height: 0; height: 100%; resize: none; }
 .code-workbench:fullscreen .output-panel { min-height: 0; overflow: auto; }
@@ -808,7 +839,7 @@ p, li { text-wrap: pretty; }
 .debug-guide li { display: grid; grid-template-columns: 140px 1fr; gap: 13px; padding: 9px 11px; border: 1px solid #ffffff1f; border-radius: 8px; background: #ffffff08; }
 .debug-guide code { color: var(--yellow); font-family: var(--mono); font-size: 12px; font-weight: 800; }
 .debug-guide li span { color: #c8d8d3; font-size: 13px; line-height: 1.45; }
-.python-editor.is-tall, .python-editor.is-tall .syntax-layer, .python-editor.is-tall .syntax-input { min-height: 500px; }
+.python-editor.is-tall, .python-editor.is-tall .python-editor-surface, .python-editor.is-tall .syntax-layer, .python-editor.is-tall .syntax-input { min-height: 500px; }
 .playground-reflection { padding-top: 76px; padding-bottom: 90px; }
 .project-section { padding-top: 38px; padding-bottom: 54px; border-top: 1px solid var(--line); background: #faf8f2; }
 .project-heading { display: flex; align-items: end; justify-content: space-between; gap: 28px; }
@@ -1289,8 +1320,12 @@ p, li { text-wrap: pretty; }
   .progression-card { padding: 21px; }
   .lab-heading { display: flex; align-items: start; }
   .live-badge { display: none; }
-  .python-editor, .syntax-layer, .syntax-input, .python-editor.is-tall, .python-editor.is-tall .syntax-layer, .python-editor.is-tall .syntax-input { min-height: 340px; }
+  .python-editor, .python-editor-surface, .syntax-layer, .syntax-input, .python-editor.is-tall, .python-editor.is-tall .python-editor-surface, .python-editor.is-tall .syntax-layer, .python-editor.is-tall .syntax-input { min-height: 340px; }
   .syntax-layer, .syntax-input { padding: 20px 17px; font-size: var(--editor-font-size, 19px); }
+  .editor-assist-bar { display: grid; }
+  .editor-position { min-width: 0; border-right: 0; border-bottom: 1px solid #34514b; }
+  .editor-inline-help { align-items: flex-start; flex-wrap: wrap; }
+  .editor-inline-help > span { width: 100%; margin-left: 0; }
   .lab-tabs { grid-template-columns: 1fr; }
   .typing-guide { padding: 17px; }
   .typing-steps > li { grid-template-columns: 32px minmax(0, 1fr); gap: 8px; padding: 10px; }

@@ -25,6 +25,14 @@ const analyzerContext = vm.createContext({});
 vm.runInContext(analyzerJavaScript, analyzerContext);
 const analyzePythonError = analyzerContext.analyzePythonError;
 
+const editorHelperSource = page.slice(page.indexOf("type EditorDiagnostic"), page.indexOf("function PythonEditor"));
+const editorHelperJavaScript = ts.transpileModule(`${editorHelperSource}\nglobalThis.pythonRangePreview = pythonRangePreview;\nglobalThis.pythonLineDiagnostic = pythonLineDiagnostic;\nglobalThis.startsPythonBlockWithoutColon = startsPythonBlockWithoutColon;`, {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None },
+}).outputText;
+const editorHelperContext = vm.createContext({});
+vm.runInContext(editorHelperJavaScript, editorHelperContext);
+const { pythonRangePreview, pythonLineDiagnostic, startsPythonBlockWithoutColon } = editorHelperContext;
+
 test("appen inneholder ti komplette læringsmoduler", () => {
   const moduleIds = page.match(/\n    id: (?:[1-9]|10),/g) ?? [];
   assert.equal(moduleIds.length, 10);
@@ -226,13 +234,43 @@ test("alle moduler bygger kompetanse i små, kjørbare steg", () => {
 });
 
 test("kodeeditoren støtter innrykk, lesbar tekst og fullskjerm", () => {
-  assert.match(page, /event\.key !== "Tab"/);
+  assert.match(page, /event\.key === "Enter"/);
+  assert.match(page, /codeBeforeComment\.endsWith\(":"\)/);
+  assert.match(page, /Legg til : og lag innrykk/);
+  assert.match(page, /const pairMap/);
+  assert.match(page, /Linje \{lineNumber\}, kolonne \{columnNumber\}/);
+  assert.match(page, /Løkken teller slik/);
+  assert.match(page, /indent-guide-layer/);
   assert.match(page, /event\.shiftKey/);
   assert.match(page, /bjornsveen-editor-font-size/);
   assert.match(page, /requestFullscreen/);
   assert.match(page, /Fullskjerm/);
   assert.match(page, /const playgroundCode = ""/);
   assert.match(page, /code: ""/);
+});
+
+test("editorhjelpen varsler presist og forklarer range uten å løse oppgaven", () => {
+  assert.equal(startsPythonBlockWithoutColon("for n in range(1, 6)"), true);
+  assert.equal(startsPythonBlockWithoutColon("for n in range(1, 6):"), false);
+  assert.equal(startsPythonBlockWithoutColon("print('hei')"), false);
+  assert.match(pythonRangePreview("for n in range(1, 6):"), /1, 2, 3, 4, 5/);
+  assert.match(pythonRangePreview("for n in range(5, 0, -2):"), /5, 3, 1/);
+  assert.match(pythonRangePreview("for n in range(1, 6):"), /Stopptallet 6 er ikke med/);
+  assert.equal(pythonRangePreview("print('hei')"), "");
+  assert.equal(pythonLineDiagnostic("if alder = 14:").replacement, "==");
+  assert.equal(pythonLineDiagnostic("for n in range(4);").replacement, ":");
+  assert.equal(pythonLineDiagnostic("areal = 5 ^ 2").replacement, "**");
+  assert.equal(pythonLineDiagnostic("pris = 2,5").kind, "tip");
+});
+
+test("Python-kjøringen sender tilbake en pedagogisk variabeloversikt", () => {
+  assert.match(worker, /_skolepython_variables/);
+  assert.match(worker, /callable\(_skolepython_value\)/);
+  assert.match(worker, /variables = JSON\.parse/);
+  assert.match(worker, /game, variables/);
+  assert.match(page, /Dette husker Python nå/);
+  assert.match(page, /Løkkevariabler viser den siste verdien/);
+  assert.match(page, /setPythonVariables\(data\.variables \?\? \[\]\)/);
 });
 
 test("feildetektiven gjør Python-feil forståelige uten å rette koden", () => {
@@ -486,7 +524,7 @@ test("Turtle kan spilles av stegvis uten komprimerte mellombilder", () => {
   assert.match(worker, /_turtle_events/);
   assert.match(worker, /"line" if self\._down else "move"/);
   assert.match(worker, /canvasWidth/);
-  assert.match(worker, /self\.postMessage\(\{ type: "result", output: `\$\{stdout\}\$\{stderr\}`, plots, turtle, game \}\)/);
+  assert.match(worker, /self\.postMessage\(\{ type: "result", output: `\$\{stdout\}\$\{stderr\}`, plots, turtle, game, variables \}\)/);
   assert.match(page, /function renderTurtleFrame/);
   assert.match(page, /function TurtlePlayer/);
   assert.match(page, /Steg \$\{frame\} av \$\{lastFrame\}/);
