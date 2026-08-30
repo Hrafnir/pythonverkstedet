@@ -14,6 +14,7 @@ const desktopMain = readFileSync("desktop/main.mjs", "utf8");
 const desktopBuild = readFileSync("scripts/build-macos.mjs", "utf8");
 const desktopPrepare = readFileSync("scripts/prepare-desktop-dev.mjs", "utf8");
 const offlinePackages = readFileSync("scripts/download-pyodide.mjs", "utf8");
+const { evaluateChallengeAttempt, pythonChallenges } = await import("../app/challenges.ts");
 
 const analyzerSource = page.slice(page.indexOf("function analyzePythonError"), page.indexOf("const pythonTokens"));
 const analyzerJavaScript = ts.transpileModule(`${analyzerSource}\nglobalThis.analyzePythonError = analyzePythonError;`, {
@@ -82,6 +83,8 @@ test("utfordringssiden bygger programmeringslogikk med gradvis støtte og mestri
   assert.equal((challenges.match(/label: "Byggekloss"/g) ?? []).length, 18);
   assert.equal((challenges.match(/label: "Plan"/g) ?? []).length, 18);
   assert.equal((challenges.match(/label: "Nesten der"/g) ?? []).length, 18);
+  assert.equal((challenges.match(/^    given: \[/gm) ?? []).length, 18);
+  assert.equal((challenges.match(/^    programShould: \[/gm) ?? []).length, 18);
   assert.match(challenges, /Er trekanten rettvinklet/);
   assert.match(challenges, /Finn den ukjente kateten/);
   assert.match(challenges, /mest logiske|grunnlogikken|synlige mellomsteg/i);
@@ -90,9 +93,48 @@ test("utfordringssiden bygger programmeringslogikk med gradvis støtte og mestri
   assert.match(page, /Den gode utfordringssonen/);
   assert.match(page, /Ta bare så mye hjelp som du trenger/);
   assert.match(page, /Sjekk retning – ikke bare fasit/);
+  assert.match(page, /Dette får du vite/);
+  assert.match(page, /Programmet ditt skal/);
+  assert.match(page, /godtar flere framgangsmåter og variabelnavn/);
   assert.match(page, /Løsningsforslag med forklaring/);
   assert.match(page, /skolepython-completed-challenges/);
   assert.match(page, /id="challenge-code"/);
+});
+
+test("mestringssjekken godkjenner løsningsforslagene og naturlige alternative løsninger", () => {
+  const outputs = {
+    "sum-variables": "Totalprisen er 648 kr",
+    discount: "Den nye prisen er 600 kr",
+    "even-odd": "14 er et partall",
+    hypotenuse: "Hypotenusen er 5 cm",
+    "multiplication-table": "10 · 5 = 50",
+    "ticket-price": "15 år betaler 90 kr",
+    "right-triangle": "rettvinklet",
+    "missing-leg": "12 cm",
+    "largest-without-max": "19",
+    "average-analysis": "14 og 2",
+    "count-vowels": "7 vokaler",
+    "turtle-polygon": "",
+    "triangle-classifier": "uliksidet og rettvinklet",
+    "prime-number": "97 er et primtall",
+    "growth-threshold": "6 år",
+    "dice-simulation": "",
+    "caesar-cipher": "sbwkrq",
+    "turtle-spiral": "",
+  };
+
+  for (const challenge of pythonChallenges) {
+    const results = evaluateChallengeAttempt(challenge, challenge.solutionCode, outputs[challenge.id] ?? "");
+    assert.ok(results.every((result) => result.startsWith("✓")), `${challenge.id}: ${results.join(" | ")}`);
+  }
+
+  const sumChallenge = pythonChallenges.find((challenge) => challenge.id === "sum-variables");
+  const flexibleSum = "vare = 599\nporto = 49\nsvar = vare + porto\nprint(f\"Totalprisen er {svar} kr\")";
+  assert.ok(evaluateChallengeAttempt(sumChallenge, flexibleSum, "Totalprisen er 648 kr").every((result) => result.startsWith("✓")));
+
+  const discountChallenge = pythonChallenges.find((challenge) => challenge.id === "discount");
+  const flexibleDiscount = "gammel_pris = 800\nrabatt_i_kroner = gammel_pris * 0.25\nsluttpris = gammel_pris - rabatt_i_kroner\nprint(sluttpris, \"kr\")";
+  assert.ok(evaluateChallengeAttempt(discountChallenge, flexibleDiscount, "600.0 kr").every((result) => result.startsWith("✓")));
 });
 
 test("eksamenstreningen kobler læreplantolking, flervalg og kjørbar Python", () => {

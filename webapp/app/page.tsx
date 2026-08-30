@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, KeyboardEvent, ReactNode } from "react";
 import { commandCategories, pythonCommands } from "./pythonCommands";
 import type { CommandCategory, PythonCommand } from "./pythonCommands";
-import { challengeDifficulties, pythonChallenges } from "./challenges";
+import { challengeDifficulties, evaluateChallengeAttempt, pythonChallenges } from "./challenges";
 import type { ChallengeDifficulty, PythonChallenge } from "./challenges";
 import { examLevels, examTasks } from "./examTraining";
 import type { ExamLevel, ExamTask } from "./examTraining";
@@ -4600,16 +4600,7 @@ export default function Home() {
       setChallengeCheckFeedback(["○ Editoren er tom ennå. Skriv ett lite steg eller hent startpunktet før du sjekker."]);
       return;
     }
-    const normalizedCode = code.toLocaleLowerCase("nb");
-    const normalizedOutput = output.toLocaleLowerCase("nb");
-    const results = challenge.checks.map((check) => {
-      const codePass = !check.codeIncludes || check.codeIncludes.every((part) => normalizedCode.includes(part.toLocaleLowerCase("nb")));
-      const outputPass = !check.outputIncludes || check.outputIncludes.every((part) => normalizedOutput.includes(part.toLocaleLowerCase("nb")));
-      return `${codePass && outputPass ? "✓" : "○"} ${check.label}`;
-    });
-    if (results.every((result) => result.startsWith("✓"))) results.push("✓ Flott! Test nå minst ett annet tall eller datasett før du kaller løsningen ferdig.");
-    else results.push("○ Ikke alt er synlig ennå. Bruk listen som retning, ikke som fasit: Endre én liten ting og kjør igjen.");
-    setChallengeCheckFeedback(results);
+    setChallengeCheckFeedback(evaluateChallengeAttempt(challenge, code, output));
   }
 
   function markChallengeComplete(challenge: PythonChallenge) {
@@ -6073,6 +6064,16 @@ export default function Home() {
                 <div className="challenge-mission-main">
                   <p className="section-label"><span>1</span> Oppdraget</p>
                   <h2>{activeChallenge.mission}</h2>
+                  <div className="challenge-brief" aria-label="Opplysninger og krav i oppgaven">
+                    <section>
+                      <strong>Dette får du vite</strong>
+                      <ul>{activeChallenge.given.map((item) => <li key={item}>{item}</li>)}</ul>
+                    </section>
+                    <section>
+                      <strong>Programmet ditt skal</strong>
+                      <ul>{activeChallenge.programShould.map((item) => <li key={item}>{item}</li>)}</ul>
+                    </section>
+                  </div>
                   <div className="challenge-why"><strong>Hvorfor gjør vi dette?</strong><p>{activeChallenge.whyItMatters}</p></div>
                 </div>
                 <div className="challenge-success-box">
@@ -6172,8 +6173,8 @@ export default function Home() {
                 <section className="challenge-check-column">
                   <p className="section-label"><span>5</span> Mestringssjekk</p>
                   <h2>Sjekk retning – ikke bare fasit</h2>
-                  <p>Sjekken ser etter noen viktige spor i koden og resultatet. Den kan ikke vurdere hele forklaringen din.</p>
-                  <button type="button" onClick={() => checkChallengeAttempt(activeChallenge)}>Sjekk forsøket mitt</button>
+                  <p>Sjekken godtar flere framgangsmåter og variabelnavn. Den ser etter noen viktige spor i koden og resultatet, men et åpent grønt punkt er støtte – ikke en dom over hele løsningen.</p>
+                  <button type="button" onClick={() => checkChallengeAttempt(activeChallenge)} disabled={runnerStatus === "loading" || runnerStatus === "running"}>{runnerStatus === "loading" || runnerStatus === "running" ? "Vent til koden er kjørt …" : "Sjekk forsøket mitt"}</button>
                   {challengeCheckFeedback.length > 0 && <ul className="challenge-check-results" aria-live="polite">{challengeCheckFeedback.map((item) => <li className={item.startsWith("✓") ? "is-pass" : ""} key={item}>{item}</li>)}</ul>}
                   <div className="challenge-concepts-box"><strong>Byggeklosser i oppgaven</strong><div>{activeChallenge.concepts.map((concept) => <button type="button" onClick={() => openCommandLibrary(concept)} key={concept}>{concept}</button>)}</div></div>
                 </section>

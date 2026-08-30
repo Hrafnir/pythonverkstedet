@@ -11,7 +11,10 @@ export type ChallengeHint = {
 export type ChallengeCheck = {
   label: string;
   codeIncludes?: string[];
+  codeIncludesAny?: string[];
+  codeExcludes?: string[];
   outputIncludes?: string[];
+  outputIncludesAny?: string[];
 };
 
 export type PythonChallenge = {
@@ -22,6 +25,8 @@ export type PythonChallenge = {
   estimatedMinutes: number;
   teaser: string;
   mission: string;
+  given: string[];
+  programShould: string[];
   whyItMatters: string;
   concepts: string[];
   beforeQuestions: string[];
@@ -37,6 +42,32 @@ export type PythonChallenge = {
   checks: ChallengeCheck[];
 };
 
+export function evaluateChallengeAttempt(challenge: PythonChallenge, code: string, output: string) {
+  const executableCode = code
+    .split("\n")
+    .map((line) => line.replace(/#.*$/, ""))
+    .join("\n");
+  const compactCode = executableCode.toLocaleLowerCase("nb").replace(/\s+/g, "");
+  const normalizedOutput = output.toLocaleLowerCase("nb");
+  const hasCodePart = (part: string) => compactCode.includes(part.toLocaleLowerCase("nb").replace(/\s+/g, ""));
+
+  const results = challenge.checks.map((check) => {
+    const codeAllPass = !check.codeIncludes || check.codeIncludes.every(hasCodePart);
+    const codeAnyPass = !check.codeIncludesAny || check.codeIncludesAny.some(hasCodePart);
+    const codeExcludesPass = !check.codeExcludes || check.codeExcludes.every((part) => !hasCodePart(part));
+    const outputAllPass = !check.outputIncludes || check.outputIncludes.every((part) => normalizedOutput.includes(part.toLocaleLowerCase("nb")));
+    const outputAnyPass = !check.outputIncludesAny || check.outputIncludesAny.some((part) => normalizedOutput.includes(part.toLocaleLowerCase("nb")));
+    return `${codeAllPass && codeAnyPass && codeExcludesPass && outputAllPass && outputAnyPass ? "✓" : "○"} ${check.label}`;
+  });
+
+  if (results.every((result) => result.startsWith("✓"))) {
+    results.push("✓ Flott! Test nå minst ett annet tall eller datasett før du kaller løsningen ferdig.");
+  } else {
+    results.push("○ Sjekken leter bare etter noen synlige spor. En annen løsning kan fortsatt være riktig – sammenlign resultatet med kravene i oppgaven.");
+  }
+  return results;
+}
+
 export const pythonChallenges: PythonChallenge[] = [
   {
     id: "sum-variables",
@@ -45,7 +76,9 @@ export const pythonChallenges: PythonChallenge[] = [
     subject: "Variabler og utskrift",
     estimatedMinutes: 10,
     teaser: "La Python legge sammen to verdier og svare med en hel setning.",
-    mission: "Lag variablene pris og frakt. Regn ut totalprisen, lagre svaret i en ny variabel og skriv: «Totalprisen er 648 kr.»",
+    mission: "En vare koster 599 kr, og frakten koster 49 kr. Lag et lite program som regner ut hva kunden skal betale til sammen.",
+    given: ["Varepris: 599 kr", "Frakt: 49 kr", "Bruk gjerne variablene pris, frakt og total"],
+    programShould: ["legge sammen pris og frakt med variablene", "skrive nøyaktig hva svaret betyr, for eksempel: «Totalprisen er 648 kr»"],
     whyItMatters: "Nesten alle programmer tar imot verdier, bearbeider dem og viser et resultat. Her øver du på hele denne kjeden i liten skala.",
     concepts: ["variabler", "+", "print", "f-tekst"],
     beforeQuestions: ["Hvilke to verdier må Python kjenne?", "Hva bør variabelen som lagrer svaret hete?", "Hvilken del av utskriften er tekst, og hvilken del er en verdi?"],
@@ -62,7 +95,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["Python lagrer først de to verdiene.", "Høyresiden pris + frakt regnes ut før svaret lagres i total.", "F-teksten bytter {total} ut med 648."],
     reflection: ["Hvorfor er total = pris + frakt lettere å endre enn total = 599 + 49?", "Hva skjer hvis frakt får verdien 0?"],
     extension: "Legg til variabelen rabatt = 50 og trekk rabatten fra totalen før svaret skrives ut.",
-    checks: [{ label: "Programmet regner med variabelnavn", codeIncludes: ["pris", "frakt", "+"] }, { label: "Resultatet viser totalpris og 648", outputIncludes: ["total", "648"] }],
+    checks: [{ label: "Programmet legger sammen verdier i kode", codeIncludes: ["+", "print("] }, { label: "Resultatet forklarer at totalprisen er 648 kr", outputIncludes: ["total", "648", "kr"] }],
   },
   {
     id: "discount",
@@ -72,6 +105,8 @@ export const pythonChallenges: PythonChallenge[] = [
     estimatedMinutes: 15,
     teaser: "Gjør 25 % rabatt om til en pris kunden faktisk skal betale.",
     mission: "En vare koster 800 kr og har 25 % rabatt. Lag et program som regner ut ny pris og skriver et forståelig svar uten unødvendige desimaler.",
+    given: ["Opprinnelig pris: 800 kr", "Rabatt: 25 %, som kan skrives 0.25 i Python"],
+    programShould: ["regne ut prisen etter rabatt", "skrive et tydelig svar som viser 600 kr"],
     whyItMatters: "Programmering tvinger oss til å forklare prosentregningen presist: Hva er hele prisen, hva fjernes, og hva blir igjen?",
     concepts: ["desimaltall", "prosent", "parentes", "f-tekst"],
     beforeQuestions: ["Hva er 25 % skrevet som desimaltall?", "Hvis 25 % fjernes, hvor mange prosent beholdes?", "Hvorfor kan hele prisen representeres med tallet 1?"],
@@ -88,7 +123,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["1 representerer 100 % av den gamle prisen.", "1 - 0.25 blir 0.75, altså 75 %.", "800 * 0.75 blir 600.", ":.0f endrer bare hvordan tallet vises."],
     reflection: ["Hvorfor blir det feil å skrive pris * rabatt hvis vi vil finne den nye prisen?", "Hvordan ville du regnet ut selve rabattbeløpet?"],
     extension: "Skriv både «Du sparer 200 kr» og «Den nye prisen er 600 kr».",
-    checks: [{ label: "Koden bruker delen som beholdes", codeIncludes: ["1 - rabatt"] }, { label: "Resultatet viser ny pris", outputIncludes: ["600", "kr"] }],
+    checks: [{ label: "Koden beregner prisen – flere prosentmetoder godtas", codeIncludesAny: ["1 - rabatt", "0.75", "pris - pris *", "- rabattbelop", "75 / 100", "* 0.25"] }, { label: "Resultatet viser ny pris som 600 kr", outputIncludes: ["600", "kr"] }],
   },
   {
     id: "even-odd",
@@ -97,7 +132,9 @@ export const pythonChallenges: PythonChallenge[] = [
     subject: "Vilkår og divisjonsrest",
     estimatedMinutes: 15,
     teaser: "La programmet avgjøre om et tall er partall eller oddetall.",
-    mission: "Lag variabelen tall. Programmet skal skrive enten «14 er et partall» eller «14 er et oddetall», avhengig av verdien.",
+    mission: "Sett variabelen tall til 14. Lag et program som undersøker tallet og forteller om det er partall eller oddetall.",
+    given: ["Startverdi: tall = 14", "Et partall gir rest 0 når det deles på 2"],
+    programShould: ["undersøke verdien i tall – ikke bare skrive et ferdig svar", "skrive «14 er et partall» for startverdien", "også virke når tall endres til for eksempel 9"],
     whyItMatters: "Her gjør du en matematisk regel om til et sant/usant-spørsmål som programmet kan bruke til å velge vei.",
     concepts: ["%", "==", "if", "else"],
     beforeQuestions: ["Hva er alltid sant om resten når et partall deles på 2?", "Hva er forskjellen på = og ==?", "Hvilke to mulige veier trenger programmet?"],
@@ -114,7 +151,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["tall % 2 finner divisjonsresten.", "== 0 spør om resten er null.", "if-grenen velges ved True; ellers velges else."],
     reflection: ["Hvorfor trenger ikke else et eget spørsmål?", "Hva skjer med negative heltall? Test -3 og -4."],
     extension: "Utvid programmet slik at det også forteller om tallet er positivt, negativt eller null.",
-    checks: [{ label: "Koden undersøker divisjonsrest", codeIncludes: ["% 2", "== 0"] }, { label: "Resultatet klassifiserer tallet", outputIncludes: ["partall"] }],
+    checks: [{ label: "Koden bruker et vilkår og undersøker rest ved deling på 2", codeIncludes: ["if", "% 2"] }, { label: "Resultatet forteller at 14 er et partall", outputIncludes: ["14", "partall"] }],
   },
   {
     id: "hypotenuse",
@@ -124,6 +161,8 @@ export const pythonChallenges: PythonChallenge[] = [
     estimatedMinutes: 20,
     teaser: "Regn ut den lengste siden uten å be et bibliotek om hele løsningen.",
     mission: "Katetene i en rettvinklet trekant er 3 cm og 4 cm. Lag et program som bruker Pytagoras til å finne hypotenusen og skriver et svar med enhet.",
+    given: ["Første katet: a = 3 cm", "Andre katet: b = 4 cm", "Pytagoras: a² + b² = c²"],
+    programShould: ["regne ut hypotenusen fra katetene", "skrive at hypotenusen er 5 cm"],
     whyItMatters: "Du oversetter en kjent matematisk formel til små operasjoner Python kan følge. Hvert mellomsteg kan undersøkes.",
     concepts: ["Pytagoras", "**", "variabler", "avrunding"],
     beforeQuestions: ["Hvilken side er hypotenusen?", "Hva sier a² + b² = c²?", "Hvordan kan kvadratroten skrives som en potens?"],
@@ -141,7 +180,7 @@ export const pythonChallenges: PythonChallenge[] = [
     reflection: ["Hvorfor finner vi c² før vi finner c?", "Hvorfor er c alltid den lengste siden i en rettvinklet trekant?"],
     extension: "Gjør om programmet slik at hypotenusen og én katet er kjent, mens den andre kateten skal finnes.",
     shortcut: { title: "Senere: math.sqrt", body: "Når logikken er forstått, kan math.sqrt uttrykke «kvadratrot» direkte. Matematikken er den samme.", code: "import math\nc = math.sqrt(a ** 2 + b ** 2)" },
-    checks: [{ label: "Koden bruker Pytagoras synlig", codeIncludes: ["a ** 2", "b ** 2", "+"] }, { label: "Resultatet viser hypotenusen", outputIncludes: ["5", "cm"] }],
+    checks: [{ label: "Koden legger sammen kvadratene av katetene", codeIncludes: ["+"], codeIncludesAny: ["** 2", "* a", "* b"] }, { label: "Koden finner en kvadratrot", codeIncludesAny: ["** 0.5", "sqrt(", "pow("] }, { label: "Resultatet viser hypotenusen som 5 cm", outputIncludes: ["5", "cm"] }],
   },
   {
     id: "multiplication-table",
@@ -151,6 +190,8 @@ export const pythonChallenges: PythonChallenge[] = [
     estimatedMinutes: 15,
     teaser: "Skriv regelen én gang og la Python gjøre ti runder.",
     mission: "Lag femgangen fra 1 · 5 til 10 · 5. Hver linje skal vise både regnestykket og svaret.",
+    given: ["Gangetabell: 5-gangen", "Første regnestykke: 1 · 5", "Siste regnestykke: 10 · 5"],
+    programShould: ["bruke en løkke i stedet for ti kopierte utskrifter", "vise regnestykke og svar på hver linje"],
     whyItMatters: "Løkker lar deg beskrive et mønster i stedet for å kopiere nesten like kodelinjer.",
     concepts: ["for", "range", "*", "f-tekst"],
     beforeQuestions: ["Hvilke tall skal forandre seg i hver runde?", "Hvilket tall er det samme hver gang?", "Hva må stoppverdien i range være for at 10 skal bli med?"],
@@ -167,7 +208,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["range(1, 11) gir 1 til og med 10.", "tall får én ny verdi i hver runde.", "Den innrykkede beregningen og utskriften gjentas ti ganger."],
     reflection: ["Hvorfor må stoppverdien være 11?", "Hvilken enkelt verdi endrer du for å lage sjugangen?"],
     extension: "Lag en dobbel løkke som skriver gangetabellene fra 1 til 10.",
-    checks: [{ label: "Programmet bruker løkke og riktig range", codeIncludes: ["for", "range(1, 11)"] }, { label: "Tabellen kommer til 50", outputIncludes: ["50"] }],
+    checks: [{ label: "Programmet lager tabellen med en løkke", codeIncludesAny: ["for", "while"] }, { label: "Utskriften kommer fram til 10 · 5 = 50", outputIncludes: ["10", "5", "50"] }],
   },
   {
     id: "ticket-price",
@@ -177,6 +218,8 @@ export const pythonChallenges: PythonChallenge[] = [
     estimatedMinutes: 20,
     teaser: "La alderen bestemme hvilken av tre priser som skal brukes.",
     mission: "Barn under 12 år betaler 60 kr, ungdom fra 12 til og med 17 år betaler 90 kr, og voksne betaler 140 kr. Lag et program som finner og skriver riktig pris.",
+    given: ["Start med alder = 15", "Under 12 år: 60 kr", "12–17 år: 90 kr", "18 år eller eldre: 140 kr"],
+    programShould: ["gi variabelen pris riktig verdi ut fra alder", "skrive alder og billettpris", "fortsatt virke når alder endres til 10, 12 eller 18"],
     whyItMatters: "Programmer tar ofte beslutninger ut fra grenser. Rekkefølgen på spørsmålene avgjør om alle verdier havner riktig.",
     concepts: ["if", "elif", "else", "grenser"],
     beforeQuestions: ["Hvilke tre aldersområder finnes?", "Kan én alder passe i to områder samtidig?", "Hvilken grense bør undersøkes først?"],
@@ -193,7 +236,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["Første gren tar alle aldre under 12.", "De som når elif, er allerede minst 12; alder < 18 tar derfor 12–17.", "else tar 18 år og eldre.", "Utskriften kan stå etter valget fordi pris er laget i alle tre grener."],
     reflection: ["Hvorfor holder det å skrive elif alder < 18?", "Hva skjer med en negativ alder, og bør programmet håndtere det?"],
     extension: "Legg til en kontroll som gir en tydelig feilmelding hvis alder er mindre enn 0.",
-    checks: [{ label: "Alle tre programveier finnes", codeIncludes: ["if", "elif", "else"] }, { label: "Resultatet viser ungdomsprisen", outputIncludes: ["90", "kr"] }],
+    checks: [{ label: "Koden har vilkår og en vei for den siste aldersgruppen", codeIncludes: ["if", "else"] }, { label: "Startverdien 15 gir ungdomsprisen 90 kr", outputIncludes: ["90", "kr"] }],
   },
 
   {
@@ -204,6 +247,8 @@ export const pythonChallenges: PythonChallenge[] = [
     estimatedMinutes: 25,
     teaser: "Bruk tre sidelengder til å undersøke om Pytagoras stemmer.",
     mission: "En trekant har sidene 5, 12 og 13. Lag et program som undersøker om den er rettvinklet og skriver en forklaring.",
+    given: ["Sidelengder: a = 5, b = 12 og c = 13", "I startverdiene er c den lengste siden"],
+    programShould: ["sammenligne a² + b² med c²", "skrive om trekanten er rettvinklet", "også kunne gi «ikke rettvinklet» når sidene endres til 5, 6 og 7"],
     whyItMatters: "Du kombinerer matematisk kunnskap med programmeringslogikk: beregn to uttrykk, sammenlign dem og velg et svar.",
     concepts: ["Pytagoras", "==", "if/else", "største side"],
     beforeQuestions: ["Hvilken side må være hypotenusen?", "Hvilke to uttrykk skal sammenlignes?", "Hva må være sant for en rettvinklet trekant?"],
@@ -221,7 +266,7 @@ export const pythonChallenges: PythonChallenge[] = [
     reflection: ["Hvorfor må den lengste siden stå alene på høyresiden?", "Hvordan kan programmet finne den lengste siden selv?"],
     extension: "La sidene ligge i en liste, sorter listen og bruk de to første som kateter og den siste som hypotenus.",
     shortcut: { title: "Mer robust med sortering", body: "Når grunnlogikken er forstått, kan sortering sikre at den lengste siden blir c uansett rekkefølge.", code: "sider = sorted([5, 13, 12])\na, b, c = sider" },
-    checks: [{ label: "Begge sider av Pytagoras regnes ut", codeIncludes: ["a ** 2", "b ** 2", "c ** 2"] }, { label: "Programmet avgjør rettvinklet", outputIncludes: ["rettvinklet"] }],
+    checks: [{ label: "Koden sammenligner kvadrerte sidelengder", codeIncludes: ["if", "=="], codeIncludesAny: ["** 2", "* a", "* b", "* c"] }, { label: "Programmet avgjør at 5, 12 og 13 gir en rettvinklet trekant", outputIncludes: ["rettvinklet"] }],
   },
   {
     id: "missing-leg",
@@ -231,6 +276,8 @@ export const pythonChallenges: PythonChallenge[] = [
     estimatedMinutes: 25,
     teaser: "Denne gangen kjenner du hypotenusen og bare én katet.",
     mission: "Hypotenusen er 13 cm og én katet er 5 cm. Lag et program som finner den andre kateten ved å omforme Pytagoras.",
+    given: ["Kjent katet: a = 5 cm", "Hypotenus: c = 13 cm", "Utgangspunkt: a² + b² = c²"],
+    programShould: ["regne ut b² ved å trekke a² fra c²", "ta kvadratroten og skrive at den ukjente kateten er 12 cm"],
     whyItMatters: "Du må først gjøre matematisk algebra: flytte ett ledd til den andre siden. Deretter kan Python gjennomføre den nye oppskriften.",
     concepts: ["omforme formel", "minus", "kvadratrot", "mellomsteg"],
     beforeQuestions: ["Start med a² + b² = c². Hva blir b² alene?", "Hvorfor må c være større enn a?", "Hvilket regnesteg tar oss fra b² til b?"],
@@ -247,7 +294,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["b² = c² - a².", "13² - 5² blir 169 - 25 = 144.", "Kvadratroten av 144 er 12."],
     reflection: ["Hvorfor er det minus i denne formelen, men pluss når hypotenusen finnes?", "Hva skjer hvis a er større enn c, og hva forteller det om målene?"],
     extension: "Legg inn en kontroll som gir en forklaring hvis den oppgitte kateten er like lang eller lengre enn hypotenusen.",
-    checks: [{ label: "Formelen er omformet med minus", codeIncludes: ["c ** 2", "- a ** 2"] }, { label: "Resultatet viser 12 cm", outputIncludes: ["12", "cm"] }],
+    checks: [{ label: "Koden trekker ett kvadrat fra et annet", codeIncludes: ["-"], codeIncludesAny: ["** 2", "* c", "* a"] }, { label: "Koden finner kvadratroten", codeIncludesAny: ["** 0.5", "sqrt(", "pow("] }, { label: "Resultatet viser den ukjente kateten som 12 cm", outputIncludes: ["12", "cm"] }],
   },
   {
     id: "largest-without-max",
@@ -257,6 +304,8 @@ export const pythonChallenges: PythonChallenge[] = [
     estimatedMinutes: 25,
     teaser: "Finn maksimum uten å bruke max – så ser du logikken bak verktøyet.",
     mission: "Finn det største tallet i listen [7, 12, 4, 19, 8] uten å bruke max(). Programmet skal skrive både største verdi og hvordan den ble funnet.",
+    given: ["Liste: tall = [7, 12, 4, 19, 8]", "Du skal øve på logikken bak max(), så max() skal ikke brukes"],
+    programShould: ["gå gjennom listen med en løkke", "huske den største verdien som er funnet så langt", "skrive at det største tallet er 19"],
     whyItMatters: "Du øver på å la en variabel huske det beste svaret så langt. Det samme mønsteret brukes i rekorder, søk og spill.",
     concepts: ["liste", "for", "if", "oppdatere variabel"],
     beforeQuestions: ["Hva kan være vårt første «største så langt»?", "Når skal denne verdien byttes ut?", "Hva må løkken sammenligne i hver runde?"],
@@ -274,7 +323,7 @@ export const pythonChallenges: PythonChallenge[] = [
     reflection: ["Hvorfor er storste = 0 en dårlig start hvis alle tall er negative?", "Hvordan ville du endret programmet for å finne det minste tallet?"],
     extension: "Finn både minste og største verdi i den samme løkken uten min() eller max().",
     shortcut: { title: "Senere: innebygd max", body: "Når du forstår søkelogikken, er max(tall) den tydelige og effektive løsningen i vanlig kode.", code: "storste = max(tall)" },
-    checks: [{ label: "Koden bygger maksimum selv", codeIncludes: ["for", "if", ">"] }, { label: "Resultatet finner 19", outputIncludes: ["19"] }],
+    checks: [{ label: "Koden går gjennom listen og sammenligner verdier", codeIncludes: ["for", ">"], codeExcludes: ["max("] }, { label: "Resultatet finner 19", outputIncludes: ["19"] }],
   },
   {
     id: "average-analysis",
@@ -284,6 +333,8 @@ export const pythonChallenges: PythonChallenge[] = [
     estimatedMinutes: 25,
     teaser: "Finn gjennomsnittet og tell målinger som ligger over det.",
     mission: "For målingene [12, 15, 11, 18, 14] skal programmet finne gjennomsnittet og telle hvor mange målinger som er høyere enn gjennomsnittet.",
+    given: ["Målinger: [12, 15, 11, 18, 14]", "Gjennomsnitt = sum delt på antall"],
+    programShould: ["regne ut gjennomsnittet fra listen", "gå gjennom målingene og telle dem som er større enn gjennomsnittet", "skrive gjennomsnitt 14 og antall 2"],
     whyItMatters: "Du kombinerer aggregering og sammenligning: først lager du en referanseverdi, så undersøker du hvert datapunkt mot den.",
     concepts: ["liste", "sum", "len", "løkke", "teller"],
     beforeQuestions: ["Hvordan regnes gjennomsnitt?", "Hva må være kjent før vi kan sammenligne hver måling?", "Hvordan kan en teller økes hver gang et vilkår er sant?"],
@@ -300,7 +351,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["Summen 70 deles på 5 og gir 14.", "Telleren begynner på 0.", "15 og 18 er større enn 14, så telleren økes to ganger."],
     reflection: ["Hvorfor må gjennomsnittet beregnes før løkken?", "Hva er forskjellen på høyere enn og høyere enn eller lik gjennomsnittet?"],
     extension: "Lag en ny liste som inneholder bare målingene over gjennomsnittet.",
-    checks: [{ label: "Gjennomsnittet bruker sum og len", codeIncludes: ["sum(", "len("] }, { label: "Resultatet viser to treff", outputIncludes: ["14", "2"] }],
+    checks: [{ label: "Koden beregner gjennomsnitt fra målingene", codeIncludesAny: ["sum(", "for", "mean("] }, { label: "Koden sammenligner målinger med gjennomsnittet", codeIncludesAny: [">", "filter("] }, { label: "Resultatet viser gjennomsnitt 14 og 2 målinger over", outputIncludes: ["14", "2"] }],
   },
   {
     id: "count-vowels",
@@ -310,6 +361,8 @@ export const pythonChallenges: PythonChallenge[] = [
     estimatedMinutes: 25,
     teaser: "La Python undersøke én bokstav om gangen.",
     mission: "Tell hvor mange vokaler som finnes i teksten «Programmering er gøy». Bruk en løkke og en teller.",
+    given: ["Tekst: «Programmering er gøy»", "I denne oppgaven regnes a, e, i, o, u, y, æ, ø og å som vokaler"],
+    programShould: ["undersøke teksten ett tegn om gangen", "telle både små og store vokaler", "skrive at teksten har 7 vokaler"],
     whyItMatters: "Tekst er også en samling. Ved å gå gjennom tegnene kan vi bygge søk, kontroll, statistikk og enkle språkverktøy.",
     concepts: ["tekst", "for", "in", "teller"],
     beforeQuestions: ["Hva får en for-løkke når den går gjennom en tekst?", "Hvordan kan alle vokalene samles i én tekst?", "Hva skal gjøre at telleren øker?"],
@@ -326,7 +379,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["lower lager en sammenlignbar tekst med små bokstaver.", "Løkken gir ett tegn om gangen.", "in blir True når tegnet finnes i vokalteksten.", "Telleren økes bare ved slike treff."],
     reflection: ["Hvorfor er mellomrom og punktum uproblematiske?", "Er y alltid en vokal på norsk? Hvordan kan oppgaven tilpasses en annen regel?"],
     extension: "Lag en ordbok som teller hvor mange ganger hver vokal forekommer.",
-    checks: [{ label: "Koden går gjennom teksten og bruker in", codeIncludes: ["for", " in vokaler"] }, { label: "Resultatet viser antall vokaler", outputIncludes: ["vokal"] }],
+    checks: [{ label: "Koden går gjennom teksten og undersøker medlemskap", codeIncludes: ["for", " in "] }, { label: "Resultatet viser 7 vokaler", outputIncludes: ["7", "vokal"] }],
   },
   {
     id: "turtle-polygon",
@@ -335,7 +388,9 @@ export const pythonChallenges: PythonChallenge[] = [
     subject: "Turtle, løkke og geometri",
     estimatedMinutes: 30,
     teaser: "Én geometrisk regel skal kunne tegne trekant, femkant og åttekant.",
-    mission: "Lag variablene antall_sider og sidelengde. Bruk dem til å tegne en regulær mangekant som lukker seg.",
+    mission: "Start med en regulær femkant med sidelengde 100. Lag én generell Turtle-oppskrift som også virker når antallet sider endres.",
+    given: ["antall_sider = 5", "sidelengde = 100", "Turtle skal til sammen snu 360°"],
+    programShould: ["regne ut dreievinkelen fra antall_sider", "tegne én side og svinge i hver runde", "lukke figuren og fortsatt virke for for eksempel 3 eller 8 sider"],
     whyItMatters: "Du gjør geometrien generell: I stedet for en oppskrift for hvert polygon lager du én algoritme styrt av variabler.",
     concepts: ["Turtle", "360°", "for-løkke", "variabler"],
     beforeQuestions: ["Hvor mange grader snur Turtle til sammen rundt hele figuren?", "Hvordan finner du dreievinkelen for n like sider?", "Hvilke kommandoer må gjentas?"],
@@ -352,7 +407,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["For en femkant blir vinkelen 360 / 5 = 72°.", "Løkken kjører fem ganger.", "Hver runde tegner én side og snur 72°.", "Fem svinger blir til sammen 360°, så figuren lukker seg."],
     reflection: ["Hva skjer med vinkelen når antall sider øker?", "Når begynner figuren å ligne en sirkel?"],
     extension: "Tegn mangekanter med 3 til 10 sider ved siden av hverandre. Bruk penup, goto og pendown til å flytte uten strek.",
-    checks: [{ label: "Vinkelen bygger på 360 grader", codeIncludes: ["360 / antall_sider"] }, { label: "Turtle bruker løkke", codeIncludes: ["for", "forward", "left"] }],
+    checks: [{ label: "Dreievinkelen bygger på en hel omdreining på 360°", codeIncludes: ["360", "/"] }, { label: "Turtle tegner og svinger i en løkke", codeIncludes: ["for", "forward"], codeIncludesAny: ["left(", "right("] }],
   },
 
   {
@@ -362,7 +417,9 @@ export const pythonChallenges: PythonChallenge[] = [
     subject: "Geometri og sammensatte vilkår",
     estimatedMinutes: 40,
     teaser: "Kontroller først om sidene kan bli en trekant, og klassifiser den deretter.",
-    mission: "For tre sidelengder skal programmet først undersøke trekantulikheten. Hvis trekanten er gyldig, skal det fortelle om den er likesidet, likebeint eller uliksidet – og om den er rettvinklet.",
+    mission: "Start med sidelengdene 5, 12 og 13. Programmet skal først kontrollere at sidene faktisk kan danne en trekant, og deretter beskrive trekanten.",
+    given: ["side1 = 5, side2 = 12 og side3 = 13", "En gyldig trekant må ha to korte sider som til sammen er lengre enn den lengste"],
+    programShould: ["stoppe med en forklaring hvis trekanten er ugyldig", "ellers skrive om den er likesidet, likebeint eller uliksidet", "også skrive om den er rettvinklet"],
     whyItMatters: "Et større problem blir håndterlig når kontrollene gjøres i riktig rekkefølge. Programmet skal ikke klassifisere noe som ikke kan være en trekant.",
     concepts: ["and", "elif", "sortering", "Pytagoras", "validering"],
     beforeQuestions: ["Hva må være sant om summen av de to korteste sidene?", "Hvilken klassifisering bør gjøres først?", "Hvordan kan sortering hjelpe Pytagoras-kontrollen?"],
@@ -379,7 +436,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["Sortering gjør c til den lengste siden.", "a + b <= c avslører ugyldige sider før videre arbeid.", "Likheter mellom sidene bestemmer sidetypen.", "Pytagoras bestemmer rettvinklethet uavhengig av sidetypen."],
     reflection: ["Hvorfor bør ugyldige trekanter stoppes først?", "Kan en rettvinklet trekant være likebeint? Finn et eksempel eller forklar hvorfor ikke."],
     extension: "Bruk omtrent-lik sammenligning med en liten toleranse slik at desimaltall som 1, 1 og 1.414 også kan undersøkes.",
-    checks: [{ label: "Koden validerer før klassifisering", codeIncludes: ["a + b <= c"] }, { label: "Koden finner både side- og vinkeltype", codeIncludes: ["sidetype", "vinkeltype", "** 2"] }],
+    checks: [{ label: "Koden sorterer sidene og kontrollerer trekantulikheten", codeIncludesAny: ["sorted(", ".sort("], codeIncludes: ["+"] }, { label: "Koden har flere veier for klassifiseringen", codeIncludes: ["if", "else"] }, { label: "Startverdiene beskrives som uliksidet og rettvinklet", outputIncludes: ["uliksidet", "rettvinklet"] }],
   },
   {
     id: "prime-number",
@@ -389,6 +446,8 @@ export const pythonChallenges: PythonChallenge[] = [
     estimatedMinutes: 40,
     teaser: "Let systematisk etter en divisor – og stopp når du finner en.",
     mission: "Lag et program som undersøker om 97 er et primtall. Løsningen skal teste mulige divisorer og forklare resultatet.",
+    given: ["Startverdi: tall = 97", "Et primtall er et heltall større enn 1 som bare er delelig med 1 og seg selv"],
+    programShould: ["lete etter en divisor med en løkke", "skrive at 97 er et primtall", "også kunne avsløre at 91 ikke er et primtall"],
     whyItMatters: "Dette er et ekte algoritmeproblem: Du må velge hva som skal prøves, hva som teller som bevis, og når søket kan avsluttes.",
     concepts: ["for", "%", "boolsk variabel", "break"],
     beforeQuestions: ["Hvilke to divisorer har alle primtall?", "Hva viser at et tall ikke er primtall?", "Hvorfor trenger vi ikke prøve divisoren 1?"],
@@ -405,7 +464,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["97 er ikke under 2, så søket starter.", "Ingen divisor fra 2 til 96 gir rest 0.", "er_primtall forblir derfor True.", "For 91 ville divisor 7 gitt rest 0 og stoppet løkken."],
     reflection: ["Hvorfor er det nok å finne én divisor?", "Hvor langt må vi egentlig lete før alle mulige faktorpar er undersøkt?"],
     extension: "Gjør søket mer effektivt ved å prøve divisorer bare til og med kvadratroten av tallet.",
-    checks: [{ label: "Koden tester divisjonsrest i en løkke", codeIncludes: ["for", "% divisor", "== 0"] }, { label: "Søket kan stoppe tidlig", codeIncludes: ["break"] }],
+    checks: [{ label: "Koden leter etter en divisor med løkke og divisjonsrest", codeIncludes: ["for", "%"] }, { label: "Resultatet forteller at 97 er et primtall", outputIncludes: ["97", "primtall"] }],
   },
   {
     id: "growth-threshold",
@@ -415,6 +474,8 @@ export const pythonChallenges: PythonChallenge[] = [
     estimatedMinutes: 35,
     teaser: "La løkken finne tidspunktet i stedet for at du gjetter det.",
     mission: "En konto starter med 1000 kr og vokser med 8 % per år. Finn det første året saldoen er minst 1500 kr, og skriv utviklingen år for år.",
+    given: ["Startsaldo: 1000 kr", "Årlig vekst: 8 %, altså vekstfaktor 1.08", "Grense: 1500 kr", "Startår: 0"],
+    programShould: ["oppdatere saldo og år helt til grensen nås", "vise utviklingen år for år", "skrive at grensen passeres etter 6 år"],
     whyItMatters: "Når antall gjentakelser ikke er kjent på forhånd, kan et vilkår styre løkken. Dette kobler modellering og algoritmisk tenkning.",
     concepts: ["while", "vekstfaktor", "teller", ">="],
     beforeQuestions: ["Hva er vekstfaktoren ved 8 % økning?", "Hvilket vilkår betyr at løkken skal fortsette?", "Hvilke to verdier må oppdateres hvert år?"],
@@ -431,7 +492,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["Løkken starter fordi 1000 < 1500.", "Hver runde representerer ett år.", "Saldoen oppdateres før den testes på nytt.", "Etter seks runder er saldoen for første gang minst 1500."],
     reflection: ["Hvorfor bruker vilkåret < og ikke <=?", "Hva ville skjedd hvis linjen saldo *= vekstfaktor lå utenfor løkken?"],
     extension: "Legg til et årlig innskudd på 500 kr og undersøk om innskuddet skal legges til før eller etter rentene.",
-    checks: [{ label: "Koden bruker en styrt while-løkke", codeIncludes: ["while saldo < grense"] }, { label: "Begge tilstandsverdiene oppdateres", codeIncludes: ["saldo *=", "aar += 1"] }, { label: "Resultatet finner år 6", outputIncludes: ["6"] }],
+    checks: [{ label: "Koden bruker while og oppdaterer beløpet", codeIncludes: ["while", "*"] }, { label: "Årtelleren økes i programmet", codeIncludesAny: ["+= 1", "+ 1"] }, { label: "Resultatet finner 6 år", outputIncludes: ["6"] }],
   },
   {
     id: "dice-simulation",
@@ -441,6 +502,8 @@ export const pythonChallenges: PythonChallenge[] = [
     estimatedMinutes: 40,
     teaser: "Undersøk hvor ofte summen 7 dukker opp i mange tilfeldige forsøk.",
     mission: "Kast to digitale terninger 10 000 ganger. Tell hvor ofte summen blir 7, regn ut andelen og sammenlign med den teoretiske sannsynligheten 1/6.",
+    given: ["To vanlige terninger med verdiene 1–6", "Antall forsøk: 10 000", "Teoretisk sannsynlighet for sum 7: 1/6"],
+    programShould: ["kaste begge terningene på nytt i hver runde", "telle forsøkene som gir sum 7", "skrive simulert andel og sammenligne den med 1/6"],
     whyItMatters: "Simulering lar oss undersøke tilfeldighet empirisk. Samtidig må vi være presise med forsøk, teller og andel.",
     concepts: ["random", "for", "teller", "andel", "avvik"],
     beforeQuestions: ["Hva skjer i ett forsøk?", "Når skal telleren økes?", "Hvordan går vi fra antall treff til andel?"],
@@ -457,7 +520,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["Hvert forsøk lager to uavhengige kast.", "Telleren økes bare for de seks kombinasjonene som gir sum 7.", "Treff deles på 10 000 for å gi simulert andel.", "abs gjør avviket positivt uansett hvilken andel som er størst."],
     reflection: ["Hvorfor varierer resultatet fra kjøring til kjøring?", "Hva skjer vanligvis med avviket når antall forsøk økes?"],
     extension: "Tell alle mulige summer fra 2 til 12 i en liste eller ordbok, og tegn resultatet som et stolpediagram.",
-    checks: [{ label: "Begge terninger kastes i løkken", codeIncludes: ["random.randint", "for"] }, { label: "Sum 7 telles", codeIncludes: ["terning1 + terning2 == 7"] }, { label: "Andelen beregnes", codeIncludes: ["/ antall_forsok"] }],
+    checks: [{ label: "Terninger kastes på nytt i en løkke", codeIncludes: ["for", "randint"] }, { label: "Programmet undersøker om en sum er 7", codeIncludes: ["== 7"] }, { label: "Programmet regner ut en andel", codeIncludesAny: ["/", "mean("] }],
   },
   {
     id: "caesar-cipher",
@@ -467,6 +530,8 @@ export const pythonChallenges: PythonChallenge[] = [
     estimatedMinutes: 45,
     teaser: "Flytt hver bokstav tre plasser fram i alfabetet – og håndter slutten av alfabetet.",
     mission: "Lag et Cæsar-chiffer for små bokstaver a–z. Teksten «python» med forskyvning 3 skal bli «sbwkrq». Mellomrom skal beholdes.",
+    given: ["Alfabet: bokstavene a–z", "Tekst: «python»", "Forskyvning: 3 plasser fram", "Mellomrom og andre tegn skal beholdes"],
+    programShould: ["behandle teksten én bokstav om gangen", "gå tilbake til a etter z", "skrive den kodede teksten «sbwkrq»"],
     whyItMatters: "Du må bryte tekstbehandling ned til én bokstav, finne posisjonen, regne ut ny posisjon og bygge et nytt resultat.",
     concepts: ["tekst", "find", "%", "løkke", "bygge resultat"],
     beforeQuestions: ["Hvordan kan alfabetet lagres slik at hver bokstav har en indeks?", "Hva skal skje med z når den flyttes fram?", "Hvordan kan resultatteksten bygges én bokstav om gangen?"],
@@ -483,7 +548,7 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["p har indeks 15; 15 + 3 gir 18, som er s.", "Hver ny bokstav legges bakerst i resultatteksten.", "% 26 gjør at en indeks etter z begynner på a igjen.", "Mellomrom gir indeks -1 og beholdes uendret."],
     reflection: ["Hvorfor trenger vi % selv om eksemplet «python» ikke går forbi z?", "Hvordan kan samme program dekode teksten?"],
     extension: "Utvid alfabetet med æ, ø og å, og lag en funksjon som kan både kode og dekode med positiv eller negativ forskyvning.",
-    checks: [{ label: "Koden behandler én bokstav om gangen", codeIncludes: ["for bokstav in"] }, { label: "Indeksen går rundt alfabetet", codeIncludes: ["% len(alfabet)"] }, { label: "Resultatet koder python", outputIncludes: ["sbwkrq"] }],
+    checks: [{ label: "Koden behandler teksten i en løkke", codeIncludes: ["for"] }, { label: "Modulo brukes for å gå tilbake til starten av alfabetet", codeIncludes: ["%"] }, { label: "Resultatet koder «python» som «sbwkrq»", outputIncludes: ["sbwkrq"] }],
   },
   {
     id: "turtle-spiral",
@@ -492,7 +557,9 @@ export const pythonChallenges: PythonChallenge[] = [
     subject: "Turtle, mønster og parametere",
     estimatedMinutes: 40,
     teaser: "La lengden vokse litt for hver strek og undersøk hvordan vinkelen endrer uttrykket.",
-    mission: "Lag et Turtle-mønster med minst 80 streker. Lengden skal øke i hver runde. Bruk variabler for antall streker, vekst og vinkel slik at mønsteret er lett å eksperimentere med og eksportere som SVG.",
+    mission: "Lag et Turtle-mønster der hver strek er litt lengre enn den forrige. Start med 100 streker og en vinkel på 91°, og gjør innstillingene lette å endre.",
+    given: ["antall_streker = 100", "startlengde = 5", "vekst = 2 per strek", "vinkel = 91°"],
+    programShould: ["tegne, svinge og øke lengden i hver runde", "bruke minst 80 streker", "styres av variabler slik at mønsteret kan utforskes og eksporteres som SVG"],
     whyItMatters: "Skapende programmering kombinerer algoritmer, geometri og design. Små parameterendringer kan gi helt nye uttrykk.",
     concepts: ["Turtle", "akkumulering", "vinkel", "parametere", "SVG"],
     beforeQuestions: ["Hvilken verdi må endres i hver runde for at spiralen skal vokse?", "Hva skjer hvis vinkelen er nøyaktig 90°?", "Hvilke innstillinger bør stå som variabler øverst?"],
@@ -509,6 +576,6 @@ export const pythonChallenges: PythonChallenge[] = [
     solutionWalkthrough: ["Første strek er 5 enheter.", "Etter hver runde økes lengden med 2.", "91° er litt mer enn et firkanthjørne, så hele spiralen roterer gradvis.", "Variablene øverst gjør designet lett å utforske."],
     reflection: ["Hvorfor får 90° og 91° så forskjellig resultat?", "Hvilke kombinasjoner av vinkel og antall streker gir symmetri?"],
     extension: "Bruk en liste med farger, bytt farge i løkken og eksporter mønsteret fra Skaperverkstedet som SVG til vinylkutter eller laser.",
-    checks: [{ label: "Mønsteret styres av variabler", codeIncludes: ["antall_streker", "vekst", "vinkel"] }, { label: "Lengden vokser i løkken", codeIncludes: ["lengde += vekst"] }, { label: "Turtle tegner og snur", codeIncludes: ["forward", "left"] }],
+    checks: [{ label: "Mønsteret tegnes med en løkke", codeIncludes: ["for", "forward"] }, { label: "Lengden oppdateres underveis", codeIncludesAny: ["+=", "= lengde +", "= startlengde +"] }, { label: "Turtle svinger mellom strekene", codeIncludesAny: ["left(", "right("] }],
   },
 ];

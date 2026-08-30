@@ -946,6 +946,15 @@ p, li { text-wrap: pretty; }
 .challenge-detail-badge strong { color: var(--green); font-family: Georgia, "Times New Roman", serif; font-size: 50px; line-height: 1; }
 .challenge-mission { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, .65fr); gap: 55px; padding-top: 52px; padding-bottom: 52px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .challenge-mission h2 { margin: 0; font-size: 34px; line-height: 1.35; }
+.challenge-brief { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; margin-top: 24px; }
+.challenge-brief section { padding: 18px 19px; border: 1px solid #d4dcd7; border-radius: 11px; background: #fafaf6; }
+.challenge-brief section:last-child { border-color: #a9c3b7; background: #edf6f0; }
+.challenge-brief strong { display: block; margin-bottom: 10px; color: var(--coral-dark); font-size: 10px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.challenge-brief section:last-child strong { color: var(--green); }
+.challenge-brief ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.challenge-brief li { position: relative; padding-left: 18px; color: #4e605b; font-size: 13px; line-height: 1.48; }
+.challenge-brief li::before { content: "•"; position: absolute; left: 2px; color: var(--coral); font-weight: 900; }
+.challenge-brief section:last-child li::before { content: "✓"; color: var(--green); font-size: 10px; }
 .challenge-why { margin-top: 22px; padding: 16px 18px; border-left: 5px solid var(--yellow); border-radius: 0 9px 9px 0; background: #fff7d8; }
 .challenge-why strong { color: #705616; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 .challenge-why p { margin: 4px 0 0; color: #5e5d51; font-size: 14px; line-height: 1.58; }
@@ -1000,6 +1009,7 @@ p, li { text-wrap: pretty; }
 .challenge-check-column > p:not(.section-label) { margin: 10px 0 16px; color: #60706b; font-size: 13px; line-height: 1.55; }
 .challenge-check-column > button { width: 100%; min-height: 45px; padding: 9px 12px; border: 1px solid var(--green); border-radius: 8px; background: var(--green); color: white; font-size: 12px; font-weight: 850; cursor: pointer; }
 .challenge-check-column > button:hover { border-color: var(--coral); background: var(--coral); }
+.challenge-check-column > button:disabled { border-color: #9daaa5; background: #9daaa5; cursor: wait; }
 .challenge-check-results { display: grid; gap: 7px; margin: 13px 0 0; padding: 0; list-style: none; }
 .challenge-check-results li { padding: 9px 10px; border-radius: 7px; background: #fff6d9; color: #6c571f; font-size: 11px; line-height: 1.45; }
 .challenge-check-results li.is-pass { background: #dcefe4; color: #245c48; }
@@ -1340,6 +1350,7 @@ p, li { text-wrap: pretty; }
   .challenge-detail-teaser { font-size: 17px; }
   .challenge-mission { padding-top: 39px; padding-bottom: 39px; }
   .challenge-mission h2 { font-size: 26px; overflow-wrap: anywhere; }
+  .challenge-brief { grid-template-columns: 1fr; }
   .challenge-think-first { padding-top: 45px; padding-bottom: 45px; }
   .challenge-think-first h2, .challenge-test-cases h2, .challenge-support-section h2, .challenge-extension h2 { font-size: 29px; }
   .challenge-think-first li { grid-template-columns: 34px minmax(0, 1fr); padding: 11px 12px; }
