@@ -6,6 +6,8 @@ import ts from "typescript";
 
 const page = readFileSync("app/page.tsx", "utf8");
 const commandLibrary = readFileSync("app/pythonCommands.ts", "utf8");
+const mathCommands = readFileSync("app/mathCommands.ts", "utf8");
+const mathHelp = readFileSync("app/mathHelp.ts", "utf8");
 const challenges = readFileSync("app/challenges.ts", "utf8");
 const examTraining = readFileSync("app/examTraining.ts", "utf8");
 const worker = readFileSync("public/pyodide-worker.mjs", "utf8");
@@ -16,6 +18,7 @@ const desktopPrepare = readFileSync("scripts/prepare-desktop-dev.mjs", "utf8");
 const offlinePackages = readFileSync("scripts/download-pyodide.mjs", "utf8");
 const { evaluateChallengeAttempt, pythonChallenges } = await import("../app/challenges.ts");
 const { evaluateExamAttempt, examTasks } = await import("../app/examTraining.ts");
+const { mathHelpTutorials } = await import("../app/mathHelp.ts");
 
 const analyzerSource = page.slice(page.indexOf("function analyzePythonError"), page.indexOf("const pythonTokens"));
 const analyzerJavaScript = ts.transpileModule(`${analyzerSource}\nglobalThis.analyzePythonError = analyzePythonError;`, {
@@ -81,6 +84,47 @@ test("kommandobiblioteket er omfattende, søkbart på norsk og tilgjengelig i ed
   assert.match(page, /⌘ Kommandoer/);
   assert.match(page, /Søk etter tegn, kommando eller det du vil gjøre/);
   assert.match(page, /Sett inn ved markøren/);
+});
+
+test("matematikkhjelpen dekker grunnregning, statistikk og tilgjengelige biblioteker", () => {
+  assert.ok((mathCommands.match(/^    id:/gm) ?? []).length >= 25);
+  assert.ok((mathHelp.match(/^    id:/gm) ?? []).length >= 10);
+  for (const content of [
+    "math.sqrt",
+    "math.hypot",
+    "math.sin",
+    "statistics.mean",
+    "statistics.median",
+    "statistics.multimode",
+    "statistics.quantiles",
+    "statistics.pstdev",
+    "Fraction",
+    "Decimal",
+    "np.mean",
+    "pd.DataFrame",
+    "sp.solve",
+    "stats.linregress",
+    "LinearRegression",
+    "plt.scatter",
+    "plt.hist",
+    "figur.area",
+    "nx.shortest_path",
+  ]) assert.match(`${commandLibrary}\n${mathCommands}\n${mathHelp}`, new RegExp(content.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  for (const norwegianSearch of [
+    "gjennomsnitt",
+    "median",
+    "standardavvik",
+    "finn vinkel",
+    "største felles divisor",
+    "filtrer tabell",
+    "nullpunkt",
+  ]) assert.match(mathCommands, new RegExp(norwegianSearch, "i"));
+  assert.match(page, /"Matematikk", "Biblioteker"/);
+  assert.match(page, /Velg riktig matematikkverktøy/);
+  assert.match(page, /Et bibliotek erstatter ikke den matematiske tankegangen/);
+  const commandIds = [...`${commandLibrary}\n${mathCommands}`.matchAll(/^    id: "([^"]+)"/gm)].map((match) => match[1]);
+  assert.equal(new Set(commandIds).size, commandIds.length, "Kommando-ID-er må være unike");
+  assert.equal(new Set(mathHelpTutorials.map((tutorial) => tutorial.id)).size, mathHelpTutorials.length, "Tutorial-ID-er må være unike");
 });
 
 test("utfordringssiden bygger programmeringslogikk med gradvis støtte og mestring", () => {

@@ -8,6 +8,7 @@ import { challengeDifficulties, evaluateChallengeAttempt, pythonChallenges } fro
 import type { ChallengeDifficulty, PythonChallenge } from "./challenges";
 import { evaluateExamAttempt, examLevels, examTasks } from "./examTraining";
 import type { ExamLevel, ExamTask } from "./examTraining";
+import { mathHelpTutorials } from "./mathHelp";
 
 type Module = {
   id: number;
@@ -182,7 +183,7 @@ const defaultTurtleWorkshop: TurtleWorkshopSettings = {
   lineCap: "round",
 };
 
-const referenceCategories = ["Alle", "Kom i gang", "Styring", "Byggeklosser", "Utforske data", "Tegne og vise", "Spill", "Videre"] as const;
+const referenceCategories = ["Alle", "Kom i gang", "Matematikk", "Styring", "Byggeklosser", "Utforske data", "Tegne og vise", "Spill", "Videre"] as const;
 type ReferenceCategory = (typeof referenceCategories)[number];
 
 type PlaygroundReference = {
@@ -209,7 +210,7 @@ type CodeSnippet = {
   change: string;
 };
 
-const tutorialCategories = ["Alle", "Utskrift", "Variabler", "Styring", "Funksjoner", "Data", "Grafikk", "Feilsøking"] as const;
+const tutorialCategories = ["Alle", "Matematikk", "Biblioteker", "Utskrift", "Variabler", "Styring", "Funksjoner", "Data", "Grafikk", "Feilsøking"] as const;
 type TutorialCategory = (typeof tutorialCategories)[number];
 
 type QuickTutorial = {
@@ -481,6 +482,7 @@ const quickTutorials: QuickTutorial[] = [
     notice: "Endre én liten ting av gangen og kjør på nytt. Da vet du hvilken endring som løste problemet.",
     challenge: "Lag med vilje én feil i eksemplet. Kan du bruke Feildetektiven til å finne den igjen?",
   },
+  ...mathHelpTutorials,
 ];
 
 type CurriculumFit = "Direkte" | "God støtte" | "Supplerende";
@@ -685,6 +687,38 @@ const codeSnippets: CodeSnippet[] = [
 ];
 
 const playgroundReferences: PlaygroundReference[] = [
+  {
+    id: "matematikk-verktoykasse",
+    category: "Matematikk",
+    level: "Start",
+    title: "Velg riktig matematikkverktøy",
+    purpose: "Finn den enkleste veien fra et matematisk spørsmål til en passende Python-kommando.",
+    commands: [
+      { code: "sum / min / max / round", explanation: "Grunnleggende verktøy som virker uten import." },
+      { code: "import math", explanation: "Én beregning: kvadratrot, π, trigonometri, logaritmer og kombinatorikk." },
+      { code: "import statistics", explanation: "En vanlig talliste: gjennomsnitt, median, typetall, kvartiler og spredning." },
+      { code: "import numpy as np", explanation: "Mange tall samtidig: verditabeller, arrays, funksjoner og statistikk." },
+      { code: "import pandas as pd", explanation: "Data i rader og kolonner: CSV, filtrering, grupper og tabellstatistikk." },
+      { code: "import sympy as sp", explanation: "Eksakt algebra: ligninger, forenkling, utviding og faktorisering." },
+      { code: "from scipy import stats", explanation: "Videre statistikk: regresjon og sannsynlighetsfordelinger." },
+      { code: "import matplotlib.pyplot as plt", explanation: "Vis resultatene som grafer, punktdiagram, stolper eller histogram." },
+    ],
+    example: `import math
+import statistics
+
+maalinger = [4, 7, 7, 9, 13]
+
+print("Kvadratrot av 81:", math.sqrt(81))
+print("Gjennomsnitt:", statistics.mean(maalinger))
+print("Median:", statistics.median(maalinger))
+print("Typetall:", statistics.multimode(maalinger))`,
+    experiments: [
+      "Åpne «Hjelp mens du koder», velg Matematikk og finn en oppskrift du ikke har brukt før.",
+      "Søk etter «kvartil», «løs ligning» og «punktdiagram» i Kommandobiblioteket.",
+      "Løs samme gjennomsnittsoppgave først med sum/len og deretter med statistics.mean. Hvilken kode forklarer hensikten best?",
+    ],
+    tip: "Et bibliotek erstatter ikke den matematiske tankegangen. Skriv først ned hva tallene betyr og hvilken beregning oppgaven krever.",
+  },
   {
     id: "variabler",
     category: "Kom i gang",
@@ -941,6 +975,10 @@ print("Seksere:", antall_seksere)`,
       { code: "pd.DataFrame(data)", explanation: "Lager en tabell fra en ordbok med kolonner." },
       { code: 'tabell["poeng"]', explanation: "Velger én kolonne." },
       { code: ".mean() / .max()", explanation: "Finner gjennomsnitt eller største verdi." },
+      { code: "tabell.describe()", explanation: "Viser antall, gjennomsnitt, standardavvik, kvartiler og ytterverdier for tallkolonnene." },
+      { code: 'tabell[tabell["poeng"] >= 10]', explanation: "Filtrerer og beholder radene som oppfyller vilkåret." },
+      { code: 'tabell.groupby("klasse")["poeng"].mean()', explanation: "Finner gjennomsnittet separat for hver gruppe." },
+      { code: 'tabell["poeng"].value_counts()', explanation: "Teller hvor mange ganger hver verdi forekommer." },
     ],
     example: `import pandas as pd
 
@@ -967,6 +1005,9 @@ print("Gjennomsnitt:", tabell["poeng"].mean())`,
     commands: [
       { code: "import matplotlib.pyplot as plt", explanation: "Laster tegneverktøyet og kaller det plt." },
       { code: "plt.plot(x, y)", explanation: "Tegner y-verdiene mot x-verdiene." },
+      { code: "plt.scatter(x, y)", explanation: "Tegner et punktdiagram for to variabler." },
+      { code: "plt.bar(kategorier, verdier)", explanation: "Tegner et stolpediagram for kategorier." },
+      { code: "plt.hist(tall, bins=5)", explanation: "Grupperer tall i intervaller og viser frekvensen." },
       { code: "plt.title / xlabel / ylabel", explanation: "Gir grafen forklarende tekst." },
       { code: "plt.grid(); plt.show()", explanation: "Viser rutenett og sender grafen til resultatpanelet." },
     ],
@@ -1074,15 +1115,19 @@ done()`,
   },
   {
     id: "numpy",
-    category: "Videre",
+    category: "Matematikk",
     level: "Videre",
     title: "Mange tall med NumPy",
     purpose: "Regn på hele tallserier samtidig og finn statistiske mål.",
     commands: [
       { code: "import numpy as np", explanation: "Laster NumPy med kortnavnet np." },
       { code: "np.array([...])", explanation: "Lager en tallserie som NumPy kan regne på." },
+      { code: "np.arange(start, stopp, steg)", explanation: "Lager en tallserie med fast steg; stoppverdien er normalt ikke med." },
+      { code: "np.linspace(start, stopp, antall)", explanation: "Lager et bestemt antall jevnt fordelte verdier med begge endepunkter." },
       { code: "verdier * 2", explanation: "Ganger alle verdiene med 2 på én gang." },
       { code: "np.mean / median / std", explanation: "Gjennomsnitt, median og standardavvik." },
+      { code: "np.sum / min / max", explanation: "Sum og ytterverdier i hele serien." },
+      { code: "np.percentile(tall, [25, 50, 75])", explanation: "Finner kvartiler som prosentiler." },
     ],
     example: `import numpy as np
 
@@ -1100,7 +1145,7 @@ print("Standardavvik:", np.std(verdier))`,
   },
   {
     id: "symbolsk",
-    category: "Videre",
+    category: "Matematikk",
     level: "Videre",
     title: "Løs og undersøk uttrykk med SymPy",
     purpose: "Arbeid med bokstaver og algebraiske uttrykk i stedet for bare desimaltall.",
@@ -1108,7 +1153,10 @@ print("Standardavvik:", np.std(verdier))`,
       { code: "import sympy as sp", explanation: "Laster SymPy med kortnavnet sp." },
       { code: 'x = sp.symbols("x")', explanation: "Gjør x til et matematisk symbol." },
       { code: "sp.expand(...) ", explanation: "Ganger ut parenteser." },
+      { code: "sp.factor(...) ", explanation: "Faktoriserer et algebraisk uttrykk." },
+      { code: "sp.simplify(...) ", explanation: "Prøver å skrive uttrykket på en enklere, men likeverdig form." },
       { code: "sp.solve(ligning, x)", explanation: "Løser en ligning med hensyn på x." },
+      { code: "sp.Eq(venstre, høyre)", explanation: "Lager en ligning med venstre og høyre side." },
     ],
     example: `import sympy as sp
 
@@ -1126,7 +1174,7 @@ print("Løsning:", sp.solve(ligning, x))`,
   },
   {
     id: "mattebibliotek",
-    category: "Kom i gang",
+    category: "Matematikk",
     level: "Utforsk",
     title: "math, statistics og brøker",
     purpose: "Bruk nyttige verktøy som allerede følger med Python – uten å installere noe.",
@@ -1135,6 +1183,12 @@ print("Løsning:", sp.solve(ligning, x))`,
       { code: "import statistics", explanation: "Gjennomsnitt, median, typetall og spredning for vanlige lister." },
       { code: "from fractions import Fraction", explanation: "Regner med eksakte brøker i stedet for avrundede desimaltall." },
       { code: "from decimal import Decimal", explanation: "Gir kontrollert desimalregning, blant annet for penger." },
+      { code: "math.sqrt / math.hypot / math.pi", explanation: "Kvadratrot, Pytagoras og sirkelberegninger." },
+      { code: "math.sin / cos / tan", explanation: "Trigonometri; gjør grader om med math.radians først." },
+      { code: "math.gcd / math.lcm", explanation: "Største felles divisor og minste felles multiplum." },
+      { code: "statistics.mean / median / multimode", explanation: "Gjennomsnitt, median og alle typetall." },
+      { code: "statistics.quantiles(..., n=4)", explanation: "Finner kvartilgrensene i et datasett." },
+      { code: "statistics.pstdev / stdev", explanation: "Standardavvik for hele gruppen eller et utvalg." },
     ],
     example: `import math\nimport statistics\nfrom fractions import Fraction\n\nverdier = [4, 7, 7, 9, 13]\n\nprint("Kvadratrot av 81:", math.sqrt(81))\nprint("Median:", statistics.median(verdier))\nprint("Gjennomsnitt:", statistics.mean(verdier))\nprint("Eksakt sum:", Fraction(1, 3) + Fraction(1, 6))`,
     experiments: [
@@ -1146,7 +1200,7 @@ print("Løsning:", sp.solve(ligning, x))`,
   },
   {
     id: "scipy",
-    category: "Utforske data",
+    category: "Matematikk",
     level: "Videre",
     title: "SciPy: statistikk og matematiske verktøy",
     purpose: "Gå videre fra enkle beregninger til regresjon, sannsynlighetsfordelinger og numeriske metoder.",
@@ -1154,7 +1208,9 @@ print("Løsning:", sp.solve(ligning, x))`,
       { code: "from scipy import stats", explanation: "Henter statistikkverktøyene." },
       { code: "stats.linregress(x, y)", explanation: "Finner en lineær modell og mål på hvor godt den passer." },
       { code: "stats.binom.pmf(...) ", explanation: "Beregner sannsynlighet i en binomisk modell." },
+      { code: "stats.binom.cdf(...) ", explanation: "Beregner samlet sannsynlighet opp til og med en verdi." },
       { code: "from scipy.optimize import root_scalar", explanation: "Finner en tilnærmet løsning av en ligning." },
+      { code: "root_scalar(f, bracket=[a, b]).root", explanation: "Gir et numerisk nullpunkt når funksjonen skifter fortegn i intervallet." },
     ],
     example: `from scipy import stats\n\nx = [1, 2, 3, 4, 5]\ny = [3, 5, 8, 9, 12]\n\nmodell = stats.linregress(x, y)\nprint("Stigningstall:", round(modell.slope, 2))\nprint("Konstantledd:", round(modell.intercept, 2))\nprint("Forklaringsstyrke:", round(modell.rvalue ** 2, 3))`,
     experiments: [
@@ -4256,11 +4312,11 @@ export default function Home() {
   );
 
   const filteredReferences = useMemo(() => {
-    const query = referenceQuery.trim().toLocaleLowerCase("nb");
+    const terms = normalizeCommandSearch(referenceQuery).split(/\s+/).filter(Boolean);
     return playgroundReferences.filter((reference) => {
       if (referenceCategory !== "Alle" && reference.category !== referenceCategory) return false;
-      if (!query) return true;
-      const searchable = [
+      if (!terms.length) return true;
+      const searchable = normalizeCommandSearch([
         reference.title,
         reference.purpose,
         reference.category,
@@ -4269,8 +4325,8 @@ export default function Home() {
         reference.tip ?? "",
         ...reference.commands.flatMap((command) => [command.code, command.explanation]),
         ...reference.experiments,
-      ].join(" ").toLocaleLowerCase("nb");
-      return searchable.includes(query);
+      ].join(" "));
+      return terms.every((term) => searchable.includes(term));
     });
   }, [referenceCategory, referenceQuery]);
 
@@ -4280,11 +4336,11 @@ export default function Home() {
   );
 
   const filteredTutorials = useMemo(() => {
-    const query = tutorialQuery.trim().toLocaleLowerCase("nb");
+    const terms = normalizeCommandSearch(tutorialQuery).split(/\s+/).filter(Boolean);
     return quickTutorials.filter((tutorial) => {
       if (tutorialCategory !== "Alle" && tutorial.category !== tutorialCategory) return false;
-      if (!query) return true;
-      const searchable = [
+      if (!terms.length) return true;
+      const searchable = normalizeCommandSearch([
         tutorial.title,
         tutorial.question,
         tutorial.intro,
@@ -4292,8 +4348,8 @@ export default function Home() {
         tutorial.notice,
         tutorial.challenge,
         ...tutorial.steps,
-      ].join(" ").toLocaleLowerCase("nb");
-      return searchable.includes(query);
+      ].join(" "));
+      return terms.every((term) => searchable.includes(term));
     });
   }, [tutorialCategory, tutorialQuery]);
 

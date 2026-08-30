@@ -1,3 +1,5 @@
+import { mathLibraryCommands } from "./mathCommands";
+
 export const commandCategories = [
   "Alle",
   "Grunnleggende",
@@ -1296,4 +1298,5 @@ export const pythonCommands: PythonCommand[] = [
     example: "tekst = \"Ada\"\nprint([navn for navn in dir(tekst) if not navn.startswith(\"_\")])",
     keywords: ["hvilke metoder", "kommandoer på objekt", "utforsk bibliotek", "tilgjengelige navn", "inspect"],
   },
+  ...mathLibraryCommands,
 ];

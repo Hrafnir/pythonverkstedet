@@ -152,3 +152,26 @@ test("editorhjelp og modale vinduer fungerer med tastatur", async ({ page }) => 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Gi tilbakemelding" })).toBeHidden();
 });
+
+test("matematikkhjelpen er søkbar og gir kjørbare oppskrifter", async ({ page }) => {
+  const { editor, output, run } = await openPython(page);
+
+  await page.getByRole("button", { name: "Kommandoer", exact: true }).first().click();
+  const commandDialog = page.getByRole("dialog", { name: "Kommandobibliotek" });
+  await commandDialog.getByRole("searchbox").fill("største felles divisor");
+  await expect(commandDialog.getByRole("heading", { name: "gcd og lcm finner felles faktorer og multipler" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Hjelp mens du koder" }).first().click();
+  const helpDialog = page.getByRole("dialog", { name: "Finn den lille detaljen" });
+  await helpDialog.getByRole("searchbox").fill("gjennomsnitt median typetall");
+  await expect(helpDialog.getByRole("heading", { name: "Gjennomsnitt, median og typetall" })).toBeVisible();
+  await helpDialog.getByRole("button", { name: "+ Sett inn ved markøren" }).click();
+  await page.getByRole("button", { name: "Lukk kodehjelpen" }).click();
+
+  await expect(editor).toHaveValue(/statistics\.multimode/);
+  await run.click();
+  await expect(output.locator("pre")).toContainText("Gjennomsnitt: 8");
+  await expect(output.locator("pre")).toContainText("Median: 7.5");
+  await expect(output.locator("pre")).toContainText("Typetall: [7]");
+});
