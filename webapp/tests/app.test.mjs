@@ -6,6 +6,7 @@ import ts from "typescript";
 
 const page = readFileSync("app/page.tsx", "utf8");
 const commandLibrary = readFileSync("app/pythonCommands.ts", "utf8");
+const challenges = readFileSync("app/challenges.ts", "utf8");
 const worker = readFileSync("public/pyodide-worker.mjs", "utf8");
 const workflow = readFileSync("../.github/workflows/deploy-pages.yml", "utf8");
 const desktopMain = readFileSync("desktop/main.mjs", "utf8");
@@ -69,6 +70,28 @@ test("kommandobiblioteket er omfattende, søkbart på norsk og tilgjengelig i ed
   assert.match(page, /⌘ Kommandoer/);
   assert.match(page, /Søk etter tegn, kommando eller det du vil gjøre/);
   assert.match(page, /Sett inn ved markøren/);
+});
+
+test("utfordringssiden bygger programmeringslogikk med gradvis støtte og mestring", () => {
+  assert.equal((challenges.match(/^    id:/gm) ?? []).length, 18);
+  assert.equal((challenges.match(/difficulty: "Enkel"/g) ?? []).length, 6);
+  assert.equal((challenges.match(/difficulty: "Middels"/g) ?? []).length, 6);
+  assert.equal((challenges.match(/difficulty: "Utfordrende"/g) ?? []).length, 6);
+  assert.equal((challenges.match(/label: "Lite dytt"/g) ?? []).length, 18);
+  assert.equal((challenges.match(/label: "Byggekloss"/g) ?? []).length, 18);
+  assert.equal((challenges.match(/label: "Plan"/g) ?? []).length, 18);
+  assert.equal((challenges.match(/label: "Nesten der"/g) ?? []).length, 18);
+  assert.match(challenges, /Er trekanten rettvinklet/);
+  assert.match(challenges, /Finn den ukjente kateten/);
+  assert.match(challenges, /mest logiske|grunnlogikken|synlige mellomsteg/i);
+  assert.match(page, /<option value="challenges">Utfordringer<\/option>/);
+  assert.match(page, /Tenk\. Prøv\. Oppdag\./);
+  assert.match(page, /Den gode utfordringssonen/);
+  assert.match(page, /Ta bare så mye hjelp som du trenger/);
+  assert.match(page, /Sjekk retning – ikke bare fasit/);
+  assert.match(page, /Løsningsforslag med forklaring/);
+  assert.match(page, /skolepython-completed-challenges/);
+  assert.match(page, /id="challenge-code"/);
 });
 
 test("modulene har tom skrivelab, redigerbar fasit, kodefarger og ekstratriks", () => {
@@ -424,7 +447,7 @@ test("Python kjører i en arbeider med sikkerhetsstopp", () => {
   assert.match(worker, /loadPyodide/);
   assert.match(worker, /runPythonAsync/);
   assert.match(page, /new Worker/);
-  assert.match(page, /playground \? 90000 : 8000/);
+  assert.match(page, /playground \? 90000 : challengeView \? 30000 : 8000/);
 });
 
 test("metadata og midlertidig startinnhold er ryddet", () => {

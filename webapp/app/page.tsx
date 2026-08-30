@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, KeyboardEvent, ReactNode } from "react";
 import { commandCategories, pythonCommands } from "./pythonCommands";
 import type { CommandCategory, PythonCommand } from "./pythonCommands";
+import { challengeDifficulties, pythonChallenges } from "./challenges";
+import type { ChallengeDifficulty, PythonChallenge } from "./challenges";
 
 type Module = {
   id: number;
@@ -3837,6 +3839,13 @@ export default function Home() {
   const [activeId, setActiveId] = useState(1);
   const [playground, setPlayground] = useState(true);
   const [curriculumView, setCurriculumView] = useState(false);
+  const [challengeView, setChallengeView] = useState(false);
+  const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null);
+  const [challengeDifficulty, setChallengeDifficulty] = useState<ChallengeDifficulty>("Alle");
+  const [challengeCodes, setChallengeCodes] = useState<Record<string, string>>({});
+  const [revealedChallengeHints, setRevealedChallengeHints] = useState<Record<string, number>>({});
+  const [completedChallenges, setCompletedChallenges] = useState<string[]>([]);
+  const [challengeCheckFeedback, setChallengeCheckFeedback] = useState<string[]>([]);
   const [curriculumGrade, setCurriculumGrade] = useState<CurriculumGrade>("Alle");
   const [curriculumFit, setCurriculumFit] = useState<"Alle" | CurriculumFit>("Alle");
   const [teacherMode, setTeacherMode] = useState(false);
@@ -3892,6 +3901,16 @@ export default function Home() {
   const active = useMemo(
     () => modules.find((item) => item.id === activeId) ?? modules[0],
     [activeId],
+  );
+
+  const activeChallenge = useMemo(
+    () => pythonChallenges.find((challenge) => challenge.id === selectedChallengeId) ?? null,
+    [selectedChallengeId],
+  );
+
+  const filteredChallenges = useMemo(
+    () => pythonChallenges.filter((challenge) => challengeDifficulty === "Alle" || challenge.difficulty === challengeDifficulty),
+    [challengeDifficulty],
   );
 
   const filteredReferences = useMemo(() => {
@@ -3982,6 +4001,8 @@ export default function Home() {
     const savedMode = window.localStorage.getItem("pythonverkstedet-mode");
     const savedProjects = window.localStorage.getItem("bjornsveen-python-projects");
     const savedEditorFontSize = Number(window.localStorage.getItem("bjornsveen-editor-font-size"));
+    const savedChallengeCodes = window.localStorage.getItem("skolepython-challenge-codes");
+    const savedCompletedChallenges = window.localStorage.getItem("skolepython-completed-challenges");
     if (saved) setCompleted(JSON.parse(saved));
     if (savedMode === "teacher") setTeacherMode(true);
     if (savedProjects) {
@@ -4014,6 +4035,12 @@ export default function Home() {
       }
     }
     if (savedEditorFontSize >= 15 && savedEditorFontSize <= 28) setEditorFontSize(savedEditorFontSize);
+    if (savedChallengeCodes) {
+      try { setChallengeCodes(JSON.parse(savedChallengeCodes)); } catch { window.localStorage.removeItem("skolepython-challenge-codes"); }
+    }
+    if (savedCompletedChallenges) {
+      try { setCompletedChallenges(JSON.parse(savedCompletedChallenges)); } catch { window.localStorage.removeItem("skolepython-completed-challenges"); }
+    }
     const handleFullscreenChange = () => setEditorFullscreen(document.fullscreenElement === workbenchRef.current);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
@@ -4135,6 +4162,7 @@ export default function Home() {
   function chooseModule(module: Module) {
     setPlayground(false);
     setCurriculumView(false);
+    setChallengeView(false);
     setActiveId(module.id);
     setLabTab("practice");
     setCode(practiceCodes[module.id] ?? "");
@@ -4153,6 +4181,7 @@ export default function Home() {
   function choosePlayground() {
     setPlayground(true);
     setCurriculumView(false);
+    setChallengeView(false);
     const project = projects.find((item) => item.id === activeProjectId) ?? projects[0];
     setCode(project?.code ?? playgroundCode);
     setOutput("Skriv eller endre koden, og trykk «Kjør kode».");
@@ -4170,9 +4199,54 @@ export default function Home() {
   function chooseCurriculum() {
     setPlayground(false);
     setCurriculumView(true);
+    setChallengeView(false);
     setFeedback("");
     setErrorCoach(null);
     setShareStatus("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function chooseChallenges() {
+    setPlayground(false);
+    setCurriculumView(false);
+    setChallengeView(true);
+    setSelectedChallengeId(null);
+    setChallengeCheckFeedback([]);
+    setErrorCoach(null);
+    setPlotImages([]);
+    setExpandedPlotIndex(null);
+    setTurtleDrawing(null);
+    setTurtleExpanded(false);
+    setSnakeGame(null);
+    setShareStatus("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openChallenge(challenge: PythonChallenge) {
+    setChallengeView(true);
+    setSelectedChallengeId(challenge.id);
+    setCode(challengeCodes[challenge.id] ?? "");
+    setOutput("Skriv løsningen din, og trykk «Kjør kode» når du vil undersøke den.");
+    setChallengeCheckFeedback([]);
+    setFeedback("");
+    setErrorCoach(null);
+    setPlotImages([]);
+    setExpandedPlotIndex(null);
+    setTurtleDrawing(null);
+    setTurtleExpanded(false);
+    setSnakeGame(null);
+    setShareStatus("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function closeChallenge() {
+    setSelectedChallengeId(null);
+    setCode("");
+    setChallengeCheckFeedback([]);
+    setErrorCoach(null);
+    setPlotImages([]);
+    setTurtleDrawing(null);
+    setSnakeGame(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -4184,6 +4258,12 @@ export default function Home() {
 
   function updateCode(nextCode: string) {
     setCode(nextCode);
+    if (challengeView && activeChallenge) {
+      const nextChallengeCodes = { ...challengeCodes, [activeChallenge.id]: nextCode };
+      setChallengeCodes(nextChallengeCodes);
+      window.localStorage.setItem("skolepython-challenge-codes", JSON.stringify(nextChallengeCodes));
+      return;
+    }
     if (!playground) {
       if (labTab === "practice") setPracticeCodes((current) => ({ ...current, [active.id]: nextCode }));
       else setSolutionCodes((current) => ({ ...current, [active.id]: nextCode }));
@@ -4265,7 +4345,7 @@ export default function Home() {
   }
 
   function insertTutorialCode(tutorial: QuickTutorial) {
-    const editorId = playground ? "playground-code" : "python-code";
+    const editorId = challengeView ? "challenge-code" : playground ? "playground-code" : "python-code";
     const editor = document.getElementById(editorId) as HTMLTextAreaElement | null;
     const start = editor?.selectionStart ?? code.length;
     const end = editor?.selectionEnd ?? start;
@@ -4329,7 +4409,7 @@ export default function Home() {
       return;
     }
 
-    const editorId = playground ? "playground-code" : "python-code";
+    const editorId = challengeView ? "challenge-code" : playground ? "playground-code" : "python-code";
     const editor = document.getElementById(editorId) as HTMLTextAreaElement | null;
     const start = editor?.selectionStart ?? code.length;
     const end = editor?.selectionEnd ?? start;
@@ -4403,6 +4483,52 @@ export default function Home() {
     setFeedback("");
     setErrorCoach(null);
     setOutput("Trykk «Kjør kode» når du er klar.");
+  }
+
+  function revealNextChallengeHint(challenge: PythonChallenge) {
+    setRevealedChallengeHints((current) => ({
+      ...current,
+      [challenge.id]: Math.min(challenge.hints.length, (current[challenge.id] ?? 0) + 1),
+    }));
+  }
+
+  function loadChallengeScaffold(challenge: PythonChallenge) {
+    if (code.trim() && !window.confirm("Dette erstatter koden i editoren med startpunktet. Vil du fortsette?")) return;
+    updateCode(challenge.scaffold);
+    setOutput("Startpunktet er hentet. Kommentarene viser hva du skal bygge – selve løsningen må du skrive.");
+    setChallengeCheckFeedback([]);
+    requestAnimationFrame(() => document.getElementById("challenge-code")?.focus());
+  }
+
+  function loadChallengeSolution(challenge: PythonChallenge) {
+    if (code.trim() && !window.confirm("Dette erstatter forsøket i editoren med løsningsforslaget. Vil du fortsette?")) return;
+    updateCode(challenge.solutionCode);
+    setOutput("Løsningsforslaget er lagt i editoren. Les det linje for linje, forutsi svaret og kjør det.");
+    setChallengeCheckFeedback([]);
+    requestAnimationFrame(() => document.getElementById("challenge-code")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  }
+
+  function checkChallengeAttempt(challenge: PythonChallenge) {
+    if (!code.trim()) {
+      setChallengeCheckFeedback(["○ Editoren er tom ennå. Skriv ett lite steg eller hent startpunktet før du sjekker."]);
+      return;
+    }
+    const normalizedCode = code.toLocaleLowerCase("nb");
+    const normalizedOutput = output.toLocaleLowerCase("nb");
+    const results = challenge.checks.map((check) => {
+      const codePass = !check.codeIncludes || check.codeIncludes.every((part) => normalizedCode.includes(part.toLocaleLowerCase("nb")));
+      const outputPass = !check.outputIncludes || check.outputIncludes.every((part) => normalizedOutput.includes(part.toLocaleLowerCase("nb")));
+      return `${codePass && outputPass ? "✓" : "○"} ${check.label}`;
+    });
+    if (results.every((result) => result.startsWith("✓"))) results.push("✓ Flott! Test nå minst ett annet tall eller datasett før du kaller løsningen ferdig.");
+    else results.push("○ Ikke alt er synlig ennå. Bruk listen som retning, ikke som fasit: Endre én liten ting og kjør igjen.");
+    setChallengeCheckFeedback(results);
+  }
+
+  function markChallengeComplete(challenge: PythonChallenge) {
+    const next = completedChallenges.includes(challenge.id) ? completedChallenges : [...completedChallenges, challenge.id];
+    setCompletedChallenges(next);
+    window.localStorage.setItem("skolepython-completed-challenges", JSON.stringify(next));
   }
 
   function tryProgressionCode(nextCode: string) {
@@ -4700,7 +4826,7 @@ export default function Home() {
   }
 
   function focusErrorLine(lineNumber: number) {
-    const editorId = playground ? "playground-code" : "python-code";
+    const editorId = challengeView ? "challenge-code" : playground ? "playground-code" : "python-code";
     const input = document.getElementById(editorId) as HTMLTextAreaElement | null;
     if (!input) return;
     const lines = code.split("\n");
@@ -5022,7 +5148,7 @@ export default function Home() {
           worker.terminate();
           setRunnerStatus("error");
           setOutput("Programmet brukte for lang tid og ble stoppet. Sjekk særlig løkker som kanskje aldri avsluttes.");
-        }, playground ? 90000 : 8000);
+        }, playground ? 90000 : challengeView ? 30000 : 8000);
       }
 
       if (data.type === "result") {
@@ -5088,6 +5214,7 @@ export default function Home() {
   }
 
   const progress = Math.round((completed.length / modules.length) * 100);
+  const visibleProgress = challengeView ? Math.round((completedChallenges.length / pythonChallenges.length) * 100) : progress;
 
   return (
     <main>
@@ -5103,14 +5230,16 @@ export default function Home() {
           <label htmlFor="module-select">Velg område</label>
           <select
             id="module-select"
-            value={playground ? "playground" : curriculumView ? "curriculum" : String(active.id)}
+            value={playground ? "playground" : challengeView ? "challenges" : curriculumView ? "curriculum" : String(active.id)}
             onChange={(event) => {
               if (event.target.value === "playground") choosePlayground();
+              else if (event.target.value === "challenges") chooseChallenges();
               else if (event.target.value === "curriculum") chooseCurriculum();
               else chooseModule(modules[Number(event.target.value) - 1]);
             }}
           >
             <option value="playground">Python</option>
+            <option value="challenges">Utfordringer</option>
             <option value="curriculum">Læreplanmål</option>
             {modules.map((module) => (
               <option key={module.id} value={module.id}>
@@ -5118,7 +5247,7 @@ export default function Home() {
               </option>
             ))}
           </select>
-          <span className="module-position">{playground ? "Python-editor" : curriculumView ? "MAT01-06" : `${completed.length} av ${modules.length} fullført`}</span>
+          <span className="module-position">{playground ? "Python-editor" : challengeView ? `${completedChallenges.length} av ${pythonChallenges.length} mestret` : curriculumView ? "MAT01-06" : `${completed.length} av ${modules.length} fullført`}</span>
         </div>
         <nav className="top-actions" aria-label="Verktøy">
           <button className="text-button command-library-button" type="button" onClick={() => openCommandLibrary()} aria-pressed={commandLibraryOpen}>
@@ -5141,8 +5270,8 @@ export default function Home() {
           </button>
         </nav>
       </header>
-      <div className="course-progress" aria-label={`${progress} prosent fullført`}>
-        <span style={{ width: `${progress}%` }} />
+      <div className="course-progress" aria-label={`${visibleProgress} prosent fullført`}>
+        <span style={{ width: `${visibleProgress}%` }} />
       </div>
 
       <div className="app-shell" id="top">
@@ -5442,6 +5571,254 @@ export default function Home() {
           </article>
         )}
 
+        {challengeView && !activeChallenge && (
+          <article className="lesson challenges-page">
+            <section className="challenge-hero content-section">
+              <div>
+                <p className="section-label inverse"><span>◆</span> Utfordringer</p>
+                <h1>Tenk. Prøv. Oppdag.</h1>
+                <p>Her trener dere programmeringslogikk gjennom små problemer som vokser i vanskelighetsgrad. Målet er ikke å skrive kortest mulig kode, men å forstå hvorfor løsningen virker.</p>
+                <div className="challenge-principles" aria-label="Arbeidsmåten i utfordringene">
+                  <span><b>1</b> Tenk før du skriver</span>
+                  <span><b>2</b> Prøv ett lite steg</span>
+                  <span><b>3</b> Hent bare hintet du trenger</span>
+                  <span><b>4</b> Test med nye verdier</span>
+                </div>
+              </div>
+              <div className="challenge-hero-progress" aria-label={`${completedChallenges.length} av ${pythonChallenges.length} utfordringer mestret`}>
+                <strong>{completedChallenges.length}<small>av {pythonChallenges.length}</small></strong>
+                <span>mestret</span>
+                <div><i style={{ width: `${Math.round((completedChallenges.length / pythonChallenges.length) * 100)}%` }} /></div>
+              </div>
+            </section>
+
+            <section className="content-section challenge-welcome">
+              <div>
+                <p className="section-label"><span>?</span> Slik lykkes du</p>
+                <h2>Fast nok støtte – uten å ta fra deg oppdagelsen</h2>
+                <p>Start med spørsmålene og et tomt kodefelt. Når du står fast, åpner du ett hint om gangen. Første hint gir bare retning; de neste viser gradvis mer struktur. Løsningsforslaget finnes, men læringen skjer i forsøket før du åpner det.</p>
+              </div>
+              <div className="challenge-zone-card">
+                <strong>Den gode utfordringssonen</strong>
+                <p>Oppgaven skal være litt for vanskelig alene, men mulig med riktig støtte. Frustrert? Ta ett hint. Full kontroll? Prøv utvidelsen eller bytt testverdier.</p>
+              </div>
+            </section>
+
+            <section className="content-section challenge-browser">
+              <div className="challenge-browser-heading">
+                <div>
+                  <p className="section-label"><span>→</span> Velg oppdrag</p>
+                  <h2>Fra første mestring til skikkelig nøtt</h2>
+                </div>
+                <div className="challenge-filters" role="group" aria-label="Filtrer utfordringer etter nivå">
+                  {challengeDifficulties.map((difficulty) => (
+                    <button type="button" className={challengeDifficulty === difficulty ? "is-active" : ""} aria-pressed={challengeDifficulty === difficulty} onClick={() => setChallengeDifficulty(difficulty)} key={difficulty}>
+                      {difficulty}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="challenge-level-guide">
+                <div><span className="challenge-difficulty difficulty-enkel">Enkel</span><p>Én eller to byggeklosser. God start etter en modul.</p></div>
+                <div><span className="challenge-difficulty difficulty-middels">Middels</span><p>Flere ideer må kobles sammen i riktig rekkefølge.</p></div>
+                <div><span className="challenge-difficulty difficulty-utfordrende">Utfordrende</span><p>Problemet må deles opp, testes og forbedres.</p></div>
+              </div>
+
+              <div className="challenge-grid">
+                {filteredChallenges.map((challenge, index) => {
+                  const complete = completedChallenges.includes(challenge.id);
+                  const savedAttempt = Boolean(challengeCodes[challenge.id]?.trim());
+                  return (
+                    <article className={`challenge-card ${complete ? "is-complete" : ""}`} key={challenge.id}>
+                      <div className="challenge-card-top">
+                        <span className={`challenge-difficulty difficulty-${challenge.difficulty.toLocaleLowerCase("nb")}`}>{challenge.difficulty}</span>
+                        <span className="challenge-number">{String(pythonChallenges.indexOf(challenge) + 1).padStart(2, "0")}</span>
+                      </div>
+                      <p className="challenge-subject">{challenge.subject}</p>
+                      <h3>{challenge.title}</h3>
+                      <p>{challenge.teaser}</p>
+                      <div className="challenge-concepts">{challenge.concepts.slice(0, 4).map((concept) => <code key={concept}>{concept}</code>)}</div>
+                      <footer>
+                        <span>{complete ? "✓ Mestret" : savedAttempt ? "● Forsøk lagret" : `Ca. ${challenge.estimatedMinutes} min`}</span>
+                        <button type="button" onClick={() => openChallenge(challenge)}>{savedAttempt ? "Fortsett" : "Start utfordringen"} <b>→</b></button>
+                      </footer>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          </article>
+        )}
+
+        {challengeView && activeChallenge && (() => {
+          const hintCount = revealedChallengeHints[activeChallenge.id] ?? 0;
+          const challengeIndex = pythonChallenges.findIndex((challenge) => challenge.id === activeChallenge.id);
+          const nextChallenge = pythonChallenges[challengeIndex + 1];
+          const challengeComplete = completedChallenges.includes(activeChallenge.id);
+          return (
+            <article className="lesson challenge-detail-page">
+              <section className="challenge-detail-top content-section">
+                <button type="button" className="challenge-back" onClick={closeChallenge}>← Alle utfordringer</button>
+                <div className="challenge-detail-heading">
+                  <div>
+                    <div className="challenge-detail-meta">
+                      <span className={`challenge-difficulty difficulty-${activeChallenge.difficulty.toLocaleLowerCase("nb")}`}>{activeChallenge.difficulty}</span>
+                      <span>Utfordring {challengeIndex + 1} av {pythonChallenges.length}</span>
+                      <span>Ca. {activeChallenge.estimatedMinutes} min</span>
+                    </div>
+                    <p className="challenge-subject">{activeChallenge.subject}</p>
+                    <h1>{activeChallenge.title}</h1>
+                    <p className="challenge-detail-teaser">{activeChallenge.teaser}</p>
+                  </div>
+                  <div className="challenge-detail-badge" aria-hidden="true"><span>Oppdrag</span><strong>{String(challengeIndex + 1).padStart(2, "0")}</strong></div>
+                </div>
+              </section>
+
+              <section className="content-section challenge-mission">
+                <div className="challenge-mission-main">
+                  <p className="section-label"><span>1</span> Oppdraget</p>
+                  <h2>{activeChallenge.mission}</h2>
+                  <div className="challenge-why"><strong>Hvorfor gjør vi dette?</strong><p>{activeChallenge.whyItMatters}</p></div>
+                </div>
+                <div className="challenge-success-box">
+                  <strong>Dette betyr at løsningen virker</strong>
+                  <ul>{activeChallenge.successCriteria.map((criterion) => <li key={criterion}>{criterion}</li>)}</ul>
+                </div>
+              </section>
+
+              <section className="content-section challenge-think-first">
+                <div>
+                  <p className="section-label"><span>2</span> Før du koder</p>
+                  <h2>Stopp og bygg en plan</h2>
+                  <p>Svar muntlig eller på papir. Det er helt greit å være usikker – spørsmålene peker mot delproblemene.</p>
+                </div>
+                <ol>{activeChallenge.beforeQuestions.map((question, index) => <li key={question}><span>{index + 1}</span><p>{question}</p></li>)}</ol>
+              </section>
+
+              <section className="content-section challenge-test-cases">
+                <div><p className="section-label"><span>✓</span> Test før du bygger</p><h2>Hva skal programmet klare?</h2></div>
+                <div>{activeChallenge.testCases.map((testCase) => <article key={testCase.change}><strong>Prøv med</strong><code>{testCase.change}</code><span>Forvent:</span><p>{testCase.expect}</p></article>)}</div>
+              </section>
+
+              <section className="content-section lab-section challenge-lab" id="challenge-lab">
+                <div className="section-heading lab-heading">
+                  <div>
+                    <p className="section-label inverse"><span>3</span> Ditt forsøk</p>
+                    <h2>Start så tomt som du tør</h2>
+                    <p className="challenge-lab-intro">Skriv ett lite steg, kjør, og se hva Python forteller. Startpunktet gir kommentarer og struktur – ikke selve løsningen.</p>
+                  </div>
+                  <div className="live-badge"><span /> Ekte Python i nettleseren</div>
+                </div>
+
+                <div className={`code-workbench challenge-workbench ${turtleDrawing ? "has-turtle" : ""} ${snakeGame ? "has-game" : ""}`} ref={workbenchRef}>
+                  <div className="editor-panel">
+                    <div className="panel-bar">
+                      <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
+                      <strong>{activeChallenge.id}.py</strong>
+                      <span className="panel-tools">
+                        <button type="button" className="command-help-button" onClick={() => openCommandLibrary()} aria-pressed={commandLibraryOpen}>⌘ Kommandoer</button>
+                        <button type="button" className="coding-help-button" onClick={openTutorial} aria-pressed={tutorialOpen}>? Hjelp mens du koder</button>
+                        <button type="button" onClick={copyCodeAsText}>Kopier kode + svar</button>
+                        <button type="button" onClick={() => copyCodeAsImage(`${activeChallenge.id}.py`)}>Bilde av kode + svar</button>
+                        <span className="editor-size-controls" aria-label="Skriftstørrelse i kodefeltet">
+                          <button type="button" onClick={() => changeEditorFontSize(-2)} disabled={editorFontSize <= 15} aria-label="Mindre kodetekst">A−</button>
+                          <output aria-live="polite">{editorFontSize} px</output>
+                          <button type="button" onClick={() => changeEditorFontSize(2)} disabled={editorFontSize >= 28} aria-label="Større kodetekst">A+</button>
+                        </span>
+                        <button type="button" onClick={toggleEditorFullscreen} aria-pressed={editorFullscreen}>{editorFullscreen ? "Avslutt fullskjerm" : "Fullskjerm"}</button>
+                      </span>
+                    </div>
+                    <label htmlFor="challenge-code" className="sr-only">Skriv løsningen på utfordringen</label>
+                    <PythonEditor id="challenge-code" value={code} onChange={updateCode} describedBy="challenge-editor-help" fontSize={editorFontSize} tall />
+                    <div className="editor-footer challenge-editor-footer" id="challenge-editor-help">
+                      <button type="button" className="challenge-scaffold-button" onClick={() => loadChallengeScaffold(activeChallenge)}>Hent startpunkt</button>
+                      <span>Forsøket lagres lokalt på denne enheten.</span>
+                      <button type="button" className="run-button" onClick={runCode} disabled={runnerStatus === "loading" || runnerStatus === "running"}>
+                        <span>▶</span>{runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : "Kjør kode"}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="output-panel" aria-live="polite">
+                    <div className="panel-bar output-bar"><strong>Resultat</strong><span className={`status-dot ${runnerStatus}`} /></div>
+                    {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
+                    {plotGallery()}
+                    <div className="output-tip"><strong>Observer:</strong> Stemte resultatet med det du trodde før du kjørte?</div>
+                  </div>
+                  {codingTutorialPanel()}
+                </div>
+                {shareStatus && <p className="share-status" role="status">{shareStatus}</p>}
+              </section>
+
+              <section className="content-section challenge-support-section">
+                <div className="challenge-hints-column">
+                  <div className="challenge-support-heading">
+                    <div><p className="section-label"><span>4</span> Hintestige</p><h2>Ta bare så mye hjelp som du trenger</h2></div>
+                    <span>{hintCount} av {activeChallenge.hints.length} hint åpnet</span>
+                  </div>
+                  <div className="challenge-hint-progress" aria-hidden="true">{activeChallenge.hints.map((hint, index) => <i className={index < hintCount ? "is-revealed" : ""} key={hint.label} />)}</div>
+                  {hintCount === 0 && <div className="challenge-no-hint"><strong>Prøv først i noen minutter.</strong><p>Når du står fast på ett bestemt punkt, åpner du det første hintet.</p></div>}
+                  <div className="challenge-hints">
+                    {activeChallenge.hints.slice(0, hintCount).map((hint, index) => (
+                      <article key={hint.title}>
+                        <div><span>Hint {index + 1}</span><small>{hint.label}</small></div>
+                        <h3>{hint.title}</h3>
+                        <p>{hint.body}</p>
+                        {hint.code && <pre><code>{hint.code}</code></pre>}
+                      </article>
+                    ))}
+                  </div>
+                  {hintCount < activeChallenge.hints.length ? (
+                    <button type="button" className="reveal-hint-button" onClick={() => revealNextChallengeHint(activeChallenge)}>
+                      Vis hint {hintCount + 1}: {activeChallenge.hints[hintCount].label} <span>↓</span>
+                    </button>
+                  ) : <p className="all-hints-shown">Alle hintene er åpnet. Sammenlign planen med koden din før du ser på løsningsforslaget.</p>}
+                </div>
+
+                <section className="challenge-check-column">
+                  <p className="section-label"><span>5</span> Mestringssjekk</p>
+                  <h2>Sjekk retning – ikke bare fasit</h2>
+                  <p>Sjekken ser etter noen viktige spor i koden og resultatet. Den kan ikke vurdere hele forklaringen din.</p>
+                  <button type="button" onClick={() => checkChallengeAttempt(activeChallenge)}>Sjekk forsøket mitt</button>
+                  {challengeCheckFeedback.length > 0 && <ul className="challenge-check-results" aria-live="polite">{challengeCheckFeedback.map((item) => <li className={item.startsWith("✓") ? "is-pass" : ""} key={item}>{item}</li>)}</ul>}
+                  <div className="challenge-concepts-box"><strong>Byggeklosser i oppgaven</strong><div>{activeChallenge.concepts.map((concept) => <button type="button" onClick={() => openCommandLibrary(concept)} key={concept}>{concept}</button>)}</div></div>
+                </section>
+              </section>
+
+              <section className="content-section challenge-solution-section">
+                <details>
+                  <summary>
+                    <span className="solution-lock">⌁</span>
+                    <span><small>Åpne når du har gjort et ekte forsøk</small><strong>Løsningsforslag med forklaring</strong></span>
+                    <b>Vis løsning</b>
+                  </summary>
+                  <div className="challenge-solution-content">
+                    <div className="solution-code-panel">
+                      <div><strong>Én logisk løsning</strong><span>Ikke den eneste riktige</span></div>
+                      <pre><code>{activeChallenge.solutionCode}</code></pre>
+                      <button type="button" onClick={() => loadChallengeSolution(activeChallenge)}>Prøv løsningsforslaget i editoren</button>
+                    </div>
+                    <div className="solution-walkthrough">
+                      <h3>Følg tankegangen</h3>
+                      <ol>{activeChallenge.solutionWalkthrough.map((step) => <li key={step}>{step}</li>)}</ol>
+                      <div className="solution-reflection"><strong>Forklar uten å se på koden</strong>{activeChallenge.reflection.map((question) => <p key={question}>{question}</p>)}</div>
+                    </div>
+                  </div>
+                  {activeChallenge.shortcut && <details className="challenge-shortcut"><summary>✦ {activeChallenge.shortcut.title}</summary><p>{activeChallenge.shortcut.body}</p><pre><code>{activeChallenge.shortcut.code}</code></pre></details>}
+                </details>
+              </section>
+
+              <section className="content-section challenge-extension">
+                <div><p className="section-label"><span>+</span> Klar for mer?</p><h2>Utvid problemet</h2><p>{activeChallenge.extension}</p></div>
+                <div className="challenge-complete-actions">
+                  <button type="button" className={challengeComplete ? "is-complete" : ""} onClick={() => markChallengeComplete(activeChallenge)}>{challengeComplete ? "✓ Markert som mestret" : "Jeg kan forklare løsningen – marker som mestret"}</button>
+                  {nextChallenge && <button type="button" className="next-challenge-button" onClick={() => openChallenge(nextChallenge)}>Neste utfordring: {nextChallenge.title} →</button>}
+                </div>
+              </section>
+            </article>
+          );
+        })()}
+
         {curriculumView && (
           <article className="lesson curriculum-page">
             <section className="curriculum-hero content-section">
@@ -5545,7 +5922,7 @@ export default function Home() {
           </article>
         )}
 
-        {!playground && !curriculumView && (
+        {!playground && !curriculumView && !challengeView && (
         <article className="lesson">
           <section className="lesson-hero">
             <div className="hero-copy">
