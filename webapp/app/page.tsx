@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent, CSSProperties, KeyboardEvent, ReactNode } from "react";
+import type { ChangeEvent, CSSProperties, FormEvent, KeyboardEvent, ReactNode } from "react";
 import { commandCategories, pythonCommands } from "./pythonCommands";
 import type { CommandCategory, PythonCommand } from "./pythonCommands";
 import { challengeDifficulties, evaluateChallengeAttempt, pythonChallenges } from "./challenges";
@@ -272,6 +272,38 @@ const quickTutorials: QuickTutorial[] = [
     example: 'pris = 120\nantall = 2\nfrakt = 49\nrabatt = 30\n\ntotal = pris * antall\ntotal += frakt\ntotal -= rabatt\nprint("Å betale:", total, "kr")',
     notice: "Likhetstegnet betyr her «gi variabelen en verdi». Variabelen må lages før den kan brukes eller endres.",
     challenge: "Legg til mva som et desimaltall, og lagre en ny variabel som heter total_med_mva.",
+  },
+  {
+    id: "input-text",
+    category: "Variabler",
+    title: "Spør brukeren med input",
+    question: "Hvordan lar jeg den som kjører programmet skrive inn en verdi?",
+    intro: "input viser et spørsmål og stopper programmet til brukeren har svart. Svaret lagres i en variabel, slik at resten av programmet kan bruke det.",
+    steps: [
+      "Skriv spørsmålet som tekst inni input(...). En tydelig prompt forteller hva brukeren skal skrive.",
+      "Lagre svaret i en variabel: navn = input(\"Hva heter du? \").",
+      "input gir alltid tekst, også når brukeren skriver siffer.",
+      "Når du kjører koden i Skolepython, åpnes et eget svarvindu. Skriv svaret og trykk Enter.",
+    ],
+    example: 'navn = input("Hva heter du? ")\nby = input("Hvor bor du? ")\n\nprint("Hei", navn, "fra", by + "!")',
+    notice: "Variabelen får det brukeren faktisk skriver. Velg derfor spørsmål som gjør det tydelig om du ønsker navn, tall eller noe annet.",
+    challenge: "Spør også om favorittfag, og lag en hel setning som bruker alle tre svarene.",
+  },
+  {
+    id: "input-number",
+    category: "Variabler",
+    title: "Regn med tall fra input",
+    question: "Hvorfor må et tall fra input gjøres om før Python kan regne med det?",
+    intro: "Selv om brukeren skriver 14, mottar input teksten \"14\". int gjør heltallsteksten om til tallet 14. Da kan Python legge til, trekke fra og sammenligne.",
+    steps: [
+      "alder_tekst lagrer først akkurat det brukeren skrev. Datatypen er tekst, altså str.",
+      "int(alder_tekst) lager et heltall og lagrer det i alder.",
+      "Nå betyr alder + 1 vanlig addisjon. Uten int kan ikke Python legge sammen tekst og tall.",
+      "Bruk float i stedet for int når brukeren skal kunne skrive et desimaltall som 3.5.",
+    ],
+    example: 'alder_tekst = input("Hvor gammel er du? ")\nalder = int(alder_tekst)\n\nom_et_aar = alder + 1\nprint("Neste år er du", om_et_aar, "år.")',
+    notice: "Hvis brukeren skriver et ord der int forventer et heltall, får programmet ValueError. Start gjerne med å be tydelig om et heltall.",
+    challenge: "Spør om to heltall, gjør begge om med int og vis både summen og produktet.",
   },
   {
     id: "if-choice",
@@ -545,6 +577,22 @@ const codeSnippets: CodeSnippet[] = [
     purpose: "Gang sammen verdier og lagre resultatet.",
     code: 'pris = 80\nantall = 3\ntotal = pris * antall\nprint("Total:", total, "kr")',
     change: "Endre pris, antall eller regneart.",
+  },
+  {
+    id: "input-alder",
+    category: "Kom i gang",
+    title: "Spør om navn og alder",
+    purpose: "Hent tekst og et heltall fra den som kjører programmet.",
+    code: 'navn = input("Hva heter du? ")\nalder = int(input("Hvor gammel er du? "))\n\nprint("Hei", navn)\nprint("Neste år er du", alder + 1, "år.")',
+    change: "Bytt spørsmålene og bruk svarene i en ny beregning eller beskjed.",
+  },
+  {
+    id: "input-trekant",
+    category: "Kom i gang",
+    title: "Bygg en trekantdetektiv",
+    purpose: "Spør om tre sider og bruk Pytagoras til å undersøke trekanten.",
+    code: 'a = float(input("Skriv første katet: "))\nb = float(input("Skriv andre katet: "))\nc = float(input("Skriv hypotenusen: "))\n\nif a ** 2 + b ** 2 == c ** 2:\n    print("Dette er en rettvinklet trekant.")\nelse:\n    print("Dette er ikke en rettvinklet trekant.")',
+    change: "Test først 3, 4 og 5. Prøv deretter 5, 6 og 7.",
   },
   {
     id: "for-lokke",
@@ -1594,6 +1642,18 @@ const modules: Module[] = [
             title: "Elegant senere: f-tekst",
             body: "Når komma-versjonen gir mening, kan samme beskjed skrives mer samlet. Variablene står i krøllparenteser.",
             code: `navn = "Ada"\nalder = 15\nprint(f"Hei {navn}! Du er {alder} år.")`,
+          },
+        },
+        {
+          label: "Gjør programmet levende",
+          title: "La brukeren gi variablene verdi",
+          body: "input stopper programmet og viser spørsmålet. Svaret er først tekst. Derfor bruker vi int når teksten skal bli et heltall vi kan regne med.",
+          code: 'navn = input("Hva heter du? ")\nalder_tekst = input("Hvor gammel er du? ")\nalder = int(alder_tekst)\n\nprint("Hei", navn)\nprint("Neste år er du", alder + 1, "år.")',
+          tryThis: "Lag et program som spør om to tall og skriver «Summen er ...». Hvilke to svar må gjøres om med int?",
+          upgrade: {
+            title: "Kortere når du forstår rekkefølgen",
+            body: "input kan ligge rett inni int. Python gjør fortsatt én ting om gangen: spør først, gjør svaret om til heltall og lagrer tallet til slutt.",
+            code: 'alder = int(input("Hvor gammel er du? "))\nprint("Om fem år er du", alder + 5, "år.")',
           },
         },
       ],
@@ -4115,7 +4175,9 @@ export default function Home() {
     Object.fromEntries(modules.map((module) => [module.id, module.starterCode])),
   );
   const [output, setOutput] = useState("Trykk «Kjør kode» når du er klar.");
-  const [runnerStatus, setRunnerStatus] = useState<"idle" | "loading" | "running" | "error">("idle");
+  const [runnerStatus, setRunnerStatus] = useState<"idle" | "loading" | "running" | "input" | "error">("idle");
+  const [pythonInputRequest, setPythonInputRequest] = useState<{ prompt: string; index: number } | null>(null);
+  const [pythonInputValue, setPythonInputValue] = useState("");
   const [errorCoach, setErrorCoach] = useState<ErrorCoach | null>(null);
   const [feedback, setFeedback] = useState("");
   const [completed, setCompleted] = useState<number[]>([]);
@@ -4157,6 +4219,9 @@ export default function Home() {
   const workbenchRef = useRef<HTMLDivElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const executionRef = useRef<{ code: string; files: { name: string; content: string }[]; inputs: string[] } | null>(null);
+  const runnerBusy = runnerStatus === "loading" || runnerStatus === "running" || runnerStatus === "input";
+  const runButtonLabel = runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : runnerStatus === "input" ? "Venter på svar …" : "Kjør kode";
 
   const active = useMemo(
     () => modules.find((item) => item.id === activeId) ?? modules[0],
@@ -5549,6 +5614,44 @@ export default function Home() {
     return worker;
   }
 
+  function armExecutionTimeout(worker: Worker) {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      worker.terminate();
+      workerRef.current = null;
+      executionRef.current = null;
+      setPythonInputRequest(null);
+      setRunnerStatus("error");
+      setOutput("Programmet brukte for lang tid og ble stoppet. Sjekk særlig løkker som kanskje aldri avsluttes.");
+    }, playground ? 90000 : challengeView || examTrainingView ? 30000 : 8000);
+  }
+
+  function submitPythonInput(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const worker = workerRef.current;
+    const execution = executionRef.current;
+    if (!worker || !execution || !pythonInputRequest) return;
+    const nextInputs = [...execution.inputs, pythonInputValue];
+    executionRef.current = { ...execution, inputs: nextInputs };
+    setPythonInputRequest(null);
+    setPythonInputValue("");
+    setRunnerStatus("running");
+    setOutput(`Svaret er sendt til input nummer ${nextInputs.length}. Python fortsetter …`);
+    worker.postMessage({ ...execution, inputs: nextInputs });
+    armExecutionTimeout(worker);
+  }
+
+  function cancelPythonInput() {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    workerRef.current?.terminate();
+    workerRef.current = null;
+    executionRef.current = null;
+    setPythonInputRequest(null);
+    setPythonInputValue("");
+    setRunnerStatus("idle");
+    setOutput("Kjøringen ble stoppet mens programmet ventet på et svar.");
+  }
+
   async function runCode() {
     setRunnerStatus("loading");
     setOutput("Starter Python … Første kjøring kan ta litt tid.");
@@ -5560,22 +5663,44 @@ export default function Home() {
     setTurtleDrawing(null);
     setTurtleExpanded(false);
     setSnakeGame(null);
+    setPythonInputRequest(null);
+    setPythonInputValue("");
 
     const worker = makeWorker();
+    executionRef.current = {
+      code,
+      files: dataFiles.map(({ name, content }) => ({ name, content })),
+      inputs: [],
+    };
     let executionStarted = false;
 
     worker.onmessage = (event) => {
-      const data = event.data as { type: string; output?: string; error?: string; plots?: string[]; turtle?: TurtleDrawing | null; game?: SnakeGameConfig | null; variables?: PythonVariable[] };
+      const data = event.data as { type: string; output?: string; error?: string; prompt?: string; index?: number; plots?: string[]; turtle?: TurtleDrawing | null; game?: SnakeGameConfig | null; variables?: PythonVariable[] };
       if (data.type === "ready") {
         executionStarted = true;
         setRunnerStatus("running");
         setOutput(dataFiles.length ? `Kjører med ${dataFiles.length} datafil${dataFiles.length === 1 ? "" : "er"} …` : "Kjører …");
-        worker.postMessage({ code, files: dataFiles.map(({ name, content }) => ({ name, content })) });
-        timeoutRef.current = setTimeout(() => {
+        worker.postMessage(executionRef.current);
+        armExecutionTimeout(worker);
+      }
+
+      if (data.type === "input") {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        const execution = executionRef.current;
+        if (!execution || execution.inputs.length >= 20) {
           worker.terminate();
+          workerRef.current = null;
+          executionRef.current = null;
           setRunnerStatus("error");
-          setOutput("Programmet brukte for lang tid og ble stoppet. Sjekk særlig løkker som kanskje aldri avsluttes.");
-        }, playground ? 90000 : challengeView || examTrainingView ? 30000 : 8000);
+          setOutput("Programmet ba om mer enn 20 svar og ble stoppet. Sjekk om input() ligger i en løkke som aldri avsluttes.");
+          return;
+        }
+        const prompt = data.prompt?.trim() || "Skriv et svar:";
+        setRunnerStatus("input");
+        setPythonInputValue("");
+        setPythonInputRequest({ prompt, index: data.index ?? execution.inputs.length });
+        const partialOutput = data.output?.trim();
+        setOutput(partialOutput ? `${partialOutput}\n\nProgrammet venter nå på et svar.` : `Programmet spør: ${prompt}`);
       }
 
       if (data.type === "result") {
@@ -5591,6 +5716,9 @@ export default function Home() {
         setTurtleDrawing(nextTurtle);
         setSnakeGame(nextGame);
         worker.terminate();
+        workerRef.current = null;
+        executionRef.current = null;
+        setPythonInputRequest(null);
       }
 
       if (data.type === "error") {
@@ -5601,6 +5729,9 @@ export default function Home() {
         setPythonVariables([]);
         setOutput("Python trenger litt hjelp før programmet kan kjøre ferdig.");
         worker.terminate();
+        workerRef.current = null;
+        executionRef.current = null;
+        setPythonInputRequest(null);
       }
     };
 
@@ -5616,6 +5747,9 @@ export default function Home() {
           : `Kunne ikke laste Python-motoren. Sjekk nettilkoblingen og prøv igjen.${detail}`,
       );
       worker.terminate();
+      workerRef.current = null;
+      executionRef.current = null;
+      setPythonInputRequest(null);
     };
   }
 
@@ -5752,8 +5886,8 @@ export default function Home() {
                   />
                   <div className="editor-footer" id="playground-help">
                     <span>Start tomt, eller bruk kodebyggeren under.</span>
-                    <button type="button" className="run-button" onClick={runCode} disabled={runnerStatus === "loading" || runnerStatus === "running"}>
-                      <span>▶</span>{runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : "Kjør kode"}
+                    <button type="button" className="run-button" onClick={runCode} disabled={runnerBusy}>
+                      <span>▶</span>{runButtonLabel}
                     </button>
                   </div>
                 </div>
@@ -6198,7 +6332,7 @@ export default function Home() {
                     <div className="editor-footer challenge-editor-footer" id="exam-editor-help">
                       <button type="button" className="challenge-scaffold-button" onClick={() => loadExamStarter(activeExamTask)}>Hent startpunkt</button>
                       <span>Forsøket lagres lokalt på denne enheten.</span>
-                      <button type="button" className="run-button" onClick={runCode} disabled={runnerStatus === "loading" || runnerStatus === "running"}><span>▶</span>{runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : "Kjør kode"}</button>
+                      <button type="button" className="run-button" onClick={runCode} disabled={runnerBusy}><span>▶</span>{runButtonLabel}</button>
                     </div>
                   </div>
                   <div className="output-panel" aria-live="polite">
@@ -6225,7 +6359,7 @@ export default function Home() {
                   <p className="section-label"><span>8</span> Sensorblikk</p>
                   <h2>Vis mer enn et riktig tall</h2>
                   <p>Sjekken godtar ulike variabelnavn og flere faglig riktige framgangsmåter. <strong>Rundt punkt</strong> betyr at et nødvendig krav ikke er synlig. <strong>Trekant</strong> er bare et forbedringsråd.</p>
-                  <button type="button" onClick={() => checkExamAttempt(activeExamTask)} disabled={runnerStatus === "loading" || runnerStatus === "running"}>{runnerStatus === "loading" || runnerStatus === "running" ? "Vent til koden er kjørt …" : "Sjekk besvarelsen min"}</button>
+                  <button type="button" onClick={() => checkExamAttempt(activeExamTask)} disabled={runnerBusy}>{runnerBusy ? "Vent til koden er kjørt …" : "Sjekk besvarelsen min"}</button>
                   {examCheckFeedback.length > 0 && <ul className="challenge-check-results" aria-live="polite">{examCheckFeedback.map((item) => <li className={item.startsWith("✓") ? "is-pass" : item.startsWith("△") ? "is-advice" : ""} key={item}>{item}</li>)}</ul>}
                   <blockquote>{activeExamTask.sensorTip}</blockquote>
                 </section>
@@ -6422,8 +6556,8 @@ export default function Home() {
                     <div className="editor-footer challenge-editor-footer" id="challenge-editor-help">
                       <button type="button" className="challenge-scaffold-button" onClick={() => loadChallengeScaffold(activeChallenge)}>Hent startpunkt</button>
                       <span>Forsøket lagres lokalt på denne enheten.</span>
-                      <button type="button" className="run-button" onClick={runCode} disabled={runnerStatus === "loading" || runnerStatus === "running"}>
-                        <span>▶</span>{runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : "Kjør kode"}
+                      <button type="button" className="run-button" onClick={runCode} disabled={runnerBusy}>
+                        <span>▶</span>{runButtonLabel}
                       </button>
                     </div>
                   </div>
@@ -6468,7 +6602,7 @@ export default function Home() {
                   <p className="section-label"><span>5</span> Mestringssjekk</p>
                   <h2>Sjekk retning – ikke bare fasit</h2>
                   <p>Sjekken godtar flere framgangsmåter og variabelnavn. Den ser etter noen viktige spor i koden og resultatet, men et åpent grønt punkt er støtte – ikke en dom over hele løsningen.</p>
-                  <button type="button" onClick={() => checkChallengeAttempt(activeChallenge)} disabled={runnerStatus === "loading" || runnerStatus === "running"}>{runnerStatus === "loading" || runnerStatus === "running" ? "Vent til koden er kjørt …" : "Sjekk forsøket mitt"}</button>
+                  <button type="button" onClick={() => checkChallengeAttempt(activeChallenge)} disabled={runnerBusy}>{runnerBusy ? "Vent til koden er kjørt …" : "Sjekk forsøket mitt"}</button>
                   {challengeCheckFeedback.length > 0 && <ul className="challenge-check-results" aria-live="polite">{challengeCheckFeedback.map((item) => <li className={item.startsWith("✓") ? "is-pass" : ""} key={item}>{item}</li>)}</ul>}
                   <div className="challenge-concepts-box"><strong>Byggeklosser i oppgaven</strong><div>{activeChallenge.concepts.map((concept) => <button type="button" onClick={() => openCommandLibrary(concept)} key={concept}>{concept}</button>)}</div></div>
                 </section>
@@ -6836,8 +6970,8 @@ export default function Home() {
                 />
                 <div className="editor-footer" id="editor-help">
                   <span>{labTab === "practice" ? "Skriv én linje om gangen. Feil er en del av øvingen." : "Du kan endre alt i fasiten."}</span>
-                  <button type="button" className="run-button" onClick={runCode} disabled={runnerStatus === "loading" || runnerStatus === "running"}>
-                    <span>▶</span>{runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : "Kjør kode"}
+                  <button type="button" className="run-button" onClick={runCode} disabled={runnerBusy}>
+                    <span>▶</span>{runButtonLabel}
                   </button>
                 </div>
               </div>
@@ -6973,6 +7107,33 @@ export default function Home() {
             </div>
             <img src={`data:image/png;base64,${plotImages[expandedPlotIndex]}`} alt={`Graf ${expandedPlotIndex + 1} laget av Python-koden`} />
           </div>
+        </div>
+      )}
+      {pythonInputRequest && (
+        <div className="python-input-modal" role="presentation">
+          <form className="python-input-card" role="dialog" aria-modal="true" aria-labelledby="python-input-title" onSubmit={submitPythonInput}>
+            <header>
+              <span>Programmet ditt spør · input {pythonInputRequest.index + 1}</span>
+              <h2 id="python-input-title">Skriv et svar til Python</h2>
+            </header>
+            <div className="python-input-body">
+              <p className="python-input-prompt">{pythonInputRequest.prompt}</p>
+              <label htmlFor="python-input-answer">Svaret ditt</label>
+              <input
+                id="python-input-answer"
+                value={pythonInputValue}
+                onChange={(event) => setPythonInputValue(event.target.value)}
+                placeholder="Skriv her …"
+                autoComplete="off"
+                autoFocus
+              />
+              <p className="python-input-tip"><strong>Husk:</strong> <code>input()</code> gir alltid tekst. <code>int(...)</code> gjør heltallstekst om til et tall, mens <code>float(...)</code> brukes til desimaltall.</p>
+            </div>
+            <footer>
+              <button type="button" className="python-input-cancel" onClick={cancelPythonInput}>Stopp programmet</button>
+              <button type="submit" className="python-input-submit">Send svaret til Python →</button>
+            </footer>
+          </form>
         </div>
       )}
       {feedbackDialogOpen && (

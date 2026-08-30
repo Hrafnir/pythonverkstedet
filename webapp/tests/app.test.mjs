@@ -84,18 +84,19 @@ test("kommandobiblioteket er omfattende, søkbart på norsk og tilgjengelig i ed
 });
 
 test("utfordringssiden bygger programmeringslogikk med gradvis støtte og mestring", () => {
-  assert.equal((challenges.match(/^    id:/gm) ?? []).length, 18);
-  assert.equal((challenges.match(/difficulty: "Enkel"/g) ?? []).length, 6);
+  assert.equal((challenges.match(/^    id:/gm) ?? []).length, 19);
+  assert.equal((challenges.match(/difficulty: "Enkel"/g) ?? []).length, 7);
   assert.equal((challenges.match(/difficulty: "Middels"/g) ?? []).length, 6);
   assert.equal((challenges.match(/difficulty: "Utfordrende"/g) ?? []).length, 6);
-  assert.equal((challenges.match(/label: "Lite dytt"/g) ?? []).length, 18);
-  assert.equal((challenges.match(/label: "Byggekloss"/g) ?? []).length, 18);
-  assert.equal((challenges.match(/label: "Plan"/g) ?? []).length, 18);
-  assert.equal((challenges.match(/label: "Nesten der"/g) ?? []).length, 18);
-  assert.equal((challenges.match(/^    given: \[/gm) ?? []).length, 18);
-  assert.equal((challenges.match(/^    programShould: \[/gm) ?? []).length, 18);
+  assert.equal((challenges.match(/label: "Lite dytt"/g) ?? []).length, 19);
+  assert.equal((challenges.match(/label: "Byggekloss"/g) ?? []).length, 19);
+  assert.equal((challenges.match(/label: "Plan"/g) ?? []).length, 19);
+  assert.equal((challenges.match(/label: "Nesten der"/g) ?? []).length, 19);
+  assert.equal((challenges.match(/^    given: \[/gm) ?? []).length, 19);
+  assert.equal((challenges.match(/^    programShould: \[/gm) ?? []).length, 19);
   assert.match(challenges, /Er trekanten rettvinklet/);
   assert.match(challenges, /Finn den ukjente kateten/);
+  assert.match(challenges, /Lag en framtidsmaskin/);
   assert.match(challenges, /mest logiske|grunnlogikken|synlige mellomsteg/i);
   assert.match(page, /<option value="challenges">Utfordringer<\/option>/);
   assert.match(page, /Tenk\. Prøv\. Oppdag\./);
@@ -115,6 +116,7 @@ test("mestringssjekken godkjenner løsningsforslagene og naturlige alternative l
     "sum-variables": "Totalprisen er 648 kr",
     discount: "Den nye prisen er 600 kr",
     "even-odd": "14 er et partall",
+    "input-age": "Ada er 19 år om fem år",
     hypotenuse: "Hypotenusen er 5 cm",
     "multiplication-table": "10 · 5 = 50",
     "ticket-price": "15 år betaler 90 kr",
@@ -339,7 +341,7 @@ test("Python kan lese lokale tekst- og CSV-filer uten opplasting", () => {
   assert.match(page, /Bruk eksempel \.txt/);
   assert.match(page, /Bruk eksempel \.csv/);
   assert.match(page, /accept="\.txt,\.csv,text\/plain,text\/csv"/);
-  assert.match(page, /worker\.postMessage\(\{ code, files:/);
+  assert.match(page, /worker\.postMessage\(executionRef\.current\)/);
   assert.match(worker, /event\.data\.files/);
   assert.match(worker, /FS\.writeFile/);
   assert.match(worker, /\/home\/pyodide/);
@@ -366,6 +368,21 @@ test("Python kan lese lokale tekst- og CSV-filer uten opplasting", () => {
   assert.match(missingColumn.title, /kolonnenavnet/);
 });
 
+test("input åpner en pedagogisk svar-dialog og kan fortsette gjennom flere spørsmål", () => {
+  assert.match(worker, /event\.data\.inputs/);
+  assert.match(worker, /__SKOLEPYTHON_INPUT_REQUIRED__/);
+  assert.match(worker, /type: "input", prompt/);
+  assert.match(worker, /_skolepython_input_transcript/);
+  assert.match(page, /Skriv et svar til Python/);
+  assert.match(page, /function submitPythonInput/);
+  assert.match(page, /function cancelPythonInput/);
+  assert.match(page, /input\(\)<\/code> gir alltid tekst/);
+  assert.match(page, /Programmet ba om mer enn 20 svar/);
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.python-input-modal/);
+  assert.match(css, /\.python-input-card/);
+});
+
 test("Python-rommet har et komplett, søkbart oppslagsverk", () => {
   assert.match(page, /Python-håndbok/);
   assert.match(page, /Søk i håndboken/);
@@ -390,7 +407,7 @@ test("Python starter med tom editor og har en kodebygger", () => {
   assert.match(page, /const playgroundCode = ""/);
   assert.match(page, /const codeSnippets: CodeSnippet\[]/);
   const snippetSource = page.slice(page.indexOf("const codeSnippets"), page.indexOf("const playgroundReferences"));
-  assert.equal((snippetSource.match(/    id: "(?:variabler|print|regning|for-lokke|if-else|liste|les-txt|les-csv|funksjon|tilfeldig|graf|eksamensgraf|turtle|snake)",/g) ?? []).length, 14);
+  assert.equal((snippetSource.match(/    id: "(?:variabler|print|regning|input-alder|input-trekant|for-lokke|if-else|liste|les-txt|les-csv|funksjon|tilfeldig|graf|eksamensgraf|turtle|snake)",/g) ?? []).length, 16);
   assert.match(page, /Bygg et program av små deler/);
   assert.match(page, /Legg til i editor/);
   assert.match(page, /appendSnippet/);
@@ -404,10 +421,12 @@ test("Python starter med tom editor og har en kodebygger", () => {
 
 test("kodehjelpen lar eleven lære uten å forlate editoren", () => {
   const tutorialSource = page.slice(page.indexOf("const quickTutorials"), page.indexOf("type CurriculumFit"));
-  assert.equal((tutorialSource.match(/    id: "/g) ?? []).length, 14);
+  assert.equal((tutorialSource.match(/    id: "/g) ?? []).length, 16);
   assert.match(page, /Hjelp mens du koder/);
   assert.match(page, /Finn den lille detaljen/);
   assert.match(page, /Tekst, variabler og regning i print/);
+  assert.match(page, /Spør brukeren med input/);
+  assert.match(page, /Regn med tall fra input/);
   assert.match(page, /print\(\"Til sammen blir det\", epler \+ paerer, \"frukter\.\"\)/);
   assert.match(page, /Steg for steg/);
   assert.match(page, /Vanlig feil å se etter/);
@@ -524,7 +543,7 @@ test("Turtle kan spilles av stegvis uten komprimerte mellombilder", () => {
   assert.match(worker, /_turtle_events/);
   assert.match(worker, /"line" if self\._down else "move"/);
   assert.match(worker, /canvasWidth/);
-  assert.match(worker, /self\.postMessage\(\{ type: "result", output: `\$\{stdout\}\$\{stderr\}`, plots, turtle, game, variables \}\)/);
+  assert.match(worker, /self\.postMessage\(\{ type: "result", output: `\$\{inputTranscript\}\$\{stdout\}\$\{stderr\}`, plots, turtle, game, variables \}\)/);
   assert.match(page, /function renderTurtleFrame/);
   assert.match(page, /function TurtlePlayer/);
   assert.match(page, /Steg \$\{frame\} av \$\{lastFrame\}/);

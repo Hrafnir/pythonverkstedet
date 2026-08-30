@@ -40,8 +40,26 @@ self.onmessage = async (event) => {
   const pyodide = await pyodideReady;
   const code = event.data.code;
   const files = Array.isArray(event.data.files) ? event.data.files : [];
+  const inputValues = Array.isArray(event.data.inputs) ? event.data.inputs.map((value) => String(value)) : [];
   let stdout = "";
   let stderr = "";
+  let inputTranscript = "";
+  let globals = null;
+
+  async function releaseGlobals() {
+    if (!globals) return;
+    try {
+      await pyodide.runPythonAsync(`
+import builtins as _skolepython_builtins
+if hasattr(_skolepython_builtins, "_skolepython_original_input"):
+    _skolepython_builtins.input = _skolepython_builtins._skolepython_original_input
+`, { globals });
+    } catch {
+      // En elev kan ha endret builtins. Oppryddingen skal aldri skjule elevens resultat.
+    }
+    globals.destroy();
+    globals = null;
+  }
 
   pyodide.setStdout({ batched: (text) => { stdout += `${text}\n`; } });
   pyodide.setStderr({ batched: (text) => { stderr += `${text}\n`; } });
@@ -61,7 +79,33 @@ self.onmessage = async (event) => {
     await pyodide.loadPackagesFromImports(packageCode);
     stdout = "";
     stderr = "";
-    const globals = pyodide.globals.get("dict")();
+    globals = pyodide.globals.get("dict")();
+    globals.set("_skolepython_input_values_json", JSON.stringify(inputValues));
+    await pyodide.runPythonAsync(`
+import builtins as _skolepython_builtins
+import json as _skolepython_json
+
+if not hasattr(_skolepython_builtins, "_skolepython_original_input"):
+    _skolepython_builtins._skolepython_original_input = _skolepython_builtins.input
+
+_skolepython_input_values = _skolepython_json.loads(_skolepython_input_values_json)
+_skolepython_input_index = 0
+_skolepython_input_transcript = []
+_skolepython_pending_prompt = ""
+
+def _skolepython_input(prompt=""):
+    global _skolepython_input_index, _skolepython_pending_prompt
+    prompt_text = str(prompt)
+    if _skolepython_input_index >= len(_skolepython_input_values):
+        _skolepython_pending_prompt = prompt_text
+        raise RuntimeError("__SKOLEPYTHON_INPUT_REQUIRED__")
+    answer = str(_skolepython_input_values[_skolepython_input_index])
+    _skolepython_input_index += 1
+    _skolepython_input_transcript.append(f"{prompt_text}{answer}")
+    return answer
+
+_skolepython_builtins.input = _skolepython_input
+`, { globals });
     const usesTurtle = /(?:^|\n)\s*(?:from\s+turtle\s+import|import\s+turtle\b)/.test(code);
     if (usesTurtle) {
       await pyodide.loadPackage("matplotlib");
@@ -467,6 +511,13 @@ plt.show = _bjornsveen_show
     stdout = "";
     stderr = "";
     await pyodide.runPythonAsync(code, { globals });
+    try {
+      inputTranscript = await pyodide.runPythonAsync(`
+"\\n".join(_skolepython_input_transcript) + ("\\n" if _skolepython_input_transcript else "")
+`, { globals });
+    } catch {
+      inputTranscript = "";
+    }
     let turtle = null;
     if (usesTurtle) try {
       const encodedTurtle = await pyodide.runPythonAsync(`
@@ -571,10 +622,23 @@ _skolepython_json.dumps(_skolepython_variables[:30], ensure_ascii=False)
     } catch {
       variables = [];
     }
-    globals.destroy();
-    self.postMessage({ type: "result", output: `${stdout}${stderr}`, plots, turtle, game, variables });
+    await releaseGlobals();
+    self.postMessage({ type: "result", output: `${inputTranscript}${stdout}${stderr}`, plots, turtle, game, variables });
   } catch (error) {
-    self.postMessage({ type: "error", error: error.message });
+    const message = String(error?.message ?? error);
+    if (globals && message.includes("__SKOLEPYTHON_INPUT_REQUIRED__")) {
+      let prompt = "Skriv et svar:";
+      try {
+        prompt = String(globals.get("_skolepython_pending_prompt") || prompt);
+      } catch {
+        // Standardteksten er tydelig nok dersom prompten ikke kan leses.
+      }
+      await releaseGlobals();
+      self.postMessage({ type: "input", prompt, index: inputValues.length, output: `${stdout}${stderr}` });
+      return;
+    }
+    await releaseGlobals();
+    self.postMessage({ type: "error", error: message });
   }
 };
 
