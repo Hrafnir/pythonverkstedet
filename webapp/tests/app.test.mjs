@@ -7,6 +7,7 @@ import ts from "typescript";
 const page = readFileSync("app/page.tsx", "utf8");
 const commandLibrary = readFileSync("app/pythonCommands.ts", "utf8");
 const challenges = readFileSync("app/challenges.ts", "utf8");
+const examTraining = readFileSync("app/examTraining.ts", "utf8");
 const worker = readFileSync("public/pyodide-worker.mjs", "utf8");
 const workflow = readFileSync("../.github/workflows/deploy-pages.yml", "utf8");
 const desktopMain = readFileSync("desktop/main.mjs", "utf8");
@@ -92,6 +93,24 @@ test("utfordringssiden bygger programmeringslogikk med gradvis støtte og mestri
   assert.match(page, /Løsningsforslag med forklaring/);
   assert.match(page, /skolepython-completed-challenges/);
   assert.match(page, /id="challenge-code"/);
+});
+
+test("eksamenstreningen kobler læreplantolking, flervalg og kjørbar Python", () => {
+  assert.equal((examTraining.match(/^    id:/gm) ?? []).length, 8);
+  assert.equal((examTraining.match(/level: "Grunnleggende"/g) ?? []).length, 2);
+  assert.equal((examTraining.match(/level: "Sammensatt"/g) ?? []).length, 4);
+  assert.equal((examTraining.match(/level: "Utforskende"/g) ?? []).length, 2);
+  assert.equal((examTraining.match(/correctIndex: \d/g) ?? []).length, 16);
+  assert.equal((examTraining.match(/hints: \[/g) ?? []).length, 8);
+  assert.match(examTraining, /lese og forklare tekstbasert programkode i Python/i);
+  assert.match(examTraining, /modellere situasjoner og vurdere hvor gyldige modellene er/i);
+  assert.match(examTraining, /ligningssett|personlig økonomi|eksponentialfunksjon|sannsynlighet/i);
+  assert.match(page, /<option value="exam-training">Eksamenstrening<\/option>/);
+  assert.match(page, /Les\. Tolk\. Bygg\. Begrunn\./);
+  assert.match(page, /Flervalg · tolk først/);
+  assert.match(page, /id="exam-code"/);
+  assert.match(page, /skolepython-completed-exam-tasks/);
+  assert.match(page, /Sensorblikk/);
 });
 
 test("modulene har tom skrivelab, redigerbar fasit, kodefarger og ekstratriks", () => {
@@ -447,7 +466,7 @@ test("Python kjører i en arbeider med sikkerhetsstopp", () => {
   assert.match(worker, /loadPyodide/);
   assert.match(worker, /runPythonAsync/);
   assert.match(page, /new Worker/);
-  assert.match(page, /playground \? 90000 : challengeView \? 30000 : 8000/);
+  assert.match(page, /playground \? 90000 : challengeView \|\| examTrainingView \? 30000 : 8000/);
 });
 
 test("metadata og midlertidig startinnhold er ryddet", () => {

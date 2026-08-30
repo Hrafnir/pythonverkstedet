@@ -6,6 +6,8 @@ import { commandCategories, pythonCommands } from "./pythonCommands";
 import type { CommandCategory, PythonCommand } from "./pythonCommands";
 import { challengeDifficulties, pythonChallenges } from "./challenges";
 import type { ChallengeDifficulty, PythonChallenge } from "./challenges";
+import { examLevels, examTasks } from "./examTraining";
+import type { ExamLevel, ExamTask } from "./examTraining";
 
 type Module = {
   id: number;
@@ -3846,6 +3848,15 @@ export default function Home() {
   const [revealedChallengeHints, setRevealedChallengeHints] = useState<Record<string, number>>({});
   const [completedChallenges, setCompletedChallenges] = useState<string[]>([]);
   const [challengeCheckFeedback, setChallengeCheckFeedback] = useState<string[]>([]);
+  const [examTrainingView, setExamTrainingView] = useState(false);
+  const [selectedExamTaskId, setSelectedExamTaskId] = useState<string | null>(null);
+  const [examLevel, setExamLevel] = useState<ExamLevel>("Alle");
+  const [examCodes, setExamCodes] = useState<Record<string, string>>({});
+  const [examAnswers, setExamAnswers] = useState<Record<string, number>>({});
+  const [checkedExamInterpretations, setCheckedExamInterpretations] = useState<string[]>([]);
+  const [revealedExamHints, setRevealedExamHints] = useState<Record<string, number>>({});
+  const [completedExamTasks, setCompletedExamTasks] = useState<string[]>([]);
+  const [examCheckFeedback, setExamCheckFeedback] = useState<string[]>([]);
   const [curriculumGrade, setCurriculumGrade] = useState<CurriculumGrade>("Alle");
   const [curriculumFit, setCurriculumFit] = useState<"Alle" | CurriculumFit>("Alle");
   const [teacherMode, setTeacherMode] = useState(false);
@@ -3911,6 +3922,16 @@ export default function Home() {
   const filteredChallenges = useMemo(
     () => pythonChallenges.filter((challenge) => challengeDifficulty === "Alle" || challenge.difficulty === challengeDifficulty),
     [challengeDifficulty],
+  );
+
+  const activeExamTask = useMemo(
+    () => examTasks.find((task) => task.id === selectedExamTaskId) ?? null,
+    [selectedExamTaskId],
+  );
+
+  const filteredExamTasks = useMemo(
+    () => examTasks.filter((task) => examLevel === "Alle" || task.level === examLevel),
+    [examLevel],
   );
 
   const filteredReferences = useMemo(() => {
@@ -4003,6 +4024,8 @@ export default function Home() {
     const savedEditorFontSize = Number(window.localStorage.getItem("bjornsveen-editor-font-size"));
     const savedChallengeCodes = window.localStorage.getItem("skolepython-challenge-codes");
     const savedCompletedChallenges = window.localStorage.getItem("skolepython-completed-challenges");
+    const savedExamCodes = window.localStorage.getItem("skolepython-exam-codes");
+    const savedCompletedExamTasks = window.localStorage.getItem("skolepython-completed-exam-tasks");
     if (saved) setCompleted(JSON.parse(saved));
     if (savedMode === "teacher") setTeacherMode(true);
     if (savedProjects) {
@@ -4040,6 +4063,12 @@ export default function Home() {
     }
     if (savedCompletedChallenges) {
       try { setCompletedChallenges(JSON.parse(savedCompletedChallenges)); } catch { window.localStorage.removeItem("skolepython-completed-challenges"); }
+    }
+    if (savedExamCodes) {
+      try { setExamCodes(JSON.parse(savedExamCodes)); } catch { window.localStorage.removeItem("skolepython-exam-codes"); }
+    }
+    if (savedCompletedExamTasks) {
+      try { setCompletedExamTasks(JSON.parse(savedCompletedExamTasks)); } catch { window.localStorage.removeItem("skolepython-completed-exam-tasks"); }
     }
     const handleFullscreenChange = () => setEditorFullscreen(document.fullscreenElement === workbenchRef.current);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -4163,6 +4192,7 @@ export default function Home() {
     setPlayground(false);
     setCurriculumView(false);
     setChallengeView(false);
+    setExamTrainingView(false);
     setActiveId(module.id);
     setLabTab("practice");
     setCode(practiceCodes[module.id] ?? "");
@@ -4182,6 +4212,7 @@ export default function Home() {
     setPlayground(true);
     setCurriculumView(false);
     setChallengeView(false);
+    setExamTrainingView(false);
     const project = projects.find((item) => item.id === activeProjectId) ?? projects[0];
     setCode(project?.code ?? playgroundCode);
     setOutput("Skriv eller endre koden, og trykk «Kjør kode».");
@@ -4200,6 +4231,7 @@ export default function Home() {
     setPlayground(false);
     setCurriculumView(true);
     setChallengeView(false);
+    setExamTrainingView(false);
     setFeedback("");
     setErrorCoach(null);
     setShareStatus("");
@@ -4210,6 +4242,7 @@ export default function Home() {
     setPlayground(false);
     setCurriculumView(false);
     setChallengeView(true);
+    setExamTrainingView(false);
     setSelectedChallengeId(null);
     setChallengeCheckFeedback([]);
     setErrorCoach(null);
@@ -4219,6 +4252,54 @@ export default function Home() {
     setTurtleExpanded(false);
     setSnakeGame(null);
     setShareStatus("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function chooseExamTraining() {
+    setPlayground(false);
+    setCurriculumView(false);
+    setChallengeView(false);
+    setExamTrainingView(true);
+    setSelectedExamTaskId(null);
+    setExamCheckFeedback([]);
+    setErrorCoach(null);
+    setPlotImages([]);
+    setExpandedPlotIndex(null);
+    setTurtleDrawing(null);
+    setTurtleExpanded(false);
+    setSnakeGame(null);
+    setShareStatus("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openExamTask(task: ExamTask) {
+    setPlayground(false);
+    setCurriculumView(false);
+    setChallengeView(false);
+    setExamTrainingView(true);
+    setSelectedExamTaskId(task.id);
+    setCode(examCodes[task.id] ?? "");
+    setOutput("Tolk oppgaven først. Når planen er klar, bygger og tester du programmet her.");
+    setExamCheckFeedback([]);
+    setFeedback("");
+    setErrorCoach(null);
+    setPlotImages([]);
+    setExpandedPlotIndex(null);
+    setTurtleDrawing(null);
+    setTurtleExpanded(false);
+    setSnakeGame(null);
+    setShareStatus("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function closeExamTask() {
+    setSelectedExamTaskId(null);
+    setCode("");
+    setExamCheckFeedback([]);
+    setErrorCoach(null);
+    setPlotImages([]);
+    setTurtleDrawing(null);
+    setSnakeGame(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -4258,6 +4339,12 @@ export default function Home() {
 
   function updateCode(nextCode: string) {
     setCode(nextCode);
+    if (examTrainingView && activeExamTask) {
+      const nextExamCodes = { ...examCodes, [activeExamTask.id]: nextCode };
+      setExamCodes(nextExamCodes);
+      window.localStorage.setItem("skolepython-exam-codes", JSON.stringify(nextExamCodes));
+      return;
+    }
     if (challengeView && activeChallenge) {
       const nextChallengeCodes = { ...challengeCodes, [activeChallenge.id]: nextCode };
       setChallengeCodes(nextChallengeCodes);
@@ -4345,7 +4432,7 @@ export default function Home() {
   }
 
   function insertTutorialCode(tutorial: QuickTutorial) {
-    const editorId = challengeView ? "challenge-code" : playground ? "playground-code" : "python-code";
+    const editorId = examTrainingView ? "exam-code" : challengeView ? "challenge-code" : playground ? "playground-code" : "python-code";
     const editor = document.getElementById(editorId) as HTMLTextAreaElement | null;
     const start = editor?.selectionStart ?? code.length;
     const end = editor?.selectionEnd ?? start;
@@ -4409,7 +4496,7 @@ export default function Home() {
       return;
     }
 
-    const editorId = challengeView ? "challenge-code" : playground ? "playground-code" : "python-code";
+    const editorId = examTrainingView ? "exam-code" : challengeView ? "challenge-code" : playground ? "playground-code" : "python-code";
     const editor = document.getElementById(editorId) as HTMLTextAreaElement | null;
     const start = editor?.selectionStart ?? code.length;
     const end = editor?.selectionEnd ?? start;
@@ -4441,7 +4528,7 @@ export default function Home() {
   function composeFeedbackEmail() {
     const message = feedbackMessage.trim();
     if (!message) return;
-    const context = playground ? "Python" : curriculumView ? "Læreplanmål" : `Modul ${active.id}: ${active.title}`;
+    const context = playground ? "Python" : examTrainingView ? "Eksamenstrening" : challengeView ? "Utfordringer" : curriculumView ? "Læreplanmål" : `Modul ${active.id}: ${active.title}`;
     const subject = `Skolepython · Bjørnsveen: ${feedbackKind} – ${context}`;
     const body = [
       "Hei!",
@@ -4529,6 +4616,67 @@ export default function Home() {
     const next = completedChallenges.includes(challenge.id) ? completedChallenges : [...completedChallenges, challenge.id];
     setCompletedChallenges(next);
     window.localStorage.setItem("skolepython-completed-challenges", JSON.stringify(next));
+  }
+
+  function chooseExamAnswer(task: ExamTask, questionId: string, choiceIndex: number) {
+    setExamAnswers((current) => ({ ...current, [`${task.id}:${questionId}`]: choiceIndex }));
+    setCheckedExamInterpretations((current) => current.filter((taskId) => taskId !== task.id));
+  }
+
+  function checkExamInterpretation(task: ExamTask) {
+    const allAnswered = task.questions.every((question) => examAnswers[`${task.id}:${question.id}`] !== undefined);
+    if (!allAnswered) {
+      setExamCheckFeedback(["○ Svar på alle tolkningsspørsmålene før du sjekker. Det er lov å være usikker."]);
+      return;
+    }
+    setCheckedExamInterpretations((current) => current.includes(task.id) ? current : [...current, task.id]);
+    setExamCheckFeedback([]);
+  }
+
+  function revealNextExamHint(task: ExamTask) {
+    setRevealedExamHints((current) => ({
+      ...current,
+      [task.id]: Math.min(task.hints.length, (current[task.id] ?? 0) + 1),
+    }));
+  }
+
+  function loadExamStarter(task: ExamTask) {
+    if (code.trim() && !window.confirm("Dette erstatter koden i editoren med startpunktet. Vil du fortsette?")) return;
+    updateCode(task.starterCode);
+    setOutput("Startpunktet er hentet. Kommentarene viser delproblemene, men du må bygge løsningen.");
+    setExamCheckFeedback([]);
+    requestAnimationFrame(() => document.getElementById("exam-code")?.focus());
+  }
+
+  function loadExamSolution(task: ExamTask) {
+    if (code.trim() && !window.confirm("Dette erstatter forsøket med løsningsforslaget. Vil du fortsette?")) return;
+    updateCode(task.solutionCode);
+    setOutput("Løsningsforslaget er lagt i editoren. Les det linje for linje og forutsi resultatet før du kjører.");
+    setExamCheckFeedback([]);
+    requestAnimationFrame(() => document.getElementById("exam-code")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  }
+
+  function checkExamAttempt(task: ExamTask) {
+    if (!code.trim()) {
+      setExamCheckFeedback(["○ Kodefeltet er tomt. Skriv ett lite steg eller hent startpunktet først."]);
+      return;
+    }
+    const normalizedCode = code.toLocaleLowerCase("nb");
+    const normalizedOutput = output.toLocaleLowerCase("nb");
+    const results = task.checks.map((check) => {
+      const codePass = !check.codeIncludes || check.codeIncludes.every((part) => normalizedCode.includes(part.toLocaleLowerCase("nb")));
+      const outputPass = !check.outputIncludes || check.outputIncludes.every((part) => normalizedOutput.includes(part.toLocaleLowerCase("nb")));
+      return `${codePass && outputPass ? "✓" : "○"} ${check.label}`;
+    });
+    if (results.every((result) => result.startsWith("✓"))) results.push("✓ Koden viser viktige deler av løsningen. Nå må du også kunne forklare valgene og vurdere svaret.");
+    else results.push("○ Bruk punktene som sensorblikk: Finn ett manglende spor, endre én ting og kjør på nytt.");
+    setExamCheckFeedback(results);
+  }
+
+  function markExamTaskComplete(task: ExamTask) {
+    const next = completedExamTasks.includes(task.id) ? completedExamTasks : [...completedExamTasks, task.id];
+    setCompletedExamTasks(next);
+    window.localStorage.setItem("skolepython-completed-exam-tasks", JSON.stringify(next));
   }
 
   function tryProgressionCode(nextCode: string) {
@@ -4826,7 +4974,7 @@ export default function Home() {
   }
 
   function focusErrorLine(lineNumber: number) {
-    const editorId = challengeView ? "challenge-code" : playground ? "playground-code" : "python-code";
+    const editorId = examTrainingView ? "exam-code" : challengeView ? "challenge-code" : playground ? "playground-code" : "python-code";
     const input = document.getElementById(editorId) as HTMLTextAreaElement | null;
     if (!input) return;
     const lines = code.split("\n");
@@ -5148,7 +5296,7 @@ export default function Home() {
           worker.terminate();
           setRunnerStatus("error");
           setOutput("Programmet brukte for lang tid og ble stoppet. Sjekk særlig løkker som kanskje aldri avsluttes.");
-        }, playground ? 90000 : challengeView ? 30000 : 8000);
+        }, playground ? 90000 : challengeView || examTrainingView ? 30000 : 8000);
       }
 
       if (data.type === "result") {
@@ -5214,7 +5362,11 @@ export default function Home() {
   }
 
   const progress = Math.round((completed.length / modules.length) * 100);
-  const visibleProgress = challengeView ? Math.round((completedChallenges.length / pythonChallenges.length) * 100) : progress;
+  const visibleProgress = examTrainingView
+    ? Math.round((completedExamTasks.length / examTasks.length) * 100)
+    : challengeView
+      ? Math.round((completedChallenges.length / pythonChallenges.length) * 100)
+      : progress;
 
   return (
     <main>
@@ -5230,15 +5382,17 @@ export default function Home() {
           <label htmlFor="module-select">Velg område</label>
           <select
             id="module-select"
-            value={playground ? "playground" : challengeView ? "challenges" : curriculumView ? "curriculum" : String(active.id)}
+            value={playground ? "playground" : examTrainingView ? "exam-training" : challengeView ? "challenges" : curriculumView ? "curriculum" : String(active.id)}
             onChange={(event) => {
               if (event.target.value === "playground") choosePlayground();
+              else if (event.target.value === "exam-training") chooseExamTraining();
               else if (event.target.value === "challenges") chooseChallenges();
               else if (event.target.value === "curriculum") chooseCurriculum();
               else chooseModule(modules[Number(event.target.value) - 1]);
             }}
           >
             <option value="playground">Python</option>
+            <option value="exam-training">Eksamenstrening</option>
             <option value="challenges">Utfordringer</option>
             <option value="curriculum">Læreplanmål</option>
             {modules.map((module) => (
@@ -5247,7 +5401,7 @@ export default function Home() {
               </option>
             ))}
           </select>
-          <span className="module-position">{playground ? "Python-editor" : challengeView ? `${completedChallenges.length} av ${pythonChallenges.length} mestret` : curriculumView ? "MAT01-06" : `${completed.length} av ${modules.length} fullført`}</span>
+          <span className="module-position">{playground ? "Python-editor" : examTrainingView ? `${completedExamTasks.length} av ${examTasks.length} eksamensoppgaver` : challengeView ? `${completedChallenges.length} av ${pythonChallenges.length} mestret` : curriculumView ? "MAT01-06" : `${completed.length} av ${modules.length} fullført`}</span>
         </div>
         <nav className="top-actions" aria-label="Verktøy">
           <button className="text-button command-library-button" type="button" onClick={() => openCommandLibrary()} aria-pressed={commandLibraryOpen}>
@@ -5570,6 +5724,246 @@ export default function Home() {
             </section>
           </article>
         )}
+
+        {examTrainingView && !activeExamTask && (
+          <article className="lesson exam-training-page">
+            <section className="exam-hero content-section">
+              <div>
+                <p className="section-label inverse"><span>✦</span> Eksamenstrening · MAT01-06</p>
+                <h1>Les. Tolk. Bygg. Begrunn.</h1>
+                <p>Øv på hele tankerekken en eksamensoppgave kan kreve: Finn matematikken i teksten, forstå koden, velg en strategi, test løsningen og forklar hvorfor svaret gir mening.</p>
+                <div className="exam-hero-steps" aria-label="Arbeidsmåten i eksamenstreningen">
+                  <span><b>1</b> Tolk oppgaven</span>
+                  <span><b>2</b> Sjekk forståelsen</span>
+                  <span><b>3</b> Bygg og test</span>
+                  <span><b>4</b> Begrunn som til sensor</span>
+                </div>
+              </div>
+              <div className="exam-progress-card" aria-label={`${completedExamTasks.length} av ${examTasks.length} eksamensoppgaver fullført`}>
+                <small>Din treningsmappe</small>
+                <strong>{completedExamTasks.length}<span> / {examTasks.length}</span></strong>
+                <p>oppgaver forklart og testet</p>
+                <div><i style={{ width: `${Math.round((completedExamTasks.length / examTasks.length) * 100)}%` }} /></div>
+              </div>
+            </section>
+
+            <section className="content-section exam-foundation">
+              <div>
+                <p className="section-label"><span>LK</span> Ny læreplan fra 1. august 2026</p>
+                <h2>Python er mer enn å skrive kode</h2>
+                <p>På 10. trinn skal eleven kunne <strong>lese og forklare tekstbasert Python-kode</strong> og bruke programmering til å utforske matematikk. Oppgavene trener derfor både forståelse, regning, modellering, refleksjon og kritisk vurdering.</p>
+              </div>
+              <div className="exam-notice">
+                <strong>Treningsoppgaver – ikke lekkede eksamensoppgaver</strong>
+                <p>Oppgavene er utviklet for Skolepython med utgangspunkt i læreplanen og Udirs eksamensføringer. De viser realistiske arbeidsmåter, men er ikke offisielle Udir-oppgaver.</p>
+              </div>
+            </section>
+
+            <section className="content-section exam-browser">
+              <div className="exam-browser-heading">
+                <div><p className="section-label"><span>→</span> Velg eksamensoppgave</p><h2>Fra trygg tolking til åpen modellering</h2></div>
+                <div className="exam-filters" role="group" aria-label="Filtrer eksamensoppgaver etter nivå">
+                  {examLevels.map((level) => <button type="button" className={examLevel === level ? "is-active" : ""} aria-pressed={examLevel === level} onClick={() => setExamLevel(level)} key={level}>{level}</button>)}
+                </div>
+              </div>
+              <div className="exam-level-guide">
+                <div><span className="exam-level level-grunnleggende">Grunnleggende</span><p>Én tydelig modell og korte kodelinjer.</p></div>
+                <div><span className="exam-level level-sammensatt">Sammensatt</span><p>Flere matematiske og programmeringsfaglige valg må kobles sammen.</p></div>
+                <div><span className="exam-level level-utforskende">Utforskende</span><p>Løsningen må bygges, vurderes og begrunnes.</p></div>
+              </div>
+              <div className="exam-grid">
+                {filteredExamTasks.map((task) => {
+                  const complete = completedExamTasks.includes(task.id);
+                  const savedAttempt = Boolean(examCodes[task.id]?.trim());
+                  const index = examTasks.indexOf(task) + 1;
+                  return (
+                    <article className={`exam-card ${complete ? "is-complete" : ""}`} key={task.id}>
+                      <div className="exam-card-top"><span className={`exam-level level-${task.level.toLocaleLowerCase("nb")}`}>{task.level}</span><span>Oppgave {String(index).padStart(2, "0")}</span></div>
+                      <p className="exam-area">{task.area}</p>
+                      <h3>{task.title}</h3>
+                      <p>{task.shortDescription}</p>
+                      <div className="exam-card-facts"><span>{task.estimatedMinutes} min</span><span>{task.points} treningspoeng</span><span>{task.questions.length} tolkningsvalg</span></div>
+                      <footer>
+                        <span>{complete ? "✓ Forklart og testet" : savedAttempt ? "● Forsøk lagret" : "Klar når du er"}</span>
+                        <button type="button" onClick={() => openExamTask(task)}>{savedAttempt ? "Fortsett" : "Start"} <b>→</b></button>
+                      </footer>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          </article>
+        )}
+
+        {examTrainingView && activeExamTask && (() => {
+          const taskIndex = examTasks.findIndex((task) => task.id === activeExamTask.id);
+          const nextTask = examTasks[taskIndex + 1];
+          const interpretationChecked = checkedExamInterpretations.includes(activeExamTask.id);
+          const correctInterpretations = activeExamTask.questions.filter((question) => examAnswers[`${activeExamTask.id}:${question.id}`] === question.correctIndex).length;
+          const hintCount = revealedExamHints[activeExamTask.id] ?? 0;
+          const taskComplete = completedExamTasks.includes(activeExamTask.id);
+          return (
+            <article className="lesson exam-detail-page">
+              <section className="content-section exam-detail-top">
+                <button type="button" className="challenge-back" onClick={closeExamTask}>← Alle eksamensoppgaver</button>
+                <div className="exam-detail-heading">
+                  <div>
+                    <div className="exam-detail-meta"><span className={`exam-level level-${activeExamTask.level.toLocaleLowerCase("nb")}`}>{activeExamTask.level}</span><span>Oppgave {taskIndex + 1} av {examTasks.length}</span><span>Ca. {activeExamTask.estimatedMinutes} min</span><span>{activeExamTask.points} treningspoeng</span></div>
+                    <p className="exam-area">{activeExamTask.area}</p>
+                    <h1>{activeExamTask.title}</h1>
+                    <p>{activeExamTask.shortDescription}</p>
+                  </div>
+                  <div className="exam-stamp" aria-hidden="true"><small>Tren som</small><strong>sensor</strong><span>se etter tankegang</span></div>
+                </div>
+              </section>
+
+              <section className="content-section exam-task-text">
+                <div>
+                  <p className="section-label"><span>1</span> Situasjonen</p>
+                  <p className="exam-situation">{activeExamTask.situation}</p>
+                  <h2>{activeExamTask.taskText}</h2>
+                </div>
+                <div className="exam-goals">
+                  <strong>Denne oppgaven trener</strong>
+                  <ul>{activeExamTask.competenceGoals.map((goal) => <li key={goal}>{goal}</li>)}</ul>
+                </div>
+              </section>
+
+              <section className="content-section exam-read-code">
+                <div>
+                  <p className="section-label inverse"><span>2</span> Les kode før du skriver</p>
+                  <h2>Følg verdiene linje for linje</h2>
+                  <p>Dekk gjerne til svaralternativene først. Pek på hver linje og forklar hva Python lagrer, undersøker eller gjentar.</p>
+                </div>
+                <pre aria-label="Python-kode som skal tolkes"><code>{activeExamTask.sourceCode}</code></pre>
+              </section>
+
+              <section className="content-section exam-interpretation">
+                <div className="exam-section-heading">
+                  <div><p className="section-label"><span>3</span> Flervalg · tolk først</p><h2>Velg – og finn ut hvorfor</h2></div>
+                  <p>Et feil svar er informasjon om hva du bør undersøke. Du kan endre svaret og prøve igjen.</p>
+                </div>
+                <div className="exam-question-list">
+                  {activeExamTask.questions.map((question, questionIndex) => {
+                    const answerKey = `${activeExamTask.id}:${question.id}`;
+                    const selected = examAnswers[answerKey];
+                    const isCorrect = selected === question.correctIndex;
+                    return (
+                      <fieldset className={`exam-question ${interpretationChecked ? isCorrect ? "is-correct" : "is-wrong" : ""}`} key={question.id}>
+                        <legend><span>{questionIndex + 1}</span>{question.prompt}</legend>
+                        <div className="exam-options">
+                          {question.choices.map((choice, choiceIndex) => (
+                            <label className={selected === choiceIndex ? "is-selected" : ""} key={choice.text}>
+                              <input type="radio" name={answerKey} checked={selected === choiceIndex} onChange={() => chooseExamAnswer(activeExamTask, question.id, choiceIndex)} />
+                              <span className="exam-option-letter">{String.fromCharCode(65 + choiceIndex)}</span>
+                              <span>{choice.text}</span>
+                            </label>
+                          ))}
+                        </div>
+                        {interpretationChecked && selected !== undefined && <div className={`exam-choice-feedback ${isCorrect ? "is-correct" : "is-wrong"}`} role="status"><strong>{isCorrect ? "Godt tolket" : "Se på dette én gang til"}</strong><p>{isCorrect ? question.explanation : question.choices[selected].feedback}</p></div>}
+                      </fieldset>
+                    );
+                  })}
+                </div>
+                <div className="exam-interpretation-actions">
+                  <button type="button" onClick={() => checkExamInterpretation(activeExamTask)}>Sjekk tolkningen</button>
+                  {interpretationChecked && <p aria-live="polite"><strong>{correctInterpretations} av {activeExamTask.questions.length}</strong> tolket riktig. {correctInterpretations === activeExamTask.questions.length ? "Nå har du et godt grunnlag for å bygge." : "Les responsen, endre svaret og prøv igjen."}</p>}
+                  {!interpretationChecked && examCheckFeedback.length > 0 && <p aria-live="polite">{examCheckFeedback[0]}</p>}
+                </div>
+              </section>
+
+              <section className="content-section exam-plan">
+                <div>
+                  <p className="section-label"><span>4</span> Lag en plan</p>
+                  <h2>Fra tekst til små delproblemer</h2>
+                  <p>Skriv korte stikkord før du koder. På eksamen kan en tydelig plan spare både tid og syntaksfeil.</p>
+                </div>
+                <ol>{activeExamTask.planPrompts.map((prompt, index) => <li key={prompt}><span>{index + 1}</span><p>{prompt}</p></li>)}</ol>
+              </section>
+
+              <section className="content-section exam-coding-mission">
+                <div><p className="section-label"><span>5</span> Bygg programmet</p><h2>{activeExamTask.codingMission}</h2></div>
+                <div className="exam-success"><strong>Sensor bør kunne se at</strong><ul>{activeExamTask.successCriteria.map((criterion) => <li key={criterion}>{criterion}</li>)}</ul></div>
+              </section>
+
+              <section className="content-section exam-test-cases">
+                <div><p className="section-label"><span>✓</span> Testplan</p><h2>Bestem forventningen før du kjører</h2></div>
+                <div>{activeExamTask.testCases.map((testCase) => <article key={testCase.change}><strong>Endre eller prøv</strong><code>{testCase.change}</code><span>Forvent</span><p>{testCase.expect}</p><small>{testCase.why}</small></article>)}</div>
+              </section>
+
+              <section className="content-section lab-section exam-lab" id="exam-lab">
+                <div className="section-heading lab-heading">
+                  <div><p className="section-label inverse"><span>6</span> Python-lab</p><h2>Bygg, kjør og undersøk</h2><p className="challenge-lab-intro">Editoren starter tom. Skriv selv så langt du kommer. Startpunktet gir struktur, men ikke ferdig løsning.</p></div>
+                  <div className="live-badge"><span /> Ekte Python i nettleseren</div>
+                </div>
+                <div className={`code-workbench exam-workbench ${turtleDrawing ? "has-turtle" : ""} ${snakeGame ? "has-game" : ""}`} ref={workbenchRef}>
+                  <div className="editor-panel">
+                    <div className="panel-bar">
+                      <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
+                      <strong>{activeExamTask.id}.py</strong>
+                      <span className="panel-tools">
+                        <button type="button" className="command-help-button" onClick={() => openCommandLibrary()} aria-pressed={commandLibraryOpen}>⌘ Kommandoer</button>
+                        <button type="button" className="coding-help-button" onClick={openTutorial} aria-pressed={tutorialOpen}>? Hjelp mens du koder</button>
+                        <button type="button" onClick={copyCodeAsText}>Kopier kode + svar</button>
+                        <button type="button" onClick={() => copyCodeAsImage(`${activeExamTask.id}.py`)}>Bilde av kode + svar</button>
+                        <span className="editor-size-controls" aria-label="Skriftstørrelse i kodefeltet"><button type="button" onClick={() => changeEditorFontSize(-2)} disabled={editorFontSize <= 15} aria-label="Mindre kodetekst">A−</button><output aria-live="polite">{editorFontSize} px</output><button type="button" onClick={() => changeEditorFontSize(2)} disabled={editorFontSize >= 28} aria-label="Større kodetekst">A+</button></span>
+                        <button type="button" onClick={toggleEditorFullscreen} aria-pressed={editorFullscreen}>{editorFullscreen ? "Avslutt fullskjerm" : "Fullskjerm"}</button>
+                      </span>
+                    </div>
+                    <label htmlFor="exam-code" className="sr-only">Skriv løsningen på eksamensoppgaven</label>
+                    <PythonEditor id="exam-code" value={code} onChange={updateCode} describedBy="exam-editor-help" fontSize={editorFontSize} tall />
+                    <div className="editor-footer challenge-editor-footer" id="exam-editor-help">
+                      <button type="button" className="challenge-scaffold-button" onClick={() => loadExamStarter(activeExamTask)}>Hent startpunkt</button>
+                      <span>Forsøket lagres lokalt på denne enheten.</span>
+                      <button type="button" className="run-button" onClick={runCode} disabled={runnerStatus === "loading" || runnerStatus === "running"}><span>▶</span>{runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : "Kjør kode"}</button>
+                    </div>
+                  </div>
+                  <div className="output-panel" aria-live="polite">
+                    <div className="panel-bar output-bar"><strong>Resultat</strong><span className={`status-dot ${runnerStatus}`} /></div>
+                    {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
+                    {plotGallery()}
+                    <div className="output-tip"><strong>Eksamenstanke:</strong> Stemmer svaret med enheten, situasjonen og overslaget ditt?</div>
+                  </div>
+                  {codingTutorialPanel()}
+                </div>
+                {shareStatus && <p className="share-status" role="status">{shareStatus}</p>}
+              </section>
+
+              <section className="content-section exam-support">
+                <div>
+                  <div className="challenge-support-heading"><div><p className="section-label"><span>7</span> Gradvis hjelp</p><h2>Be om akkurat nok støtte</h2></div><span>{hintCount} av {activeExamTask.hints.length} hint åpnet</span></div>
+                  <div className="challenge-hint-progress" aria-hidden="true">{activeExamTask.hints.map((hint, index) => <i className={index < hintCount ? "is-revealed" : ""} key={hint.title} />)}</div>
+                  {hintCount === 0 && <div className="challenge-no-hint"><strong>Prøv planen først.</strong><p>Åpne ett hint når du kan si nøyaktig hvor du står fast.</p></div>}
+                  <div className="challenge-hints">{activeExamTask.hints.slice(0, hintCount).map((hint, index) => <article key={hint.title}><div><span>Hint {index + 1}</span><small>{index === 0 ? "Retning" : index === 1 ? "Byggekloss" : "Nesten der"}</small></div><h3>{hint.title}</h3><p>{hint.body}</p>{hint.code && <pre><code>{hint.code}</code></pre>}</article>)}</div>
+                  {hintCount < activeExamTask.hints.length ? <button type="button" className="reveal-hint-button" onClick={() => revealNextExamHint(activeExamTask)}>Vis hint {hintCount + 1} <span>↓</span></button> : <p className="all-hints-shown">Alle hintene er åpnet. Sammenlign dem med planen din før du ser løsningen.</p>}
+                </div>
+                <section className="exam-sensor-check">
+                  <p className="section-label"><span>8</span> Sensorblikk</p>
+                  <h2>Vis mer enn et riktig tall</h2>
+                  <p>Sjekken finner synlige spor i kode og resultat. Den kan ikke erstatte forklaringen og vurderingen din.</p>
+                  <button type="button" onClick={() => checkExamAttempt(activeExamTask)}>Sjekk besvarelsen min</button>
+                  {examCheckFeedback.length > 0 && <ul className="challenge-check-results" aria-live="polite">{examCheckFeedback.map((item) => <li className={item.startsWith("✓") ? "is-pass" : ""} key={item}>{item}</li>)}</ul>}
+                  <blockquote>{activeExamTask.sensorTip}</blockquote>
+                </section>
+              </section>
+
+              <section className="content-section exam-solution">
+                <details>
+                  <summary><span className="solution-lock">⌁</span><span><small>Etter et ekte forsøk</small><strong>Løsningsforslag og sensorens blikk</strong></span><b>Vis løsning</b></summary>
+                  <div className="challenge-solution-content">
+                    <div className="solution-code-panel"><div><strong>Én ryddig løsning</strong><span>Andre løsninger kan også være gode</span></div><pre><code>{activeExamTask.solutionCode}</code></pre><button type="button" onClick={() => loadExamSolution(activeExamTask)}>Prøv løsningen i editoren</button></div>
+                    <div className="solution-walkthrough"><h3>Hvorfor gir dette uttelling?</h3><ol>{activeExamTask.solutionNotes.map((note) => <li key={note}>{note}</li>)}</ol><div className="solution-reflection"><strong>Refleksjon</strong><p>{activeExamTask.reflection}</p></div></div>
+                  </div>
+                </details>
+              </section>
+
+              <section className="content-section exam-complete">
+                <div><p className="section-label"><span>✓</span> Avslutt som på eksamen</p><h2>Forklar løsningen uten å lese koden</h2><p>Kan du beskrive inndata, beregning, test og begrensning med egne ord? Da har du trent kompetanse – ikke bare kopiert syntaks.</p></div>
+                <div className="challenge-complete-actions"><button type="button" className={taskComplete ? "is-complete" : ""} onClick={() => markExamTaskComplete(activeExamTask)}>{taskComplete ? "✓ Oppgaven er forklart og testet" : "Jeg kan forklare og vurdere løsningen"}</button>{nextTask && <button type="button" className="next-challenge-button" onClick={() => openExamTask(nextTask)}>Neste eksamensoppgave: {nextTask.title} →</button>}</div>
+              </section>
+            </article>
+          );
+        })()}
 
         {challengeView && !activeChallenge && (
           <article className="lesson challenges-page">
@@ -5922,7 +6316,7 @@ export default function Home() {
           </article>
         )}
 
-        {!playground && !curriculumView && !challengeView && (
+        {!playground && !curriculumView && !challengeView && !examTrainingView && (
         <article className="lesson">
           <section className="lesson-hero">
             <div className="hero-copy">
