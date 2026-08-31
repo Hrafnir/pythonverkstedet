@@ -3550,7 +3550,10 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
       return;
     }
 
-    if (pythonPairMap[event.key] && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    // På norsk Mac-tastatur skrives både { } og [ ] med Option/Alt.
+    // event.key inneholder allerede det ferdige tegnet, så Alt må ikke
+    // diskvalifisere et ellers gyldig åpningstegn.
+    if (pythonPairMap[event.key] && !event.ctrlKey && !event.metaKey) {
       if ((event.key === "\"" || event.key === "'") && start === end && liveValue[start] === event.key) {
         event.preventDefault();
         moveCursor(start + 1);

@@ -149,6 +149,18 @@ test("editorhjelp og modale vinduer fungerer med tastatur", async ({ page }) => 
   await editor.press("Enter");
   await expect(editor).toHaveValue("data = {\n    \n}");
 
+  await editor.fill("ordbok = ");
+  await editor.focus();
+  await editor.press("End");
+  await editor.dispatchEvent("keydown", { key: "{", code: "Digit8", altKey: true, shiftKey: true });
+  await expect(editor).toHaveValue("ordbok = {}");
+
+  await editor.fill("liste = ");
+  await editor.focus();
+  await editor.press("End");
+  await editor.dispatchEvent("keydown", { key: "[", code: "Digit8", altKey: true });
+  await expect(editor).toHaveValue("liste = []");
+
   await editor.fill("import numpy as np\nimport math\nimport requests");
   const libraryStatus = page.locator(".editor-library-status");
   await expect(libraryStatus).toContainText("NumPy som np er tilgjengelig offline");
