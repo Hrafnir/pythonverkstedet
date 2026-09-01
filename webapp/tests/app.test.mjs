@@ -10,6 +10,7 @@ const mathCommands = readFileSync("app/mathCommands.ts", "utf8");
 const mathHelp = readFileSync("app/mathHelp.ts", "utf8");
 const challenges = readFileSync("app/challenges.ts", "utf8");
 const examTraining = readFileSync("app/examTraining.ts", "utf8");
+const pygameTutorialSource = readFileSync("app/pygameTutorials.ts", "utf8");
 const worker = readFileSync("public/pyodide-worker.mjs", "utf8");
 const pygameRunner = readFileSync("public/pygame-runner.mjs", "utf8");
 const pygameFrame = readFileSync("public/pygame-runner.html", "utf8");
@@ -21,6 +22,7 @@ const offlinePackages = readFileSync("scripts/download-pyodide.mjs", "utf8");
 const { evaluateChallengeAttempt, pythonChallenges } = await import("../app/challenges.ts");
 const { evaluateExamAttempt, examTasks } = await import("../app/examTraining.ts");
 const { mathHelpTutorials } = await import("../app/mathHelp.ts");
+const { pygameTutorials } = await import("../app/pygameTutorials.ts");
 
 const analyzerSource = page.slice(page.indexOf("function analyzePythonError"), page.indexOf("const pythonTokens"));
 const analyzerJavaScript = ts.transpileModule(`${analyzerSource}\nglobalThis.analyzePythonError = analyzePythonError;`, {
@@ -72,7 +74,13 @@ test("Python er første område, standardvisning og har ikke sidepanel", () => {
   assert.match(page, /Kopier kode \+ svar/);
   assert.doesNotMatch(page, /<aside/);
   const pickerSource = page.slice(page.indexOf('id="module-select"'), page.indexOf('<nav className="top-actions"'));
-  assert.ok(pickerSource.indexOf('<option value="playground">Python</option>') < pickerSource.indexOf("{modules.map"));
+  const pythonIndex = pickerSource.indexOf('<option value="playground">Python</option>');
+  const firstModulesIndex = pickerSource.indexOf("{modules.slice(0, 8).map");
+  const pygameIndex = pickerSource.indexOf('<option value="pygame">Pygame-lab · bygg egne spill</option>');
+  const lastModulesIndex = pickerSource.indexOf("{modules.slice(8).map");
+  assert.ok(pythonIndex < firstModulesIndex);
+  assert.ok(firstModulesIndex < pygameIndex);
+  assert.ok(pygameIndex < lastModulesIndex);
 });
 
 test("kommandobiblioteket er omfattende, søkbart på norsk og tilgjengelig i editoren", () => {
@@ -745,6 +753,30 @@ test("Pygame-laben kjører pygame-ce i et eget canvas", () => {
   assert.match(pygameRunner, /pyodide\.canvas\.setCanvas2D\(canvas\)/);
   assert.match(pygameRunner, /_skip_unwind_fatal_error = true/);
   assert.match(offlinePackages, /"pygame-ce"/);
+});
+
+test("Pygame-kurset bygger et komplett spill i seks pedagogiske steg", () => {
+  assert.equal(pygameTutorials.length, 6);
+  assert.deepEqual(pygameTutorials.map((tutorial) => tutorial.step), [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(
+    pygameTutorials.map((tutorial) => tutorial.shortTitle),
+    ["Spilløkka", "Spilleren", "Bevegelse", "Kollisjon", "Poeng", "Ferdig spill"],
+  );
+  for (const tutorial of pygameTutorials) {
+    assert.ok(tutorial.question.length > 30);
+    assert.ok(tutorial.explanation.length > 80);
+    assert.ok(tutorial.newIdeas.length >= 3);
+    assert.ok(tutorial.observe.length >= 3);
+    assert.ok(tutorial.experiments.length >= 3);
+    assert.match(tutorial.code, /import pygame/);
+    assert.match(tutorial.code, /await asyncio\.sleep\(0\)/);
+  }
+  assert.match(pygameTutorials.at(-1).code, /maal = 10/);
+  assert.match(pygameTutorials.at(-1).code, /pygame\.K_SPACE/);
+  assert.match(pygameTutorialSource, /Fang mynten/);
+  assert.match(page, /Bygg «Fang mynten» i seks forståelige steg/);
+  assert.match(page, /skolepython-pygame-tutorials/);
+  assert.match(page, /Hent steg \{activePygameTutorial\.step\} i editoren/);
 });
 
 test("Mac-utgaven er offline, ARM64 og kan pakkes for IT", () => {

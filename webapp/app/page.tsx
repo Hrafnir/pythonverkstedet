@@ -9,6 +9,8 @@ import type { ChallengeDifficulty, PythonChallenge } from "./challenges";
 import { evaluateExamAttempt, examLevels, examTasks } from "./examTraining";
 import type { ExamLevel, ExamTask } from "./examTraining";
 import { mathHelpTutorials } from "./mathHelp";
+import { pygameTutorials } from "./pygameTutorials";
+import type { PygameTutorial } from "./pygameTutorials";
 
 type Module = {
   id: number;
@@ -4598,6 +4600,8 @@ export default function Home() {
   const [pygameStatus, setPygameStatus] = useState<"loading" | "ready" | "running" | "error">("loading");
   const [pygameConsole, setPygameConsole] = useState("Pygame-motoren gjør seg klar …");
   const [pygameFrameKey, setPygameFrameKey] = useState(0);
+  const [selectedPygameTutorialId, setSelectedPygameTutorialId] = useState(pygameTutorials[0].id);
+  const [completedPygameTutorials, setCompletedPygameTutorials] = useState<string[]>([]);
   const [expandedPlotIndex, setExpandedPlotIndex] = useState<number | null>(null);
   const [turtleDrawing, setTurtleDrawing] = useState<TurtleDrawing | null>(null);
   const [snakeGame, setSnakeGame] = useState<SnakeGameConfig | null>(null);
@@ -4643,6 +4647,7 @@ export default function Home() {
   const resultIsStale = executedCode !== null && code !== executedCode && !runnerBusy;
   const runButtonLabel = runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : runnerStatus === "input" ? "Venter på svar …" : "Kjør kode";
   const activeLocalProject = normalizeProject(projects.find((item) => item.id === activeProjectId) ?? projects[0] ?? firstProject);
+  const activePygameTutorial = pygameTutorials.find((tutorial) => tutorial.id === selectedPygameTutorialId) ?? pygameTutorials[0];
   const activeLocalFile = activeProjectFile(activeLocalProject);
 
   const active = useMemo(
@@ -4758,6 +4763,7 @@ export default function Home() {
     const savedMode = window.localStorage.getItem("pythonverkstedet-mode");
     const savedProjects = window.localStorage.getItem("bjornsveen-python-projects");
     const savedPygameCode = window.localStorage.getItem("skolepython-pygame-code");
+    const savedCompletedPygameTutorials = window.localStorage.getItem("skolepython-pygame-tutorials");
     const savedEditorFontSize = Number(window.localStorage.getItem("bjornsveen-editor-font-size"));
     const savedChallengeCodes = window.localStorage.getItem("skolepython-challenge-codes");
     const savedCompletedChallenges = window.localStorage.getItem("skolepython-completed-challenges");
@@ -4795,6 +4801,9 @@ export default function Home() {
       }
     }
     if (savedPygameCode) setPygameCode(savedPygameCode);
+    if (savedCompletedPygameTutorials) {
+      try { setCompletedPygameTutorials(JSON.parse(savedCompletedPygameTutorials)); } catch { window.localStorage.removeItem("skolepython-pygame-tutorials"); }
+    }
     if (savedEditorFontSize >= 15 && savedEditorFontSize <= 28) setEditorFontSize(savedEditorFontSize);
     if (savedChallengeCodes) {
       try { setChallengeCodes(JSON.parse(savedChallengeCodes)); } catch { window.localStorage.removeItem("skolepython-challenge-codes"); }
@@ -5084,6 +5093,36 @@ export default function Home() {
     updatePygameCode(pygameStarterCode);
     setPygameConsole("Startpunktet er hentet. Les kommentarene, endre én ting og trykk «Start spillet».");
     requestAnimationFrame(() => document.getElementById("pygame-code")?.focus());
+  }
+
+  function loadPygameTutorial(tutorial: PygameTutorial) {
+    if (pygameCode.trim() && pygameCode !== tutorial.code && !window.confirm(`Dette erstatter koden i Pygame-editoren med steg ${tutorial.step}. Vil du fortsette?`)) return;
+    pendingPygameRunRef.current = null;
+    if (pygameStatus === "running") {
+      setPygameStatus("loading");
+      setPygameFrameKey((current) => current + 1);
+    }
+    updatePygameCode(tutorial.code);
+    setPygameConsole(`Steg ${tutorial.step} er hentet: ${tutorial.shortTitle}. Les kommentarene, forutsi hva som skjer og start spillet.`);
+    requestAnimationFrame(() => {
+      document.getElementById("pygame-code")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.getElementById("pygame-code")?.focus();
+    });
+  }
+
+  function completePygameTutorial(tutorial: PygameTutorial) {
+    const nextCompleted = completedPygameTutorials.includes(tutorial.id)
+      ? completedPygameTutorials
+      : [...completedPygameTutorials, tutorial.id];
+    setCompletedPygameTutorials(nextCompleted);
+    window.localStorage.setItem("skolepython-pygame-tutorials", JSON.stringify(nextCompleted));
+    const nextTutorial = pygameTutorials[tutorial.step];
+    if (nextTutorial) setSelectedPygameTutorialId(nextTutorial.id);
+  }
+
+  async function copyPygameTutorial(tutorial: PygameTutorial) {
+    await navigator.clipboard.writeText(tutorial.code);
+    setPygameConsole(`Koden fra steg ${tutorial.step} er kopiert. Du kan lime den inn i et dokument eller en annen Python-editor.`);
   }
 
   function runPygame() {
@@ -6548,11 +6587,16 @@ export default function Home() {
             }}
           >
             <option value="playground">Python</option>
-            <option value="pygame">Pygame-lab</option>
             <option value="exam-training">Eksamenstrening</option>
             <option value="challenges">Utfordringer</option>
             <option value="curriculum">Læreplanmål</option>
-            {modules.map((module) => (
+            {modules.slice(0, 8).map((module) => (
+              <option key={module.id} value={module.id}>
+                {completed.includes(module.id) ? "✓ " : ""}Modul {module.id}: {module.shortTitle}
+              </option>
+            ))}
+            <option value="pygame">Pygame-lab · bygg egne spill</option>
+            {modules.slice(8).map((module) => (
               <option key={module.id} value={module.id}>
                 {completed.includes(module.id) ? "✓ " : ""}Modul {module.id}: {module.shortTitle}
               </option>
@@ -6910,7 +6954,7 @@ export default function Home() {
                 <h1>Lag et spill som faktisk kan spilles</h1>
                 <p>Skriv vanlig <code>pygame</code>-kode, kjør den i spillflaten og styr med tastaturet. Hele spillet kjører lokalt på enheten.</p>
               </div>
-              <div className="pygame-hero-note"><strong>Arbeidsmåte</strong><span>Bygg én bevegelse, én regel og én utfordring om gangen.</span></div>
+              <div className="pygame-hero-note"><strong>Arbeidsmåte</strong><span>Bygg én bevegelse, én regel og én utfordring om gangen.</span><a href="#pygame-kurs">Start tutorialen med steg 1 →</a></div>
             </section>
 
             <section className="content-section pygame-lab-section">
@@ -6952,11 +6996,80 @@ export default function Home() {
               </div>
             </section>
 
+            <section className="content-section pygame-course" id="pygame-kurs">
+              <div className="pygame-course-heading">
+                <div>
+                  <p className="section-label"><span>▶</span> Læringssti</p>
+                  <h2>Bygg «Fang mynten» i seks forståelige steg</h2>
+                  <p>Hvert steg er et lite, kjørbart program. Les først, hent koden til editoren, endre én ting og spill. Til slutt har dere laget et helt spill.</p>
+                </div>
+                <div className="pygame-course-progress" aria-label={`${completedPygameTutorials.length} av ${pygameTutorials.length} Pygame-steg fullført`}>
+                  <strong>{completedPygameTutorials.length}<span> / {pygameTutorials.length}</span></strong>
+                  <small>steg utforsket</small>
+                  <div><i style={{ width: `${Math.round((completedPygameTutorials.length / pygameTutorials.length) * 100)}%` }} /></div>
+                </div>
+              </div>
+
+              <nav className="pygame-step-nav" aria-label="Tutorial-steg i Pygame">
+                {pygameTutorials.map((tutorial) => (
+                  <button
+                    type="button"
+                    className={tutorial.id === activePygameTutorial.id ? "is-active" : completedPygameTutorials.includes(tutorial.id) ? "is-complete" : ""}
+                    aria-current={tutorial.id === activePygameTutorial.id ? "step" : undefined}
+                    onClick={() => setSelectedPygameTutorialId(tutorial.id)}
+                    key={tutorial.id}
+                  >
+                    <span>{completedPygameTutorials.includes(tutorial.id) ? "✓" : tutorial.step}</span>
+                    <strong>{tutorial.shortTitle}</strong>
+                  </button>
+                ))}
+              </nav>
+
+              <article className="pygame-lesson-card" key={activePygameTutorial.id}>
+                <header>
+                  <div><span>Steg {activePygameTutorial.step} av {pygameTutorials.length}</span><h3>{activePygameTutorial.title}</h3><p>{activePygameTutorial.goal}</p></div>
+                  <button type="button" className="pygame-load-step" onClick={() => loadPygameTutorial(activePygameTutorial)}>Hent steg {activePygameTutorial.step} i editoren ↑</button>
+                </header>
+
+                <div className="pygame-wonder"><span>?</span><div><strong>Tenk før dere koder</strong><p>{activePygameTutorial.question}</p></div></div>
+
+                <div className="pygame-lesson-explanation">
+                  <section>
+                    <small>Forklaring</small>
+                    <h4>Hva er den nye ideen?</h4>
+                    <p>{activePygameTutorial.explanation}</p>
+                  </section>
+                  <section>
+                    <small>Nye byggeklosser</small>
+                    <div className="pygame-new-ideas">
+                      {activePygameTutorial.newIdeas.map((idea) => <div key={idea.code}><code>{idea.code}</code><p>{idea.explanation}</p></div>)}
+                    </div>
+                  </section>
+                </div>
+
+                <section className="pygame-step-code">
+                  <div><div><small>Hele programmet på dette steget</small><strong>Les kommentarene før dere kjører</strong></div><span><button type="button" onClick={() => copyPygameTutorial(activePygameTutorial)}>Kopier kode</button><button type="button" onClick={() => loadPygameTutorial(activePygameTutorial)}>Åpne i laben</button></span></div>
+                  <pre><code>{colorPython(activePygameTutorial.code)}</code></pre>
+                </section>
+
+                <div className="pygame-investigation-grid">
+                  <section><small>Observer og forklar</small><h4>Stopp og tenk</h4><ol>{activePygameTutorial.observe.map((question) => <li key={question}>{question}</li>)}</ol></section>
+                  <section><small>Fikle og utforske</small><h4>Velg én endring</h4><ul>{activePygameTutorial.experiments.map((experiment) => <li key={experiment}>{experiment}</li>)}</ul></section>
+                </div>
+
+                <footer className="pygame-lesson-nav">
+                  <button type="button" disabled={activePygameTutorial.step === 1} onClick={() => setSelectedPygameTutorialId(pygameTutorials[activePygameTutorial.step - 2]?.id ?? activePygameTutorial.id)}>← Forrige steg</button>
+                  <button type="button" className="pygame-complete-step" onClick={() => completePygameTutorial(activePygameTutorial)}>{completedPygameTutorials.includes(activePygameTutorial.id) ? "✓ Steget er utforsket" : activePygameTutorial.step === pygameTutorials.length ? "Marker spillet som ferdig" : "Jeg har utforsket steget →"}</button>
+                  <button type="button" disabled={activePygameTutorial.step === pygameTutorials.length} onClick={() => setSelectedPygameTutorialId(pygameTutorials[activePygameTutorial.step]?.id ?? activePygameTutorial.id)}>Neste steg →</button>
+                </footer>
+              </article>
+            </section>
+
             <section className="content-section pygame-tutorial">
               <div className="pygame-tutorial-heading">
-                <p className="section-label"><span>01</span> Oppskriften</p>
+                <p className="section-label"><span>+</span> Hurtigoversikt</p>
                 <h2>Fire deler finnes i nesten alle spill</h2>
-                <p>Startpunktet viser alt samlet. Her er hva dere skal lete etter og endre.</p>
+                <p>Bruk denne oversikten når dere har fullført tutorialen og trenger en rask påminnelse.</p>
               </div>
               <div className="pygame-concepts">
                 <article><span>1</span><h3>Start Pygame</h3><code>pygame.init()</code><p>Gjør spillverktøyene klare før dere lager vinduet.</p></article>

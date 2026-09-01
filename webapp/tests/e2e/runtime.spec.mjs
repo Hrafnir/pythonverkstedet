@@ -263,16 +263,36 @@ test("IDE-hjelpen støtter forslag, feilmarkering, markert kode, steg og flere f
 
 test("Pygame-laben starter et lokalt spill i canvas", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("combobox", { name: "Velg område" }).selectOption("pygame");
+  const areaPicker = page.getByRole("combobox", { name: "Velg område" });
+  const areaLabels = await areaPicker.locator("option").allTextContents();
+  expect(areaLabels.indexOf("Pygame-lab · bygg egne spill")).toBeGreaterThan(areaLabels.findIndex((label) => label.startsWith("Modul 8:")));
+  expect(areaLabels.indexOf("Pygame-lab · bygg egne spill")).toBeLessThan(areaLabels.findIndex((label) => label.startsWith("Modul 9:")));
+  await areaPicker.selectOption("pygame");
   await expect(page.getByRole("heading", { name: "Lag et spill som faktisk kan spilles" })).toBeVisible();
-  await page.getByRole("button", { name: "Hent spillbart startpunkt" }).click();
+  await expect(page.getByRole("heading", { name: "Bygg «Fang mynten» i seks forståelige steg" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Tutorial-steg i Pygame" }).getByRole("button")).toHaveCount(6);
+  await page.getByRole("button", { name: "Hent steg 1 i editoren" }).click();
   const editor = page.getByRole("textbox", { name: "Skriv Pygame-kode" });
-  await expect(editor).toHaveValue(/import pygame/);
+  await expect(editor).toHaveValue(/while kjorer:/);
   await page.getByRole("button", { name: "Start spillet" }).click();
   const frame = page.frameLocator('iframe[title="Pygame-spillflate"]');
   await expect(frame.locator("canvas")).toBeVisible();
   await expect(page.getByRole("button", { name: "Spillet kjører" })).toBeVisible();
   await expect(page.locator(".pygame-console")).not.toContainText(/Traceback|Error:/);
   await expect(page.getByRole("button", { name: "Lagre bilde" })).toBeVisible();
+  await page.getByRole("button", { name: "■ Stopp og nullstill" }).click();
+});
+
+test("Pygame-tutorialen kan laste sluttspillet i laben", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("combobox", { name: "Velg område" }).selectOption("pygame");
+  await page.getByRole("navigation", { name: "Tutorial-steg i Pygame" }).getByRole("button", { name: /Ferdig spill/ }).click();
+  await page.getByRole("button", { name: "Hent steg 6 i editoren" }).click();
+  const editor = page.getByRole("textbox", { name: "Skriv Pygame-kode" });
+  await expect(editor).toHaveValue(/maal = 10/);
+  await expect(editor).toHaveValue(/pygame\.K_SPACE/);
+  await page.getByRole("button", { name: "Start spillet" }).click();
+  await expect(page.getByRole("button", { name: "Spillet kjører" })).toBeVisible();
+  await expect(page.locator(".pygame-console")).not.toContainText(/Traceback|Error:/);
   await page.getByRole("button", { name: "■ Stopp og nullstill" }).click();
 });
