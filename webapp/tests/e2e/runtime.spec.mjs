@@ -161,13 +161,35 @@ test("editorhjelp og modale vinduer fungerer med tastatur", async ({ page }) => 
   await editor.dispatchEvent("keydown", { key: "[", code: "Digit8", altKey: true });
   await expect(editor).toHaveValue("liste = []");
 
-  await editor.fill("import numpy as np\nimport math\nimport requests");
+  await editor.fill("import numpy as np\nimport math\nimport random\nimport pygame\nimport requests");
   const libraryStatus = page.locator(".editor-library-status");
   await expect(libraryStatus).toContainText("NumPy som np er tilgjengelig offline");
   await expect(libraryStatus).toContainText("math er tilgjengelig");
   await expect(libraryStatus).toContainText("requests er ikke bekreftet i offline-pakken");
   await expect(page.locator(".py-library").filter({ hasText: /^numpy$/ }).first()).toBeVisible();
   await expect(page.locator(".py-library").filter({ hasText: /^np$/ }).first()).toBeVisible();
+  await expect(page.locator(".py-library").filter({ hasText: /^pygame$/ }).first()).toBeVisible();
+  const editorMetrics = await page.locator(".py-library").filter({ hasText: /^pygame$/ }).first().evaluate((token) => {
+    const input = token.closest(".python-editor")?.querySelector(".syntax-input");
+    if (!(input instanceof HTMLTextAreaElement)) return null;
+    const tokenStyle = getComputedStyle(token);
+    const inputStyle = getComputedStyle(input);
+    return {
+      tokenWeight: tokenStyle.fontWeight,
+      inputWeight: inputStyle.fontWeight,
+      tokenFamily: tokenStyle.fontFamily,
+      inputFamily: inputStyle.fontFamily,
+      tokenSize: tokenStyle.fontSize,
+      inputSize: inputStyle.fontSize,
+      tokenSpacing: tokenStyle.letterSpacing,
+      inputSpacing: inputStyle.letterSpacing,
+    };
+  });
+  expect(editorMetrics).not.toBeNull();
+  expect(editorMetrics.tokenWeight).toBe(editorMetrics.inputWeight);
+  expect(editorMetrics.tokenFamily).toBe(editorMetrics.inputFamily);
+  expect(editorMetrics.tokenSize).toBe(editorMetrics.inputSize);
+  expect(editorMetrics.tokenSpacing).toBe(editorMetrics.inputSpacing);
 
   const commands = page.locator(".top-actions").getByRole("button", { name: "Kommandoer", exact: true });
   await commands.click();

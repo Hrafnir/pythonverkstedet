@@ -318,6 +318,9 @@ test("editoren bekrefter tilgjengelige biblioteker og varsler om ukjente importe
   assert.match(page, /editor-library-status/);
   assert.match(page, /kind = "library"/);
   assert.match(page, /er ikke bekreftet i offline-pakken/);
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.py-library \{[^}]*font-weight: inherit/);
+  assert.doesNotMatch(css, /\.py-library \{[^}]*font-weight: (?:6|7|8|9)\d\d/);
 });
 
 test("editoren lager og rydder par og åpner tomme klammer over flere linjer", () => {

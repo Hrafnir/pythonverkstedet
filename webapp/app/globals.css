@@ -512,7 +512,7 @@ p, li { text-wrap: pretty; }
 .editor-inline-help button:hover { border-color: var(--yellow); color: var(--yellow); }
 .py-keyword { color: #f28b72; }
 .py-builtin { color: #78d5e3; }
-.py-library { color: #79e0a6; font-weight: 700; text-shadow: 0 0 12px #69d49b30; }
+.py-library { color: #79e0a6; font-weight: inherit; text-shadow: 0 0 12px #69d49b30; }
 .py-string { color: #f4c95d; }
 .py-number { color: #b8a1f5; }
 .py-comment { color: #829d95; }
