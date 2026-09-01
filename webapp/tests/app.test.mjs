@@ -11,6 +11,7 @@ const mathHelp = readFileSync("app/mathHelp.ts", "utf8");
 const challenges = readFileSync("app/challenges.ts", "utf8");
 const examTraining = readFileSync("app/examTraining.ts", "utf8");
 const pygameTutorialSource = readFileSync("app/pygameTutorials.ts", "utf8");
+const libraryGuideSource = readFileSync("app/libraryGuides.ts", "utf8");
 const worker = readFileSync("public/pyodide-worker.mjs", "utf8");
 const pygameRunner = readFileSync("public/pygame-runner.mjs", "utf8");
 const pygameFrame = readFileSync("public/pygame-runner.html", "utf8");
@@ -23,6 +24,7 @@ const { evaluateChallengeAttempt, pythonChallenges } = await import("../app/chal
 const { evaluateExamAttempt, examTasks } = await import("../app/examTraining.ts");
 const { mathHelpTutorials } = await import("../app/mathHelp.ts");
 const { pygameTutorials } = await import("../app/pygameTutorials.ts");
+const { libraryGuides } = await import("../app/libraryGuides.ts");
 
 const analyzerSource = page.slice(page.indexOf("function analyzePythonError"), page.indexOf("const pythonTokens"));
 const analyzerJavaScript = ts.transpileModule(`${analyzerSource}\nglobalThis.analyzePythonError = analyzePythonError;`, {
@@ -777,6 +779,29 @@ test("Pygame-kurset bygger et komplett spill i seks pedagogiske steg", () => {
   assert.match(page, /Bygg «Fang mynten» i seks forståelige steg/);
   assert.match(page, /skolepython-pygame-tutorials/);
   assert.match(page, /Hent steg \{activePygameTutorial\.step\} i editoren/);
+});
+
+test("alle støttede biblioteker har en pedagogisk og kjørbar egen side", () => {
+  const catalogSource = page.slice(page.indexOf("const pythonLibraryCatalog"), page.indexOf("const pythonLibraryNames"));
+  const catalogIds = [...catalogSource.matchAll(/^  ([A-Za-z]+):/gm)].map((match) => match[1]).sort();
+  const guideIds = libraryGuides.map((guide) => guide.id).sort();
+  assert.equal(libraryGuides.length, 38);
+  assert.deepEqual(guideIds, catalogIds);
+  for (const guide of libraryGuides) {
+    assert.ok(guide.intro.length >= 80, `${guide.name} trenger en grundigere forklaring`);
+    assert.ok(guide.useCases.length >= 3, `${guide.name} trenger konkrete bruksområder`);
+    assert.ok(guide.steps.length >= 3, `${guide.name} trenger trinnvise instruksjoner`);
+    assert.ok(guide.commands.length >= 2, `${guide.name} trenger kommandoer`);
+    assert.match(guide.example, /(?:import |from |def )/, `${guide.name} trenger et komplett kodeeksempel`);
+    assert.ok(guide.challenge.length >= 30, `${guide.name} trenger en utforskende oppgave`);
+    assert.ok(guide.note.length >= 25, `${guide.name} trenger en tydelig avgrensning`);
+  }
+  assert.match(page, /Biblioteker · hjelp og eksempler/);
+  assert.match(page, /Dette biblioteket bruker du hvis du skal/);
+  assert.match(page, /plainLibraryExplanation/);
+  assert.match(page, /Søk med egne ord/);
+  assert.match(page, /Åpne som nytt prosjekt/);
+  assert.match(libraryGuideSource, /Følger med Python|availability: "standard"/);
 });
 
 test("Mac-utgaven er offline, ARM64 og kan pakkes for IT", () => {

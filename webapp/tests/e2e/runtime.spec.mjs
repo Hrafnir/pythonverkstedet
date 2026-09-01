@@ -296,3 +296,26 @@ test("Pygame-tutorialen kan laste sluttspillet i laben", async ({ page }) => {
   await expect(page.locator(".pygame-console")).not.toContainText(/Traceback|Error:/);
   await page.getByRole("button", { name: "■ Stopp og nullstill" }).click();
 });
+
+test("biblioteksområdet forklarer i vanlig språk og åpner kjørbare eksempler", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("combobox", { name: "Velg område" }).selectOption("libraries");
+  await expect(page.getByRole("heading", { name: "Forstå verktøyet før du bruker kommandoen" })).toBeVisible();
+  await expect(page.locator(".library-card")).toHaveCount(38);
+
+  const search = page.getByRole("searchbox", { name: "Søk med egne ord" });
+  await search.fill("gjennomsnitt");
+  const statisticsCard = page.locator(".library-card").filter({ has: page.locator("strong", { hasText: /^statistics$/ }) });
+  await expect(statisticsCard).toBeVisible();
+  await statisticsCard.click();
+  await expect(page.getByRole("heading", { name: "Dette biblioteket bruker du hvis du skal …" })).toBeVisible();
+  await expect(page.locator(".library-plain-language")).toContainText("Dette biblioteket bruker du hvis du skal arbeide med");
+  await expect(page.locator(".library-command-grid")).toContainText("statistics.mean(tall)");
+
+  await page.getByRole("button", { name: "Åpne som nytt prosjekt" }).click();
+  const editor = page.getByRole("textbox", { name: "Skriv Python-kode" });
+  await expect(editor).toHaveValue(/import statistics/);
+  await page.getByRole("button", { name: /Kjør kode/ }).click();
+  await expect(page.locator(".output-panel pre")).toContainText("Gjennomsnitt:");
+  await expect(page.locator(".output-panel pre")).toContainText("Median:");
+});

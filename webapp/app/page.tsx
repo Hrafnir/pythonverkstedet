@@ -11,6 +11,8 @@ import type { ExamLevel, ExamTask } from "./examTraining";
 import { mathHelpTutorials } from "./mathHelp";
 import { pygameTutorials } from "./pygameTutorials";
 import type { PygameTutorial } from "./pygameTutorials";
+import { libraryGuideGroups, libraryGuides } from "./libraryGuides";
+import type { LibraryGuide, LibraryGuideGroup } from "./libraryGuides";
 
 type Module = {
   id: number;
@@ -167,6 +169,12 @@ function normalizeCommandSearch(value: string) {
     .replace(/æ/g, "ae")
     .replace(/å/g, "a")
     .trim();
+}
+
+function plainLibraryExplanation(guide: LibraryGuide) {
+  const uses = guide.useCases.map((item) => `${item.charAt(0).toLocaleLowerCase("nb-NO")}${item.slice(1)}`);
+  const readableUses = uses.length > 1 ? `${uses.slice(0, -1).join(", ")} eller ${uses.at(-1)}` : uses[0];
+  return `Dette biblioteket bruker du hvis du skal arbeide med ${readableUses}. ${guide.intro}`;
 }
 
 type TurtleVectorMode = "centerline" | "edges" | "outline";
@@ -4554,6 +4562,11 @@ export default function Home() {
   const [playground, setPlayground] = useState(true);
   const [pygameView, setPygameView] = useState(false);
   const [curriculumView, setCurriculumView] = useState(false);
+  const [libraryView, setLibraryView] = useState(false);
+  const [selectedLibraryId, setSelectedLibraryId] = useState(libraryGuides[0].id);
+  const [libraryQuery, setLibraryQuery] = useState("");
+  const [libraryGroup, setLibraryGroup] = useState<"Alle" | LibraryGuideGroup>("Alle");
+  const [libraryStatus, setLibraryStatus] = useState("");
   const [challengeView, setChallengeView] = useState(false);
   const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null);
   const [challengeDifficulty, setChallengeDifficulty] = useState<ChallengeDifficulty>("Alle");
@@ -4648,6 +4661,7 @@ export default function Home() {
   const runButtonLabel = runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : runnerStatus === "input" ? "Venter på svar …" : "Kjør kode";
   const activeLocalProject = normalizeProject(projects.find((item) => item.id === activeProjectId) ?? projects[0] ?? firstProject);
   const activePygameTutorial = pygameTutorials.find((tutorial) => tutorial.id === selectedPygameTutorialId) ?? pygameTutorials[0];
+  const activeLibraryGuide = libraryGuides.find((guide) => guide.id === selectedLibraryId) ?? libraryGuides[0];
   const activeLocalFile = activeProjectFile(activeLocalProject);
 
   const active = useMemo(
@@ -4674,6 +4688,25 @@ export default function Home() {
     () => examTasks.filter((task) => examLevel === "Alle" || task.level === examLevel),
     [examLevel],
   );
+
+  const filteredLibraryGuides = useMemo(() => {
+    const terms = normalizeCommandSearch(libraryQuery).split(/\s+/).filter(Boolean);
+    return libraryGuides.filter((guide) => {
+      if (libraryGroup !== "Alle" && guide.group !== libraryGroup) return false;
+      if (!terms.length) return true;
+      const searchable = normalizeCommandSearch([
+        guide.name,
+        guide.tagline,
+        guide.intro,
+        guide.group,
+        guide.importCode,
+        ...guide.useCases,
+        ...guide.steps,
+        ...guide.commands.flatMap((command) => [command.code, command.explanation]),
+      ].join(" "));
+      return terms.every((term) => searchable.includes(term));
+    });
+  }, [libraryGroup, libraryQuery]);
 
   const filteredReferences = useMemo(() => {
     const terms = normalizeCommandSearch(referenceQuery).split(/\s+/).filter(Boolean);
@@ -5035,6 +5068,7 @@ export default function Home() {
     setPlayground(false);
     setPygameView(false);
     setCurriculumView(false);
+    setLibraryView(false);
     setChallengeView(false);
     setExamTrainingView(false);
     setActiveId(module.id);
@@ -5056,6 +5090,7 @@ export default function Home() {
     setPlayground(true);
     setPygameView(false);
     setCurriculumView(false);
+    setLibraryView(false);
     setChallengeView(false);
     setExamTrainingView(false);
     const project = projects.find((item) => item.id === activeProjectId) ?? projects[0];
@@ -5076,6 +5111,7 @@ export default function Home() {
     setPlayground(false);
     setPygameView(true);
     setCurriculumView(false);
+    setLibraryView(false);
     setChallengeView(false);
     setExamTrainingView(false);
     setErrorCoach(null);
@@ -5171,6 +5207,7 @@ export default function Home() {
     setPlayground(false);
     setPygameView(false);
     setCurriculumView(true);
+    setLibraryView(false);
     setChallengeView(false);
     setExamTrainingView(false);
     setFeedback("");
@@ -5179,10 +5216,73 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function chooseLibraries() {
+    setPlayground(false);
+    setPygameView(false);
+    setCurriculumView(false);
+    setLibraryView(true);
+    setChallengeView(false);
+    setExamTrainingView(false);
+    setLibraryStatus("");
+    setErrorCoach(null);
+    setShareStatus("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function selectLibraryGuide(guide: LibraryGuide) {
+    setSelectedLibraryId(guide.id);
+    setLibraryStatus("");
+    requestAnimationFrame(() => document.getElementById("bibliotek-detalj")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  async function copyLibraryExample(guide: LibraryGuide) {
+    try {
+      await navigator.clipboard.writeText(guide.example);
+      setLibraryStatus(`Eksemplet for ${guide.name} er kopiert.`);
+    } catch {
+      setLibraryStatus("Nettleseren tillot ikke kopiering. Marker koden og kopier manuelt.");
+    }
+  }
+
+  function openLibraryExample(guide: LibraryGuide) {
+    if (guide.id === "pygame") {
+      updatePygameCode(guide.example);
+      choosePygame();
+      setPygameConsole("Bibliotekeksemplet er hentet. Les kommentarene, forutsi hva som skjer og start spillet.");
+      return;
+    }
+    const project = normalizeProject({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: safeProjectName(`Eksempel ${guide.name}`),
+      code: guide.example,
+      updatedAt: new Date().toISOString(),
+    });
+    const nextProjects = [...projects, project];
+    setProjects(nextProjects);
+    setActiveProjectId(project.id);
+    setDesktopFilePath("");
+    setCode(project.code);
+    setOutput(`Eksemplet for ${guide.name} er klart. Forutsi resultatet før du kjører.`);
+    setPlayground(true);
+    setPygameView(false);
+    setCurriculumView(false);
+    setLibraryView(false);
+    setChallengeView(false);
+    setExamTrainingView(false);
+    setErrorCoach(null);
+    setPlotImages([]);
+    setTurtleDrawing(null);
+    setSnakeGame(null);
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(nextProjects));
+    window.localStorage.setItem("bjornsveen-python-active-project", project.id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function chooseChallenges() {
     setPlayground(false);
     setPygameView(false);
     setCurriculumView(false);
+    setLibraryView(false);
     setChallengeView(true);
     setExamTrainingView(false);
     setSelectedChallengeId(null);
@@ -5201,6 +5301,7 @@ export default function Home() {
     setPlayground(false);
     setPygameView(false);
     setCurriculumView(false);
+    setLibraryView(false);
     setChallengeView(false);
     setExamTrainingView(true);
     setSelectedExamTaskId(null);
@@ -5421,7 +5522,7 @@ export default function Home() {
   }
 
   function insertCommandExample(command: PythonCommand) {
-    if (curriculumView) {
+    if (curriculumView || libraryView) {
       const project = normalizeProject({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         name: safeProjectName(`Eksempel ${command.title.replace(/^[^\p{L}]+/u, "")}`),
@@ -5434,6 +5535,7 @@ export default function Home() {
       setPlayground(true);
       setPygameView(false);
       setCurriculumView(false);
+      setLibraryView(false);
       setCode(project.code);
       setOutput(`Eksemplet «${command.title}» er klart. Endre det og kjør når du vil.`);
       setCommandLibraryOpen(false);
@@ -6576,13 +6678,14 @@ export default function Home() {
           <label htmlFor="module-select">Velg område</label>
           <select
             id="module-select"
-            value={playground ? "playground" : pygameView ? "pygame" : examTrainingView ? "exam-training" : challengeView ? "challenges" : curriculumView ? "curriculum" : String(active.id)}
+            value={playground ? "playground" : pygameView ? "pygame" : examTrainingView ? "exam-training" : challengeView ? "challenges" : curriculumView ? "curriculum" : libraryView ? "libraries" : String(active.id)}
             onChange={(event) => {
               if (event.target.value === "playground") choosePlayground();
               else if (event.target.value === "pygame") choosePygame();
               else if (event.target.value === "exam-training") chooseExamTraining();
               else if (event.target.value === "challenges") chooseChallenges();
               else if (event.target.value === "curriculum") chooseCurriculum();
+              else if (event.target.value === "libraries") chooseLibraries();
               else chooseModule(modules[Number(event.target.value) - 1]);
             }}
           >
@@ -6590,6 +6693,7 @@ export default function Home() {
             <option value="exam-training">Eksamenstrening</option>
             <option value="challenges">Utfordringer</option>
             <option value="curriculum">Læreplanmål</option>
+            <option value="libraries">Biblioteker · hjelp og eksempler</option>
             {modules.slice(0, 8).map((module) => (
               <option key={module.id} value={module.id}>
                 {completed.includes(module.id) ? "✓ " : ""}Modul {module.id}: {module.shortTitle}
@@ -6602,7 +6706,7 @@ export default function Home() {
               </option>
             ))}
           </select>
-          <span className="module-position">{playground ? "Python-editor" : pygameView ? "2D-spill i Python" : examTrainingView ? `${completedExamTasks.length} av ${examTasks.length} eksamensoppgaver` : challengeView ? `${completedChallenges.length} av ${pythonChallenges.length} mestret` : curriculumView ? "MAT01-06" : `${completed.length} av ${modules.length} fullført`}</span>
+          <span className="module-position">{playground ? "Python-editor" : pygameView ? "2D-spill i Python" : examTrainingView ? `${completedExamTasks.length} av ${examTasks.length} eksamensoppgaver` : challengeView ? `${completedChallenges.length} av ${pythonChallenges.length} mestret` : curriculumView ? "MAT01-06" : libraryView ? `${libraryGuides.length} bibliotek forklart` : `${completed.length} av ${modules.length} fullført`}</span>
         </div>
         <nav className="top-actions" aria-label="Verktøy">
           <button className="text-button command-library-button" type="button" onClick={() => openCommandLibrary()} aria-pressed={commandLibraryOpen}>
@@ -6770,6 +6874,7 @@ export default function Home() {
                   <strong>Ikke helt som installert Python</strong>
                   <p>Pakker som krever maskinvare, egne systemvinduer, server eller tråder kan være uegnede selv om pakken kan importeres.</p>
                 </div>
+                <button type="button" className="package-library-link" onClick={chooseLibraries}><span>38 forklarte biblioteker</span><strong>Finn riktig bibliotek, forstå det og prøv et eksempel →</strong></button>
               </div>
             </section>
 
@@ -7697,7 +7802,108 @@ export default function Home() {
           </article>
         )}
 
-        {!playground && !pygameView && !curriculumView && !challengeView && !examTrainingView && (
+        {libraryView && (
+          <article className="lesson libraries-page">
+            <section className="library-hero content-section">
+              <div>
+                <p className="section-label inverse"><span>import</span> Biblioteker i Skolepython</p>
+                <h1>Forstå verktøyet før du bruker kommandoen</h1>
+                <p>Hvert bibliotek som editoren markerer som tilgjengelig, har sitt eget oppslag. Forklaringen begynner med hva biblioteket brukes til i vanlig språk. Deretter kommer import, byggeklosser, et komplett eksempel og noe dere kan utforske selv.</p>
+              </div>
+              <div className="library-hero-count" aria-label={`${libraryGuides.length} biblioteker dokumentert`}>
+                <strong>{libraryGuides.length}</strong>
+                <span>biblioteker forklart</span>
+                <small>standard · offline · lokale</small>
+              </div>
+            </section>
+
+            <section className="content-section library-method">
+              <div><span>1</span><strong>Hva skal du gjøre?</strong><p>Start med oppgaven, ikke biblioteknavnet. Søk for eksempel etter «gjennomsnitt», «graf», «tekst» eller «spill».</p></div>
+              <div><span>2</span><strong>Hva gjør biblioteket?</strong><p>Les forklaringen i vanlig språk og finn ut hvorfor verktøyet passer til akkurat denne oppgaven.</p></div>
+              <div><span>3</span><strong>Prøv og endre</strong><p>Åpne hele eksemplet i Python, forutsi resultatet og endre én verdi om gangen.</p></div>
+            </section>
+
+            <section className="content-section library-directory" aria-labelledby="library-directory-title">
+              <div className="library-directory-heading">
+                <div><p className="section-label"><span>⌕</span> Finn bibliotek</p><h2 id="library-directory-title">Hva vil du få Python til å gjøre?</h2></div>
+                <output>{filteredLibraryGuides.length} av {libraryGuides.length} vises</output>
+              </div>
+              <label className="library-search">
+                <span>Søk med egne ord</span>
+                <input type="search" value={libraryQuery} onChange={(event) => setLibraryQuery(event.target.value)} placeholder="Prøv: gjennomsnitt, lese CSV, tegne graf, tilfeldig, spill …" />
+              </label>
+              <div className="library-group-filter" role="group" aria-label="Filtrer biblioteker etter område">
+                {libraryGuideGroups.map((group) => <button type="button" className={libraryGroup === group ? "is-active" : ""} aria-pressed={libraryGroup === group} onClick={() => setLibraryGroup(group)} key={group}>{group}</button>)}
+              </div>
+
+              {filteredLibraryGuides.length ? (
+                <div className="library-card-grid">
+                  {filteredLibraryGuides.map((guide) => (
+                    <button type="button" className={guide.id === activeLibraryGuide.id ? "library-card is-active" : "library-card"} aria-pressed={guide.id === activeLibraryGuide.id} onClick={() => selectLibraryGuide(guide)} key={guide.id}>
+                      <span className={`library-availability ${guide.availability}`}>{guide.availability === "standard" ? "Følger med Python" : guide.availability === "offline" ? "Komplett offline" : "Laget for Skolepython"}</span>
+                      <strong>{guide.name}</strong>
+                      <p>{guide.tagline}</p>
+                      <small>{guide.group} · {guide.level}</small>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="library-empty"><strong>Ingen treff ennå</strong><p>Prøv et enklere ord, eller velg «Alle».</p><button type="button" onClick={() => { setLibraryQuery(""); setLibraryGroup("Alle"); }}>Vis alle biblioteker</button></div>
+              )}
+            </section>
+
+            <section className="content-section library-detail" id="bibliotek-detalj" key={activeLibraryGuide.id}>
+              <header className="library-detail-header">
+                <div>
+                  <span className={`library-availability ${activeLibraryGuide.availability}`}>{activeLibraryGuide.availability === "standard" ? "Følger med Python" : activeLibraryGuide.availability === "offline" ? "Installert og virker offline" : "Laget for Skolepython"}</span>
+                  <p>{activeLibraryGuide.group} · {activeLibraryGuide.level}</p>
+                  <h2>{activeLibraryGuide.name}</h2>
+                  <strong>{activeLibraryGuide.tagline}</strong>
+                </div>
+                <code>{activeLibraryGuide.importCode}</code>
+              </header>
+
+              <section className="library-plain-language">
+                <p className="section-label"><span>?</span> Først: Hva bruker vi dette til?</p>
+                <h3>Dette biblioteket bruker du hvis du skal …</h3>
+                <p>{plainLibraryExplanation(activeLibraryGuide)}</p>
+                <div>{activeLibraryGuide.useCases.map((useCase) => <span key={useCase}>{useCase}</span>)}</div>
+              </section>
+
+              <div className="library-start-grid">
+                <section>
+                  <p className="section-label"><span>1–3</span> Slik kommer du i gang</p>
+                  <ol>{activeLibraryGuide.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+                </section>
+                <section className="library-import-card">
+                  <p className="section-label inverse"><span>import</span> Skriv dette øverst</p>
+                  <pre><code>{colorPython(activeLibraryGuide.importCode)}</code></pre>
+                  <p>Import-linjen gjør verktøyene tilgjengelige. Den gir vanligvis ingen utskrift alene.</p>
+                </section>
+              </div>
+
+              <section className="library-command-section">
+                <div><p className="section-label"><span>+</span> Viktige byggeklosser</p><h3>Kommandoer du kan begynne med</h3></div>
+                <div className="library-command-grid">
+                  {activeLibraryGuide.commands.map((command) => <article key={command.code}><code>{command.code}</code><p>{command.explanation}</p></article>)}
+                </div>
+              </section>
+
+              <section className="library-example-section">
+                <header><div><p className="section-label inverse"><span>▶</span> Komplett eksempel</p><h3>Les, forutsi, kjør og endre</h3></div><span><button type="button" onClick={() => copyLibraryExample(activeLibraryGuide)}>Kopier kode</button><button type="button" className="library-open-example" onClick={() => openLibraryExample(activeLibraryGuide)}>{activeLibraryGuide.id === "pygame" ? "Åpne i Pygame-laben" : "Åpne som nytt prosjekt"}</button></span></header>
+                <pre><code>{colorPython(activeLibraryGuide.example)}</code></pre>
+              </section>
+
+              <div className="library-after-example">
+                <section><p className="section-label"><span>?</span> Prøv selv</p><h3>Utforsk videre</h3><p>{activeLibraryGuide.challenge}</p></section>
+                <div className="library-caution"><strong>Viktig å vite</strong><p>{activeLibraryGuide.note}</p></div>
+              </div>
+              {libraryStatus && <p className="library-status" role="status">{libraryStatus}</p>}
+            </section>
+          </article>
+        )}
+
+        {!playground && !pygameView && !curriculumView && !libraryView && !challengeView && !examTrainingView && (
         <article className="lesson">
           <section className="lesson-hero">
             <div className="hero-copy">
