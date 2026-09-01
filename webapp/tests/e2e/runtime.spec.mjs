@@ -203,3 +203,54 @@ test("matematikkhjelpen er søkbar og gir kjørbare oppskrifter", async ({ page 
   await expect(output.locator("pre")).toContainText("Median: 7.5");
   await expect(output.locator("pre")).toContainText("Typetall: [7]");
 });
+
+test("IDE-hjelpen støtter forslag, feilmarkering, markert kode, steg og flere filer", async ({ page }) => {
+  const { editor, output, run } = await openPython(page);
+
+  await editor.fill("pri");
+  await expect(page.locator(".editor-suggestions")).toContainText("print");
+  await editor.press("Tab");
+  await expect(editor).toHaveValue("print()");
+  await expect(page.locator(".syntax-gutter span")).toHaveCount(1);
+
+  await editor.fill('print("BARE_MARKERT")');
+  await editor.selectText();
+  await expect(page.getByRole("button", { name: "Kjør markert" })).toBeEnabled();
+  await page.getByRole("button", { name: "Kjør markert" }).click();
+  await expect(output.locator("pre")).toContainText("BARE_MARKERT");
+
+  await editor.fill("start = 2\ndobbelt = start * 2\nprint(dobbelt)");
+  await page.getByRole("button", { name: "Følg stegvis" }).click();
+  await expect(page.locator(".trace-player")).toBeVisible();
+  await expect(page.locator(".trace-player")).toContainText("Følg programmet");
+
+  page.once("dialog", (dialog) => dialog.accept("hjelper.py"));
+  await page.getByRole("button", { name: "+ Ny fil" }).click();
+  await expect(page.getByRole("button", { name: "hjelper.py" })).toBeVisible();
+  await editor.fill("def doble(tall):\n    return tall * 2");
+  const mainFile = page.locator(".project-file-tabs button").filter({ hasNotText: /Ny fil|hjelper/ }).first();
+  await mainFile.click();
+  await editor.fill("from hjelper import doble\nprint(doble(6))");
+  await run.click();
+  await expect(output.locator("pre")).toContainText("12");
+
+  await editor.fill("if 3 > 2\n    print('ja')");
+  await run.click();
+  await expect(page.locator(".syntax-gutter .is-error-line")).toHaveText("1");
+});
+
+test("Pygame-laben starter et lokalt spill i canvas", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("combobox", { name: "Velg område" }).selectOption("pygame");
+  await expect(page.getByRole("heading", { name: "Lag et spill som faktisk kan spilles" })).toBeVisible();
+  await page.getByRole("button", { name: "Hent spillbart startpunkt" }).click();
+  const editor = page.getByRole("textbox", { name: "Skriv Pygame-kode" });
+  await expect(editor).toHaveValue(/import pygame/);
+  await page.getByRole("button", { name: "Start spillet" }).click();
+  const frame = page.frameLocator('iframe[title="Pygame-spillflate"]');
+  await expect(frame.locator("canvas")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Spillet kjører" })).toBeVisible();
+  await expect(page.locator(".pygame-console")).not.toContainText(/Traceback|Error:/);
+  await expect(page.getByRole("button", { name: "Lagre bilde" })).toBeVisible();
+  await page.getByRole("button", { name: "■ Stopp og nullstill" }).click();
+});

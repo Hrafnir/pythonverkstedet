@@ -459,18 +459,29 @@ p, li { text-wrap: pretty; }
 .data-file-list button { width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #ffffff10; color: #caddd6; font-size: 17px; line-height: 1; cursor: pointer; }
 .data-file-list button:hover { background: var(--coral); color: white; }
 .data-file-shelf > p { margin: 7px 0 0; color: #91aaa2; font-size: 11px; line-height: 1.4; }
+.project-file-tabs { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #34514b; background: #122f2c; }
+.project-file-tabs > span { flex: 0 0 auto; color: #8ca69e; font-size: 9px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.project-file-tabs > div { min-width: 0; display: flex; gap: 5px; overflow-x: auto; }
+.project-file-tabs button { flex: 0 0 auto; min-height: 31px; padding: 5px 9px; border: 1px solid #4e6d65; border-radius: 6px; background: #0d2926; color: #aebfba; font-family: var(--mono); font-size: 10px; cursor: pointer; }
+.project-file-tabs button:hover { border-color: var(--yellow); color: white; }
+.project-file-tabs button.is-active { border-color: #79d7ad; background: #214a42; color: #c3f2da; box-shadow: inset 0 -2px 0 #79d7ad; }
+.project-file-tabs .add-project-file { border-style: dashed; color: var(--yellow); }
 .dot { width: 8px; height: 8px; border-radius: 50%; }
 .dot.coral { background: var(--coral); }
 .dot.cream { background: var(--yellow); }
 .dot.green { background: #6fd79f; }
 .python-editor { position: relative; min-height: 390px; display: flex; flex-direction: column; background: #102e2b; }
 .python-editor-surface { position: relative; min-height: 390px; flex: 1; }
-.syntax-layer, .syntax-input { width: 100%; min-height: 390px; margin: 0; padding: 28px; border: 0; font-family: var(--mono); font-size: var(--editor-font-size, 19px); font-weight: 500; font-style: normal; font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; letter-spacing: 0; line-height: 1.7; tab-size: 4; white-space: pre; overflow-wrap: normal; word-break: normal; }
+.syntax-layer, .syntax-input { width: 100%; min-height: 390px; margin: 0; padding: 28px 28px 28px 76px; border: 0; font-family: var(--mono); font-size: var(--editor-font-size, 19px); font-weight: 500; font-style: normal; font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; letter-spacing: 0; line-height: 1.7; tab-size: 4; white-space: pre; overflow-wrap: normal; word-break: normal; }
 .syntax-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: #102e2b; color: #e7eee9; }
 .syntax-input { position: relative; display: block; overflow: auto; resize: vertical; outline: 0; background: transparent; color: transparent; caret-color: #ff8a6e; }
 .syntax-input::selection { background: #6fd79f45; }
 .python-editor:focus-within { box-shadow: inset 0 0 0 2px #f06f5180; }
 .syntax-line { position: relative; display: block; min-height: 1.7em; }
+.syntax-line.is-error-line { margin-left: -8px; padding-left: 8px; border-left: 3px solid #ff7759; background: #f06f5125; }
+.syntax-gutter { position: absolute; inset: 0 auto 0 0; z-index: 2; width: 57px; min-height: 390px; margin: 0; overflow: hidden; padding: 28px 8px 28px 0; border-right: 1px solid #34514b; background: #0d2926; color: #67877e; font-family: var(--mono); font-size: var(--editor-font-size, 19px); line-height: 1.7; text-align: right; pointer-events: none; }
+.syntax-gutter span { display: block; min-height: 1.7em; padding-right: 9px; }
+.syntax-gutter span.is-error-line { background: #f06f5130; color: #ffb29f; font-weight: 900; }
 .indent-guide-layer { position: absolute; inset: 0; pointer-events: none; }
 .indent-guide-layer i { position: absolute; top: 0; bottom: 0; width: 1px; background: #8eb7aa35; transform: translateX(-.5ch); }
 .editor-library-status { position: relative; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; padding: 7px 14px; border-top: 1px solid #34514b; background: #0b2623; font-family: var(--mono); font-size: 11px; line-height: 1.35; }
@@ -480,6 +491,13 @@ p, li { text-wrap: pretty; }
 .editor-library-status .is-available strong { color: #69d49b; }
 .editor-library-status .is-unknown { border-color: #f4c95d70; background: #f4c95d14; color: #ffe6a0; }
 .editor-library-status .is-unknown strong { color: var(--yellow); }
+.editor-suggestions { position: relative; z-index: 4; display: flex; align-items: stretch; gap: 5px; overflow-x: auto; padding: 7px 10px; border-top: 1px solid #34514b; background: #173a36; color: #c7d8d2; white-space: nowrap; }
+.editor-suggestions > span, .editor-suggestions > small { align-self: center; padding: 0 6px; color: #8fa9a1; font-size: 10px; }
+.editor-suggestions > span code { color: var(--yellow); font-family: var(--mono); }
+.editor-suggestions button { min-width: 120px; display: grid; gap: 1px; padding: 6px 8px; border: 1px solid #56776e; border-radius: 7px; background: #0d2926; color: white; text-align: left; cursor: pointer; }
+.editor-suggestions button:hover { border-color: var(--yellow); background: #214a43; }
+.editor-suggestions button code { color: #9fe5bd; font-family: var(--mono); font-size: 12px; font-weight: 850; }
+.editor-suggestions button small { color: #9eb2ac; font-size: 9px; }
 .editor-assist-bar { position: relative; z-index: 2; min-height: 43px; display: flex; align-items: stretch; border-top: 1px solid #34514b; background: #0d2926; color: #b9cbc5; font-size: 12px; line-height: 1.45; }
 .editor-position { flex: 0 0 auto; min-width: 135px; display: flex; align-items: center; padding: 8px 14px; border-right: 1px solid #34514b; color: #87a59c; font-family: var(--mono); font-size: 11px; white-space: nowrap; }
 .editor-inline-help { min-width: 0; flex: 1; display: flex; align-items: center; gap: 7px; padding: 7px 13px; }
@@ -500,6 +518,10 @@ p, li { text-wrap: pretty; }
 .py-comment { color: #829d95; }
 .py-plain { color: #e7eee9; }
 .editor-footer { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 10px 14px 10px 22px; border-top: 1px solid #34514b; color: #9bb0aa; font-size: 13px; }
+.editor-run-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 7px; }
+.secondary-run-button { min-height: 40px; padding: 8px 12px; border: 1px solid #6f8e85; border-radius: 8px; background: transparent; color: #d6e4df; font-size: 12px; font-weight: 800; cursor: pointer; }
+.secondary-run-button:hover:not(:disabled) { border-color: var(--yellow); color: var(--yellow); }
+.secondary-run-button:disabled { opacity: .4; cursor: not-allowed; }
 .run-button { display: flex; align-items: center; gap: 8px; border: 0; border-radius: 8px; padding: 13px 19px; background: var(--coral); color: white; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px #0003; }
 .run-button:hover:not(:disabled) { background: #ff7d5d; transform: translateY(-1px); }
 .run-button:disabled { cursor: wait; opacity: .72; }
@@ -513,6 +535,7 @@ p, li { text-wrap: pretty; }
 .output-bar { background: #13332f; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #678078; }
 .status-dot.loading, .status-dot.running, .status-dot.input { background: var(--yellow); animation: pulse 1s infinite; }
+.status-dot.ready { background: #6fd79f; }
 .status-dot.error { background: var(--coral); }
 @keyframes pulse { 50% { opacity: .35; } }
 .output-panel pre { flex: 1; min-height: 320px; margin: 0; padding: 28px; white-space: pre-wrap; overflow-wrap: anywhere; color: #b9efcb; font-family: var(--mono); font-size: 16px; line-height: 1.7; }
@@ -548,14 +571,34 @@ p, li { text-wrap: pretty; }
 .variable-inspector-heading span { color: var(--yellow); font-size: 9px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
 .variable-inspector-heading strong { font-size: 14px; }
 .variable-inspector-heading small { padding: 4px 7px; border-radius: 99px; background: #ffffff12; color: #b9cbc5; font-size: 10px; white-space: nowrap; }
+.variable-search { display: grid; grid-template-columns: auto minmax(100px, 1fr); align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #ffffff12; }
+.variable-search span { color: #a9bdb6; font-size: 10px; font-weight: 800; }
+.variable-search input { min-width: 0; padding: 6px 8px; border: 1px solid #5e7d74; border-radius: 6px; background: #0e2e2a; color: white; font-family: var(--mono); font-size: 11px; }
 .variable-table-wrap { max-height: 220px; overflow: auto; }
 .variable-inspector table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .variable-inspector th, .variable-inspector td { padding: 8px 12px; border-bottom: 1px solid #ffffff12; text-align: left; vertical-align: top; }
 .variable-inspector thead th { position: sticky; top: 0; z-index: 1; background: #21483f; color: #9db5ad; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
 .variable-inspector tbody th { color: #f3ca60; font-weight: 800; }
-.variable-inspector td:nth-child(2) { color: #a9c6bc; white-space: nowrap; }
+.variable-inspector td:nth-child(2), .variable-inspector td:nth-child(3) { color: #a9c6bc; white-space: nowrap; }
 .variable-inspector code { color: inherit; font-family: var(--mono); font-size: 11px; overflow-wrap: anywhere; }
 .variable-inspector > p { margin: 0; padding: 9px 13px; color: #91aaa2; font-size: 10px; line-height: 1.45; }
+.trace-player { margin: 0 16px 16px; overflow: hidden; border: 1px solid #d1b654; border-radius: 10px; background: #fff8dd; color: #213c37; }
+.trace-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 13px; border-bottom: 1px solid #dccb8c; background: #f5e7ad; }
+.trace-heading > div:first-child { display: grid; }
+.trace-heading span { color: #836619; font-size: 9px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.trace-heading strong { font-size: 14px; }
+.trace-controls { display: flex; gap: 5px; }
+.trace-controls button { min-height: 31px; padding: 5px 8px; border: 1px solid #baa45c; border-radius: 6px; background: white; color: #4e4938; font-size: 10px; font-weight: 800; cursor: pointer; }
+.trace-controls button:disabled { opacity: .4; cursor: not-allowed; }
+.trace-code-line { display: grid; grid-template-columns: 42px minmax(0, 1fr); background: #102e2b; color: white; }
+.trace-code-line span { display: grid; place-items: center; border-right: 1px solid #3a5751; color: var(--yellow); font-family: var(--mono); font-size: 12px; font-weight: 900; }
+.trace-code-line code { overflow-x: auto; padding: 11px 13px; font-family: var(--mono); font-size: 12px; white-space: pre; }
+.trace-player > p { margin: 0; padding: 9px 12px; color: #665e44; font-size: 11px; line-height: 1.45; }
+.trace-variables { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 5px; padding: 0 11px 11px; }
+.trace-variables div { min-width: 0; display: grid; gap: 2px; padding: 7px 8px; border: 1px solid #dfd1a0; border-radius: 6px; background: white; }
+.trace-variables code { color: #9a5b20; font-family: var(--mono); font-size: 10px; font-weight: 900; }
+.trace-variables span { overflow: hidden; color: #43534f; font-family: var(--mono); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.trace-empty { margin: 0 11px 11px; padding: 9px; border: 1px dashed #cdbd83; border-radius: 6px; color: #70684e; font-size: 10px; text-align: center; }
 .coding-help-drawer { position: absolute; inset: 0 0 0 auto; z-index: 20; width: clamp(500px, 50%, 640px); min-width: 500px; display: flex; flex-direction: column; overflow: hidden; border-left: 1px solid #769087; background: #fffdf8; color: var(--ink); box-shadow: -20px 0 55px #061d1a70; }
 .coding-help-header { flex: 0 0 auto; min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 13px 18px 13px 22px; border-bottom: 1px solid #d5d8d1; background: var(--green-dark); color: white; }
 .coding-help-header > div { display: grid; }
@@ -885,6 +928,40 @@ p, li { text-wrap: pretty; }
 .project-toolbar button:hover, .import-button:hover { border-color: var(--coral); color: var(--coral-dark); }
 .import-button input { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
 .project-toolbar .delete-project-button { color: #9a3f32; }
+.project-toolbar .delete-project-file-button { color: #886219; }
+
+.pygame-page { background: #fffdf8; }
+.pygame-hero { min-height: 390px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(250px, .55fr); align-items: center; gap: 70px; padding: 70px max(5vw, 70px); background: linear-gradient(125deg, #0b2825, #173f3a 62%, #265a4f); color: white; }
+.pygame-hero h1 { max-width: 850px; margin: 14px 0 18px; color: white; font-size: clamp(48px, 6vw, 82px); line-height: .98; letter-spacing: -.045em; }
+.pygame-hero p:last-child { max-width: 780px; margin: 0; color: #c7d9d2; font-size: 20px; line-height: 1.55; }
+.pygame-hero code { color: var(--yellow); font-family: var(--mono); }
+.pygame-hero-note { display: grid; gap: 8px; padding: 25px; border: 1px solid #ffffff33; border-radius: 14px; background: #ffffff0b; }
+.pygame-hero-note strong { color: var(--yellow); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.pygame-hero-note span { color: #e4efeb; font-size: 18px; font-weight: 750; line-height: 1.45; }
+.pygame-lab-section { max-width: 1600px; padding-top: 55px; padding-bottom: 64px; }
+.pygame-workbench { display: grid; grid-template-columns: minmax(430px, .9fr) minmax(550px, 1.1fr); overflow: hidden; border: 1px solid #49665f; border-radius: 15px; background: #102e2b; box-shadow: 0 24px 55px #071f1c42; }
+.pygame-stage-panel { min-width: 0; display: flex; flex-direction: column; background: #0b2623; }
+.pygame-frame-wrap { min-height: 560px; flex: 1; display: grid; padding: 14px; background: #091f1d; }
+.pygame-frame-wrap iframe { width: 100%; height: 100%; min-height: 530px; border: 1px solid #47665e; border-radius: 9px; background: #0b2623; }
+.pygame-console { min-height: 75px; max-height: 150px; margin: 0; overflow: auto; padding: 13px 16px; border-top: 1px solid #34514b; background: #102e2b; color: #b9efcb; font-family: var(--mono); font-size: 11px; line-height: 1.5; white-space: pre-wrap; }
+.pygame-focus-tip { margin: 0; padding: 11px 15px; border-top: 1px solid #34514b; color: #9eb2ab; font-size: 11px; line-height: 1.45; }
+.pygame-focus-tip strong { color: var(--yellow); }
+.pygame-tutorial { padding-top: 55px; padding-bottom: 80px; }
+.pygame-tutorial-heading { max-width: 800px; }
+.pygame-tutorial-heading h2 { margin: 10px 0; font-size: 43px; line-height: 1.1; }
+.pygame-tutorial-heading > p:last-child { color: #5d6c67; font-size: 17px; line-height: 1.55; }
+.pygame-concepts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 30px; }
+.pygame-concepts article { min-width: 0; padding: 20px; border: 1px solid #d4ddd8; border-radius: 12px; background: white; }
+.pygame-concepts article > span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; background: var(--yellow); color: #60490d; font-family: var(--mono); font-size: 12px; font-weight: 900; }
+.pygame-concepts h3 { margin: 13px 0 8px; font-size: 20px; }
+.pygame-concepts code { display: block; overflow-x: auto; padding: 9px 10px; border-radius: 7px; background: #102e2b; color: #b9efcb; font-family: var(--mono); font-size: 11px; white-space: nowrap; }
+.pygame-concepts p { margin: 10px 0 0; color: #596964; font-size: 13px; line-height: 1.5; }
+.pygame-browser-rule { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr); gap: 40px; margin-top: 34px; padding: 28px; border: 1px solid #ddc66e; border-radius: 14px; background: #fff8dc; }
+.pygame-browser-rule strong { color: #574719; font-size: 20px; }
+.pygame-browser-rule p { color: #625e4e; font-size: 14px; line-height: 1.62; }
+.pygame-browser-rule code { font-family: var(--mono); }
+.pygame-browser-rule ol { display: grid; gap: 8px; margin: 0; padding-left: 24px; }
+.pygame-browser-rule li { padding-left: 4px; color: #4e5f59; font-size: 14px; line-height: 1.5; }
 .package-guide { max-width: 1060px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 24px auto 0; }
 .package-guide > div { padding: 18px 20px; border: 1px solid #49665f; border-radius: 10px; background: #153632; }
 .package-guide strong { color: #eef5f0; font-size: 15px; }
@@ -1272,6 +1349,9 @@ p, li { text-wrap: pretty; }
   .lab-section { padding-left: 34px; padding-right: 34px; }
   .code-workbench { grid-template-columns: 1fr; }
   .code-workbench.has-turtle, .code-workbench.has-game { max-width: 1060px; grid-template-columns: 1fr; }
+  .pygame-workbench { grid-template-columns: 1fr; }
+  .pygame-stage-panel { min-height: 620px; }
+  .pygame-concepts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .coding-help-drawer { width: min(720px, 100%); min-width: 0; height: min(760px, 100%); inset: 0 0 auto auto; }
   .editor-panel { border-right: 0; border-bottom: 1px solid #49665f; }
   .task-section { grid-template-columns: 1fr; }
@@ -1351,7 +1431,8 @@ p, li { text-wrap: pretty; }
   .lab-heading { display: flex; align-items: start; }
   .live-badge { display: none; }
   .python-editor, .python-editor-surface, .syntax-layer, .syntax-input, .python-editor.is-tall, .python-editor.is-tall .python-editor-surface, .python-editor.is-tall .syntax-layer, .python-editor.is-tall .syntax-input { min-height: 340px; }
-  .syntax-layer, .syntax-input { padding: 20px 17px; font-size: var(--editor-font-size, 19px); }
+  .syntax-layer, .syntax-input { padding: 20px 17px 20px 58px; font-size: var(--editor-font-size, 19px); }
+  .syntax-gutter { width: 43px; min-height: 340px; padding-top: 20px; font-size: var(--editor-font-size, 19px); }
   .editor-assist-bar { display: grid; }
   .editor-position { min-width: 0; border-right: 0; border-bottom: 1px solid #34514b; }
   .editor-inline-help { align-items: flex-start; flex-wrap: wrap; }
@@ -1368,6 +1449,8 @@ p, li { text-wrap: pretty; }
   .polish-code-change { grid-template-columns: 1fr; }
   .editor-footer > span { display: none; }
   .editor-footer { justify-content: flex-end; }
+  .editor-run-actions { width: 100%; }
+  .editor-run-actions > button { flex: 1 1 120px; justify-content: center; }
   .output-panel pre { min-height: 180px; font-size: 15px; }
   .error-coach { margin: 10px; padding: 16px; }
   .error-coach-heading { display: grid; }
@@ -1549,6 +1632,14 @@ p, li { text-wrap: pretty; }
   .project-toolbar { align-items: stretch; }
   .project-toolbar label:first-child { flex-basis: 100%; }
   .project-toolbar button, .import-button { justify-content: center; flex: 1 1 130px; }
+  .pygame-hero { min-height: 0; grid-template-columns: 1fr; gap: 28px; padding: 54px 22px; }
+  .pygame-hero h1 { font-size: 48px; }
+  .pygame-hero p:last-child { font-size: 17px; }
+  .pygame-lab-section { padding-left: 10px; padding-right: 10px; }
+  .pygame-frame-wrap { min-height: 420px; padding: 8px; }
+  .pygame-frame-wrap iframe { min-height: 400px; }
+  .pygame-concepts { grid-template-columns: 1fr; }
+  .pygame-browser-rule { grid-template-columns: 1fr; gap: 20px; padding: 20px; }
   .package-guide { grid-template-columns: 1fr; }
   .playground-lab { padding-top: 34px; }
   .playground-lab .lab-heading h1 { font-size: 38px; }

@@ -11,6 +11,8 @@ const mathHelp = readFileSync("app/mathHelp.ts", "utf8");
 const challenges = readFileSync("app/challenges.ts", "utf8");
 const examTraining = readFileSync("app/examTraining.ts", "utf8");
 const worker = readFileSync("public/pyodide-worker.mjs", "utf8");
+const pygameRunner = readFileSync("public/pygame-runner.mjs", "utf8");
+const pygameFrame = readFileSync("public/pygame-runner.html", "utf8");
 const workflow = readFileSync("../.github/workflows/deploy-pages.yml", "utf8");
 const desktopMain = readFileSync("desktop/main.mjs", "utf8");
 const desktopBuild = readFileSync("scripts/build-macos.mjs", "utf8");
@@ -369,7 +371,7 @@ test("feildetektiven gjør Python-feil forståelige uten å rette koden", () => 
   assert.match(page, /Vis et tydeligere hint/);
   assert.match(page, /Vis den tekniske Python-feilen/);
   assert.match(page, /Gå til linje/);
-  assert.match(page, /setErrorCoach\(analyzePythonError\(error, code\)\)/);
+  assert.match(page, /setErrorCoach\(analyzePythonError\(error, sourceCode\)\)/);
   assert.match(page, /Endre én liten ting, og kjør koden på nytt/);
   assert.doesNotMatch(page, /setCode\([^)]*(?:replace|fixed|corrected)/);
   const css = readFileSync("app/globals.css", "utf8");
@@ -631,7 +633,7 @@ test("Turtle kan spilles av stegvis uten komprimerte mellombilder", () => {
   assert.match(worker, /_turtle_events/);
   assert.match(worker, /"line" if self\._down else "move"/);
   assert.match(worker, /canvasWidth/);
-  assert.match(worker, /self\.postMessage\(\{ type: "result", output: `\$\{stdout\}\$\{stderr\}`, plots, turtle, game, variables \}\)/);
+  assert.match(worker, /self\.postMessage\(\{ type: "result", output: `\$\{stdout\}\$\{stderr\}`, plots, turtle, game, variables, trace \}\)/);
   assert.match(page, /function renderTurtleFrame/);
   assert.match(page, /function TurtlePlayer/);
   assert.match(page, /Steg \$\{frame\} av \$\{lastFrame\}/);
@@ -710,6 +712,38 @@ test("GitHub Pages-pakken er komplett", () => {
   }
 });
 
+test("Python-editoren har nybegynnervennlige IDE-verktøy", () => {
+  assert.match(page, /className="syntax-gutter"/);
+  assert.match(page, /editorSuggestions/);
+  assert.match(page, /Kjør markert/);
+  assert.match(page, /Følg stegvis/);
+  assert.match(page, /executeCode\(code, "trace"\)/);
+  assert.match(page, /className="project-file-tabs"/);
+  assert.match(page, /function createProjectFile/);
+  assert.match(page, /className="variable-search"/);
+  assert.match(page, /errorLine=\{errorCoach\?\.lineNumber\}/);
+  assert.match(worker, /_skolepython_sys\.settrace\(_skolepython_tracer\)/);
+  assert.match(worker, /\/\\\.py\$\/i\.test/);
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.syntax-gutter/);
+  assert.match(css, /\.is-error-line/);
+  assert.match(css, /\.editor-suggestions/);
+  assert.match(css, /\.trace-player/);
+});
+
+test("Pygame-laben kjører pygame-ce i et eget canvas", () => {
+  assert.match(page, /Pygame-lab/);
+  assert.match(page, /src="\.\/pygame-runner\.html"/);
+  assert.match(page, /pygameStarterCode/);
+  assert.match(page, /await asyncio\.sleep\(0\)/);
+  assert.match(page, /Lagre bilde/);
+  assert.match(pygameFrame, /<canvas id="canvas"/);
+  assert.match(pygameRunner, /loadPackage\("pygame-ce"\)/);
+  assert.match(pygameRunner, /pyodide\.canvas\.setCanvas2D\(canvas\)/);
+  assert.match(pygameRunner, /_skip_unwind_fatal_error = true/);
+  assert.match(offlinePackages, /"pygame-ce"/);
+});
+
 test("Mac-utgaven er offline, ARM64 og kan pakkes for IT", () => {
   assert.match(desktopMain, /Skolepython · Bjørnsveen/);
   assert.match(desktopMain, /smokeTestMode/);
@@ -723,6 +757,8 @@ test("Mac-utgaven er offline, ARM64 og kan pakkes for IT", () => {
   assert.match(desktopMain, /BJORNSVEEN_SMOKE_OK/);
   assert.match(desktopMain, /import numpy as np/);
   assert.match(desktopMain, /import matplotlib\.pyplot as plt/);
+  assert.match(desktopMain, /PYGAME_OFFLINE_OK/);
+  assert.match(desktopMain, /pygame\.display\.set_mode/);
   assert.match(desktopMain, /plotWidth/);
   assert.match(desktopPrepare, /github-dist/);
   assert.match(desktopPrepare, /pyodide/);
@@ -740,4 +776,5 @@ test("Mac-utgaven er offline, ARM64 og kan pakkes for IT", () => {
   assert.match(offlinePackages, /"matplotlib"/);
   assert.match(offlinePackages, /"scikit-learn"/);
   assert.match(offlinePackages, /"shapely"/);
+  assert.match(offlinePackages, /"pygame-ce"/);
 });

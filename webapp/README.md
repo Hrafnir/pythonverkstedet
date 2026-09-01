@@ -14,14 +14,16 @@ Fra Bjørnsveen: digitalt hefte og Python-laboratorium for matematikk på 8.–1
 - lærertips, typiske misforståelser, vurderingsstøtte og utvidelser
 - progresjon lagret lokalt på enheten
 - utskriftsvennlig heftemodus
-- fritt Python-rom med flere lokale prosjekter
+- fritt Python-rom med flere lokale prosjekter og flere `.py`-filer i hvert prosjekt
 - import og eksport av `.py`-filer
 - lokal import av `.txt`- og `.csv`-filer som kan leses med `open`, `csv` eller pandas
 - kopiering av kode som formatert tekst eller bilde
-- støtte for Pyodide-pakker som NumPy, pandas og Matplotlib
+- støtte for Pyodide-pakker som NumPy, pandas, Matplotlib og pygame-ce
+- egen Pygame-lab med spillcanvas, spillbart startpunkt, bildefangst og pedagogisk oppskrift
 - lokal Turtle-tegning for geometri, mønstre, farger og fyll, med stegvis avspilling, variabel hastighet og høyoppløselig canvas
 - Skaperverksted-meny med ekte SVG-eksport i millimeter, farge- og tykkelsesvalg, senterlinje, ytterlinjer og lukket kutteomriss
-- kodeeditor med Tab-innrykk, justerbar skriftstørrelse og fullskjerm
+- kodeeditor med linjenummer, Tab- og automatisk innrykk, kodeforslag, tydelig feilmarkering, justerbar skriftstørrelse og fullskjerm
+- variabelutforsker, kjøring av markerte linjer og enkel stegvis gjennomgang av programmet
 - skrivelab med tydelig skille mellom koden eleven skal skrive, forklaringen og praktiske handlinger
 - strukturert tilbakemelding via brukerens eget e-postprogram; meldinger sendes ikke av appen
 
@@ -54,7 +56,8 @@ Første Python-kjøring laster Pyodide fra jsDelivr. Deretter kjøres elevens ko
 
 Mac-utgaven bygges for Apple Silicon/ARM64 og inneholder Python-motoren og den
 kuraterte skolepakken lokalt. Den blokkerer eksterne nettverksforespørsler og
-lager `.app`, `.dmg` og `.pkg` i `../release/macos-arm64`.
+lager `.app`, `.dmg` og `.pkg` i `../release/macos-arm64`. Pygame og de andre
+annonserte pakkene følger med og kan kjøres uten internett.
 
 ```bash
 npm run desktop:build

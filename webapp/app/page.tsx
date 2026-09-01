@@ -75,6 +75,14 @@ type LocalProject = {
   name: string;
   code: string;
   updatedAt: string;
+  files?: ProjectFile[];
+  activeFileId?: string;
+};
+
+type ProjectFile = {
+  id: string;
+  name: string;
+  code: string;
 };
 
 type PythonDataFile = {
@@ -87,6 +95,14 @@ type PythonVariable = {
   name: string;
   type: string;
   value: string;
+  size?: string;
+  shape?: string;
+};
+
+type PythonTraceStep = {
+  line: number;
+  code: string;
+  variables: PythonVariable[];
 };
 
 type TurtleEvent = {
@@ -2926,6 +2942,46 @@ for tall in range(1, 6):
 
 const playgroundCode = "";
 
+const pygameStarterCode = `import pygame
+import asyncio
+
+pygame.init()
+bredde = 800
+hoyde = 500
+skjerm = pygame.display.set_mode((bredde, hoyde))
+pygame.display.set_caption("Mitt første Pygame-spill")
+
+spiller = pygame.Rect(bredde // 2 - 25, hoyde // 2 - 25, 50, 50)
+fart = 5
+klokke = pygame.time.Clock()
+
+async def spill():
+    kjorer = True
+    while kjorer:
+        for hendelse in pygame.event.get():
+            if hendelse.type == pygame.QUIT:
+                kjorer = False
+
+        taster = pygame.key.get_pressed()
+        if taster[pygame.K_LEFT]:
+            x_flytt = -fart
+        elif taster[pygame.K_RIGHT]:
+            x_flytt = fart
+        else:
+            x_flytt = 0
+
+        spiller.x += x_flytt
+
+        skjerm.fill((244, 241, 233))
+        pygame.draw.rect(skjerm, (240, 111, 81), spiller, border_radius=8)
+        pygame.display.flip()
+        klokke.tick(60)
+        await asyncio.sleep(0)
+
+    pygame.quit()
+
+await spill()`;
+
 const exampleDataFiles: Record<"txt" | "csv", PythonDataFile> = {
   txt: {
     name: "temperaturer.txt",
@@ -2945,6 +3001,34 @@ const firstProject: LocalProject = {
   code: playgroundCode,
   updatedAt: new Date(0).toISOString(),
 };
+
+function projectMainFile(project: LocalProject): ProjectFile {
+  return {
+    id: `${project.id}-main`,
+    name: `${safeProjectName(project.name)}.py`,
+    code: project.code ?? "",
+  };
+}
+
+function normalizeProject(project: LocalProject): LocalProject {
+  const files = project.files?.length
+    ? project.files.map((file) => ({ ...file, name: file.name.toLowerCase().endsWith(".py") ? file.name : `${file.name}.py` }))
+    : [projectMainFile(project)];
+  const activeFileId = files.some((file) => file.id === project.activeFileId) ? project.activeFileId : files[0].id;
+  const activeFile = files.find((file) => file.id === activeFileId) ?? files[0];
+  return { ...project, code: activeFile.code, files, activeFileId };
+}
+
+function activeProjectFile(project: LocalProject) {
+  const normalized = normalizeProject(project);
+  return normalized.files?.find((file) => file.id === normalized.activeFileId) ?? normalized.files?.[0] ?? projectMainFile(project);
+}
+
+function updateActiveProjectFile(project: LocalProject, nextCode: string): LocalProject {
+  const normalized = normalizeProject(project);
+  const files = normalized.files!.map((file) => file.id === normalized.activeFileId ? { ...file, code: nextCode } : file);
+  return { ...normalized, code: nextCode, files, updatedAt: new Date().toISOString() };
+}
 
 function safeProjectName(name: string) {
   return name.trim().replace(/[\\/:*?"<>|]+/g, "-") || "python-prosjekt";
@@ -3239,6 +3323,7 @@ const pythonLibraryCatalog: Record<string, PythonLibraryDefinition> = {
   PIL: { label: "Pillow", availability: "offline", highlightedNames: ["PIL", "Image", "ImageDraw"] },
   networkx: { label: "NetworkX", availability: "offline", highlightedNames: ["networkx", "nx"] },
   shapely: { label: "Shapely", availability: "offline", highlightedNames: ["shapely", "Polygon"] },
+  pygame: { label: "Pygame", availability: "offline", highlightedNames: ["pygame"] },
   turtle: { label: "Turtle", availability: "local", highlightedNames: ["turtle"] },
   spill: { label: "Spill", availability: "local", highlightedNames: ["spill", "Snake"] },
 };
@@ -3295,13 +3380,13 @@ function colorPython(source: string, importedAliases = new Set<string>()): React
   });
 }
 
-function colorPythonLines(source: string) {
+function colorPythonLines(source: string, errorLine?: number) {
   const importedAliases = new Set(analyzePythonImports(source).flatMap((status) => status.available && status.alias ? [status.alias] : []));
   return source.split("\n").map((line, lineIndex) => {
     const leadingSpaces = line.match(/^ */)?.[0].length ?? 0;
     const indentLevels = Math.floor(leadingSpaces / 4);
     return (
-      <span className="syntax-line" key={`${lineIndex}-${line}`}>
+      <span className={`syntax-line ${errorLine === lineIndex + 1 ? "is-error-line" : ""}`} key={`${lineIndex}-${line}`}>
         <span className="indent-guide-layer" aria-hidden="true">
           {Array.from({ length: indentLevels }, (_, level) => (
             <i key={level} style={{ left: `${(level + 1) * 4}ch` }} />
@@ -3430,6 +3515,49 @@ function findPythonBlockSuggestion(value: string, cursor: number): PythonBlockSu
 const pythonPairMap: Record<string, string> = { "(": ")", "[": "]", "{": "}", "\"": "\"", "'": "'" };
 const pythonClosingCharacters = new Set(Object.values(pythonPairMap));
 
+type EditorSuggestion = { label: string; insert: string; detail: string; cursorBack?: number };
+
+const editorSuggestions: EditorSuggestion[] = [
+  { label: "print", insert: "print()", detail: "Vis tekst eller verdier", cursorBack: 1 },
+  { label: "input", insert: "input()", detail: "Spør brukeren om en verdi", cursorBack: 1 },
+  { label: "range", insert: "range()", detail: "Lag en tallfølge til en løkke", cursorBack: 1 },
+  { label: "len", insert: "len()", detail: "Finn antall elementer", cursorBack: 1 },
+  { label: "round", insert: "round(, 2)", detail: "Avrund et tall", cursorBack: 4 },
+  { label: "int", insert: "int()", detail: "Gjør tekst om til heltall", cursorBack: 1 },
+  { label: "float", insert: "float()", detail: "Gjør tekst om til desimaltall", cursorBack: 1 },
+  { label: "str", insert: "str()", detail: "Gjør en verdi om til tekst", cursorBack: 1 },
+  { label: "sum", insert: "sum()", detail: "Legg sammen en liste", cursorBack: 1 },
+  { label: "min", insert: "min()", detail: "Finn minste verdi", cursorBack: 1 },
+  { label: "max", insert: "max()", detail: "Finn største verdi", cursorBack: 1 },
+  { label: "for", insert: "for n in range():\n    ", detail: "Gjenta kode flere ganger", cursorBack: 7 },
+  { label: "while", insert: "while vilkaar:\n    ", detail: "Gjenta så lenge et vilkår er sant", cursorBack: 5 },
+  { label: "if", insert: "if vilkaar:\n    ", detail: "Kjør kode når et vilkår er sant", cursorBack: 5 },
+  { label: "else", insert: "else:\n    ", detail: "Alternativet når if ikke er sant" },
+  { label: "def", insert: "def funksjon():\n    ", detail: "Lag en funksjon", cursorBack: 8 },
+  { label: "return", insert: "return ", detail: "Send en verdi ut av en funksjon" },
+  { label: "import", insert: "import ", detail: "Hent et bibliotek" },
+  { label: "math", insert: "import math", detail: "Kvadratrot, pi og annen matematikk" },
+  { label: "random", insert: "import random", detail: "Tilfeldige tall og valg" },
+  { label: "statistics", insert: "import statistics", detail: "Gjennomsnitt, median og typetall" },
+  { label: "numpy", insert: "import numpy as np", detail: "Regn med mange tall" },
+  { label: "pandas", insert: "import pandas as pd", detail: "Arbeid med tabeller" },
+  { label: "matplotlib", insert: "import matplotlib.pyplot as plt", detail: "Tegn grafer" },
+  { label: "pygame", insert: "import pygame", detail: "Lag 2D-spill i Pygame-laben" },
+];
+
+function suggestionsAtCursor(value: string, cursor: number) {
+  const before = value.slice(0, cursor);
+  const match = before.match(/[A-Za-z_][A-Za-z_0-9]*$/);
+  const word = match?.[0] ?? "";
+  if (word.length < 2) return { word: "", start: cursor, suggestions: [] as EditorSuggestion[] };
+  const normalized = word.toLowerCase();
+  return {
+    word,
+    start: cursor - word.length,
+    suggestions: editorSuggestions.filter((suggestion) => suggestion.label.startsWith(normalized) && suggestion.label !== normalized).slice(0, 5),
+  };
+}
+
 function pythonPairedEnter(value: string, cursor: number) {
   const opening = value[cursor - 1];
   const closing = value[cursor];
@@ -3442,15 +3570,18 @@ function pythonPairedEnter(value: string, cursor: number) {
   };
 }
 
-function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false }: {
+function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false, errorLine, onSelectionChange }: {
   id: string;
   value: string;
   onChange: (value: string) => void;
   describedBy: string;
   fontSize: number;
   tall?: boolean;
+  errorLine?: number;
+  onSelectionChange?: (start: number, end: number, selected: string) => void;
 }) {
   const highlightRef = useRef<HTMLPreElement | null>(null);
+  const gutterRef = useRef<HTMLPreElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [cursor, setCursor] = useState(0);
   const [pendingBlock, setPendingBlock] = useState<{ position: number; indent: string } | null>(null);
@@ -3468,6 +3599,8 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
   const rangePreview = pythonRangePreview(currentLine);
   const lineDiagnostic = pythonLineDiagnostic(currentLine);
   const importStatuses = analyzePythonImports(value);
+  const suggestionData = suggestionsAtCursor(value, cursor);
+  const lineCount = Math.max(1, value.split("\n").length);
   const blockSuggestion = pendingBlock
     ? { ...pendingBlock, hasFollowingNewline: false }
     : findPythonBlockSuggestion(value, cursor);
@@ -3478,8 +3611,16 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
       if (!input) return;
       input.selectionStart = input.selectionEnd = next;
       setCursor(next);
+      onSelectionChange?.(next, next, "");
       input.focus();
     });
+  }
+
+  function reportSelection(input: HTMLTextAreaElement) {
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    setCursor(start);
+    onSelectionChange?.(start, end, input.value.slice(start, end));
   }
 
   function replaceSelection(start: number, end: number, replacement: string, nextCursor = start + replacement.length) {
@@ -3513,6 +3654,13 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
     setPendingBlock(null);
   }
 
+  function acceptSuggestion(suggestion: EditorSuggestion, liveValue = value, liveCursor = cursor) {
+    const match = suggestionsAtCursor(liveValue, liveCursor);
+    if (!match.word) return;
+    const nextCursor = match.start + suggestion.insert.length - (suggestion.cursorBack ?? 0);
+    replaceSelection(match.start, liveCursor, suggestion.insert, nextCursor);
+  }
+
   function handleEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     const input = event.currentTarget;
     const liveValue = input.value;
@@ -3526,6 +3674,19 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
     if (event.key === "Escape" && pendingBlock) {
       event.preventDefault();
       setPendingBlock(null);
+      return;
+    }
+
+    const liveSuggestions = suggestionsAtCursor(liveValue, start);
+    if (event.key === "Tab" && !event.shiftKey && start === end && liveSuggestions.suggestions.length) {
+      event.preventDefault();
+      const suggestion = liveSuggestions.suggestions[0];
+      replaceLiveSelection(
+        suggestion.insert,
+        liveSuggestions.start + suggestion.insert.length - (suggestion.cursorBack ?? 0),
+        liveSuggestions.start,
+        start,
+      );
       return;
     }
 
@@ -3626,7 +3787,12 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
   return (
     <div className={`python-editor ${tall ? "is-tall" : ""}`} style={{ "--editor-font-size": `${fontSize}px` } as CSSProperties}>
       <div className="python-editor-surface">
-        <pre className="syntax-layer" ref={highlightRef} aria-hidden="true">{colorPythonLines(`${value}\n`)}</pre>
+        <pre className="syntax-gutter" ref={gutterRef} aria-hidden="true">
+          {Array.from({ length: lineCount }, (_, index) => (
+            <span className={errorLine === index + 1 ? "is-error-line" : ""} key={index + 1}>{index + 1}</span>
+          ))}
+        </pre>
+        <pre className="syntax-layer" ref={highlightRef} aria-hidden="true">{colorPythonLines(`${value}\n`, errorLine)}</pre>
         <textarea
           ref={inputRef}
           id={id}
@@ -3634,17 +3800,18 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
           value={value}
           onChange={(event) => {
             onChange(event.target.value);
-            setCursor(event.target.selectionStart);
+            reportSelection(event.target);
             setPendingBlock(null);
           }}
           onKeyDown={handleEditorKeyDown}
-          onSelect={(event) => setCursor(event.currentTarget.selectionStart)}
-          onClick={(event) => setCursor(event.currentTarget.selectionStart)}
-          onKeyUp={(event) => setCursor(event.currentTarget.selectionStart)}
+          onSelect={(event) => reportSelection(event.currentTarget)}
+          onClick={(event) => reportSelection(event.currentTarget)}
+          onKeyUp={(event) => reportSelection(event.currentTarget)}
           onScroll={(event) => {
             if (!highlightRef.current) return;
             highlightRef.current.scrollTop = event.currentTarget.scrollTop;
             highlightRef.current.scrollLeft = event.currentTarget.scrollLeft;
+            if (gutterRef.current) gutterRef.current.scrollTop = event.currentTarget.scrollTop;
           }}
           spellCheck={false}
           autoCapitalize="off"
@@ -3652,6 +3819,17 @@ function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false
           aria-describedby={`${describedBy} ${id}-assist`}
         />
       </div>
+      {suggestionData.suggestions.length > 0 && (
+        <div className="editor-suggestions" aria-label="Forslag mens du skriver">
+          <span>Forslag for <code>{suggestionData.word}</code></span>
+          {suggestionData.suggestions.map((suggestion) => (
+            <button type="button" key={suggestion.label} onMouseDown={(event) => event.preventDefault()} onClick={() => acceptSuggestion(suggestion)}>
+              <code>{suggestion.label}</code><small>{suggestion.detail}</small>
+            </button>
+          ))}
+          <small>Trykk Tab for første forslag</small>
+        </div>
+      )}
       {importStatuses.length > 0 && (
         <div className="editor-library-status" aria-label="Biblioteker i programmet" aria-live="polite">
           {importStatuses.map((status) => (
@@ -4372,6 +4550,7 @@ function SnakePlayer({ config, onRestart }: { config: SnakeGameConfig; onRestart
 export default function Home() {
   const [activeId, setActiveId] = useState(1);
   const [playground, setPlayground] = useState(true);
+  const [pygameView, setPygameView] = useState(false);
   const [curriculumView, setCurriculumView] = useState(false);
   const [challengeView, setChallengeView] = useState(false);
   const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null);
@@ -4411,6 +4590,14 @@ export default function Home() {
   const [shareStatus, setShareStatus] = useState("");
   const [plotImages, setPlotImages] = useState<string[]>([]);
   const [pythonVariables, setPythonVariables] = useState<PythonVariable[]>([]);
+  const [variableQuery, setVariableQuery] = useState("");
+  const [editorSelection, setEditorSelection] = useState({ start: 0, end: 0, selected: "" });
+  const [traceSteps, setTraceSteps] = useState<PythonTraceStep[]>([]);
+  const [traceIndex, setTraceIndex] = useState(0);
+  const [pygameCode, setPygameCode] = useState("");
+  const [pygameStatus, setPygameStatus] = useState<"loading" | "ready" | "running" | "error">("loading");
+  const [pygameConsole, setPygameConsole] = useState("Pygame-motoren gjør seg klar …");
+  const [pygameFrameKey, setPygameFrameKey] = useState(0);
   const [expandedPlotIndex, setExpandedPlotIndex] = useState<number | null>(null);
   const [turtleDrawing, setTurtleDrawing] = useState<TurtleDrawing | null>(null);
   const [snakeGame, setSnakeGame] = useState<SnakeGameConfig | null>(null);
@@ -4442,9 +4629,11 @@ export default function Home() {
   const [feedbackSchool, setFeedbackSchool] = useState("");
   const [feedbackName, setFeedbackName] = useState("");
   const workbenchRef = useRef<HTMLDivElement | null>(null);
+  const pygameFrameRef = useRef<HTMLIFrameElement | null>(null);
+  const pendingPygameRunRef = useRef<{ code: string; files: { name: string; content: string }[] } | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const executionRef = useRef<{ code: string; files: { name: string; content: string }[] } | null>(null);
+  const executionRef = useRef<{ code: string; files: { name: string; content: string }[]; mode: "normal" | "selection" | "trace" } | null>(null);
   const inputDialogRef = useRef<HTMLFormElement | null>(null);
   const commandDialogRef = useRef<HTMLElement | null>(null);
   const feedbackDialogRef = useRef<HTMLElement | null>(null);
@@ -4453,6 +4642,8 @@ export default function Home() {
   const runnerBusy = runnerStatus === "loading" || runnerStatus === "running" || runnerStatus === "input";
   const resultIsStale = executedCode !== null && code !== executedCode && !runnerBusy;
   const runButtonLabel = runnerStatus === "loading" ? "Laster Python …" : runnerStatus === "running" ? "Kjører …" : runnerStatus === "input" ? "Venter på svar …" : "Kjør kode";
+  const activeLocalProject = normalizeProject(projects.find((item) => item.id === activeProjectId) ?? projects[0] ?? firstProject);
+  const activeLocalFile = activeProjectFile(activeLocalProject);
 
   const active = useMemo(
     () => modules.find((item) => item.id === activeId) ?? modules[0],
@@ -4566,6 +4757,7 @@ export default function Home() {
     const saved = window.localStorage.getItem("pythonverkstedet-progress");
     const savedMode = window.localStorage.getItem("pythonverkstedet-mode");
     const savedProjects = window.localStorage.getItem("bjornsveen-python-projects");
+    const savedPygameCode = window.localStorage.getItem("skolepython-pygame-code");
     const savedEditorFontSize = Number(window.localStorage.getItem("bjornsveen-editor-font-size"));
     const savedChallengeCodes = window.localStorage.getItem("skolepython-challenge-codes");
     const savedCompletedChallenges = window.localStorage.getItem("skolepython-completed-challenges");
@@ -4575,11 +4767,11 @@ export default function Home() {
     if (savedMode === "teacher") setTeacherMode(true);
     if (savedProjects) {
       try {
-        const parsed = (JSON.parse(savedProjects) as LocalProject[]).map((project) =>
+        const parsed = (JSON.parse(savedProjects) as LocalProject[]).map((project) => normalizeProject(
           project.id === firstProject.id && project.code === legacyPlaygroundCode
             ? { ...project, code: "" }
             : project,
-        );
+        ));
         const previousScratch = parsed.find((project) => project.id === firstProject.id);
         const preservedScratch = previousScratch?.code.trim()
           ? {
@@ -4602,6 +4794,7 @@ export default function Home() {
         window.localStorage.removeItem("bjornsveen-python-projects");
       }
     }
+    if (savedPygameCode) setPygameCode(savedPygameCode);
     if (savedEditorFontSize >= 15 && savedEditorFontSize <= 28) setEditorFontSize(savedEditorFontSize);
     if (savedChallengeCodes) {
       try { setChallengeCodes(JSON.parse(savedChallengeCodes)); } catch { window.localStorage.removeItem("skolepython-challenge-codes"); }
@@ -4625,9 +4818,41 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    function handlePygameMessage(event: MessageEvent) {
+      if (event.source !== pygameFrameRef.current?.contentWindow || event.data?.source !== "skolepython-pygame") return;
+      const type = String(event.data.type ?? "");
+      if (type === "ready") {
+        setPygameStatus("ready");
+        setPygameConsole("Pygame er klar. Skriv kode eller hent startpunktet.");
+        const pending = pendingPygameRunRef.current;
+        if (pending) {
+          pendingPygameRunRef.current = null;
+          setPygameStatus("running");
+          pygameFrameRef.current?.contentWindow?.postMessage({ source: "skolepython", type: "run", ...pending }, "*");
+        }
+      } else if (type === "loading") {
+        setPygameStatus("loading");
+        setPygameConsole(String(event.data.message ?? "Laster Pygame …"));
+      } else if (type === "stdout") {
+        setPygameConsole((current) => `${current === "Kjører Pygame …" ? "" : `${current}\n`}${String(event.data.text ?? "")}`.trim());
+      } else if (type === "result") {
+        setPygameStatus("ready");
+        setPygameConsole((current) => current.trim() || "Programmet ble avsluttet uten utskrift.");
+      } else if (type === "error") {
+        setPygameStatus("error");
+        setPygameConsole(String(event.data.error ?? "Pygame-programmet stoppet."));
+      }
+    }
+    window.addEventListener("message", handlePygameMessage);
+    return () => window.removeEventListener("message", handlePygameMessage);
+  }, [pygameFrameKey]);
+
+  useEffect(() => {
     // Variabelvisningen beskriver alltid den koden som faktisk ble kjørt.
     // Så snart eleven endrer eller henter ny kode, skjules gamle verdier.
     setPythonVariables([]);
+    setTraceSteps([]);
+    setTraceIndex(0);
   }, [code]);
 
   useEffect(() => {
@@ -4799,6 +5024,7 @@ export default function Home() {
 
   function chooseModule(module: Module) {
     setPlayground(false);
+    setPygameView(false);
     setCurriculumView(false);
     setChallengeView(false);
     setExamTrainingView(false);
@@ -4819,11 +5045,12 @@ export default function Home() {
 
   function choosePlayground() {
     setPlayground(true);
+    setPygameView(false);
     setCurriculumView(false);
     setChallengeView(false);
     setExamTrainingView(false);
     const project = projects.find((item) => item.id === activeProjectId) ?? projects[0];
-    setCode(project?.code ?? playgroundCode);
+    setCode(project ? activeProjectFile(project).code : playgroundCode);
     setOutput("Skriv eller endre koden, og trykk «Kjør kode».");
     setFeedback("");
     setErrorCoach(null);
@@ -4836,8 +5063,74 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function choosePygame() {
+    setPlayground(false);
+    setPygameView(true);
+    setCurriculumView(false);
+    setChallengeView(false);
+    setExamTrainingView(false);
+    setErrorCoach(null);
+    setShareStatus("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function updatePygameCode(nextCode: string) {
+    setPygameCode(nextCode);
+    window.localStorage.setItem("skolepython-pygame-code", nextCode);
+  }
+
+  function loadPygameStarter() {
+    if (pygameCode.trim() && !window.confirm("Dette erstatter koden som står i Pygame-editoren. Vil du fortsette?")) return;
+    updatePygameCode(pygameStarterCode);
+    setPygameConsole("Startpunktet er hentet. Les kommentarene, endre én ting og trykk «Start spillet».");
+    requestAnimationFrame(() => document.getElementById("pygame-code")?.focus());
+  }
+
+  function runPygame() {
+    if (!pygameCode.trim()) {
+      setPygameConsole("Editoren er tom. Skriv Pygame-kode eller hent det spillbare startpunktet.");
+      return;
+    }
+    const payload = { code: pygameCode, files: [] as { name: string; content: string }[] };
+    setPygameConsole("Kjører Pygame …");
+    if (pygameStatus === "ready" || pygameStatus === "error") {
+      if (pygameStatus === "error") {
+        pendingPygameRunRef.current = payload;
+        setPygameStatus("loading");
+        setPygameFrameKey((current) => current + 1);
+        return;
+      }
+      setPygameStatus("running");
+      pygameFrameRef.current?.contentWindow?.postMessage({ source: "skolepython", type: "run", ...payload }, "*");
+    } else {
+      pendingPygameRunRef.current = payload;
+      setPygameConsole("Pygame-motoren lastes. Spillet starter automatisk når den er klar …");
+    }
+  }
+
+  function stopPygame() {
+    pendingPygameRunRef.current = null;
+    setPygameStatus("loading");
+    setPygameConsole("Spillet er stoppet. Pygame-flaten nullstilles …");
+    setPygameFrameKey((current) => current + 1);
+  }
+
+  function savePygameImage() {
+    pygameFrameRef.current?.contentWindow?.postMessage({ source: "skolepython", type: "save-image" }, "*");
+  }
+
+  function downloadPygameCode() {
+    const url = URL.createObjectURL(new Blob([pygameCode], { type: "text/x-python;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "pygame-spill.py";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
   function chooseCurriculum() {
     setPlayground(false);
+    setPygameView(false);
     setCurriculumView(true);
     setChallengeView(false);
     setExamTrainingView(false);
@@ -4849,6 +5142,7 @@ export default function Home() {
 
   function chooseChallenges() {
     setPlayground(false);
+    setPygameView(false);
     setCurriculumView(false);
     setChallengeView(true);
     setExamTrainingView(false);
@@ -4866,6 +5160,7 @@ export default function Home() {
 
   function chooseExamTraining() {
     setPlayground(false);
+    setPygameView(false);
     setCurriculumView(false);
     setChallengeView(false);
     setExamTrainingView(true);
@@ -4883,6 +5178,7 @@ export default function Home() {
 
   function openExamTask(task: ExamTask) {
     setPlayground(false);
+    setPygameView(false);
     setCurriculumView(false);
     setChallengeView(false);
     setExamTrainingView(true);
@@ -4913,6 +5209,7 @@ export default function Home() {
   }
 
   function openChallenge(challenge: PythonChallenge) {
+    setPygameView(false);
     setChallengeView(true);
     setSelectedChallengeId(challenge.id);
     setCode(challengeCodes[challenge.id] ?? "");
@@ -4968,7 +5265,7 @@ export default function Home() {
     }
     const nextProjects = projects.map((project) =>
       project.id === activeProjectId
-        ? { ...project, code: nextCode, updatedAt: new Date().toISOString() }
+        ? updateActiveProjectFile(project, nextCode)
         : project,
     );
     setProjects(nextProjects);
@@ -4976,12 +5273,12 @@ export default function Home() {
   }
 
   function openReferenceProject(reference: PlaygroundReference) {
-    const project: LocalProject = {
+    const project = normalizeProject({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: safeProjectName(`Eksempel ${reference.title}`),
       code: reference.example,
       updatedAt: new Date().toISOString(),
-    };
+    });
     const nextProjects = [...projects, project];
     setProjects(nextProjects);
     setActiveProjectId(project.id);
@@ -5086,16 +5383,17 @@ export default function Home() {
 
   function insertCommandExample(command: PythonCommand) {
     if (curriculumView) {
-      const project: LocalProject = {
+      const project = normalizeProject({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         name: safeProjectName(`Eksempel ${command.title.replace(/^[^\p{L}]+/u, "")}`),
         code: command.example,
         updatedAt: new Date().toISOString(),
-      };
+      });
       const nextProjects = [...projects, project];
       setProjects(nextProjects);
       setActiveProjectId(project.id);
       setPlayground(true);
+      setPygameView(false);
       setCurriculumView(false);
       setCode(project.code);
       setOutput(`Eksemplet «${command.title}» er klart. Endre det og kjør når du vil.`);
@@ -5289,9 +5587,12 @@ export default function Home() {
   function selectProject(projectId: string) {
     const project = projects.find((item) => item.id === projectId);
     if (!project) return;
+    const normalized = normalizeProject(project);
+    const nextProjects = projects.map((item) => item.id === projectId ? normalized : item);
+    setProjects(nextProjects);
     setActiveProjectId(projectId);
     setDesktopFilePath("");
-    setCode(project.code);
+    setCode(activeProjectFile(normalized).code);
     setOutput("Prosjektet er åpnet. Trykk «Kjør kode» når du er klar.");
     setErrorCoach(null);
     setPlotImages([]);
@@ -5301,17 +5602,18 @@ export default function Home() {
     setSnakeGame(null);
     setShareStatus("");
     window.localStorage.setItem("bjornsveen-python-active-project", projectId);
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(nextProjects));
   }
 
   function createProject() {
     const name = window.prompt("Hva skal prosjektet hete?", `Nytt prosjekt ${projects.length + 1}`);
     if (!name?.trim()) return;
-    const project: LocalProject = {
+    const project = normalizeProject({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: safeProjectName(name),
       code: "",
       updatedAt: new Date().toISOString(),
-    };
+    });
     const next = [...projects, project];
     setProjects(next);
     setActiveProjectId(project.id);
@@ -5321,6 +5623,92 @@ export default function Home() {
     setErrorCoach(null);
     window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
     window.localStorage.setItem("bjornsveen-python-active-project", project.id);
+  }
+
+  function selectProjectFile(fileId: string) {
+    const project = projects.find((item) => item.id === activeProjectId);
+    if (!project) return;
+    const normalized = normalizeProject(project);
+    const file = normalized.files?.find((item) => item.id === fileId);
+    if (!file) return;
+    const updated = { ...normalized, activeFileId: file.id, code: file.code };
+    const next = projects.map((item) => item.id === project.id ? updated : item);
+    setProjects(next);
+    setCode(file.code);
+    setExecutedCode(null);
+    setOutput(`Filen «${file.name}» er åpnet.`);
+    setErrorCoach(null);
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
+  }
+
+  function createProjectFile() {
+    const project = projects.find((item) => item.id === activeProjectId);
+    if (!project) return;
+    const normalized = normalizeProject(project);
+    const answer = window.prompt("Hva skal Python-filen hete?", `hjelp${normalized.files!.length}.py`);
+    if (!answer?.trim()) return;
+    const baseName = safeProjectName(answer.trim().replace(/\.py$/i, ""));
+    const name = `${baseName}.py`;
+    if (normalized.files!.some((file) => file.name.toLowerCase() === name.toLowerCase())) {
+      setShareStatus(`Prosjektet har allerede en fil som heter «${name}».`);
+      return;
+    }
+    const file: ProjectFile = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name, code: "" };
+    const updated: LocalProject = { ...normalized, files: [...normalized.files!, file], activeFileId: file.id, code: "", updatedAt: new Date().toISOString() };
+    const next = projects.map((item) => item.id === project.id ? updated : item);
+    setProjects(next);
+    setCode("");
+    setExecutedCode(null);
+    setOutput(`«${name}» er opprettet. Filer i samme prosjekt kan importere hverandre.`);
+    setShareStatus("");
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
+  }
+
+  function renameProjectFile() {
+    const project = projects.find((item) => item.id === activeProjectId);
+    if (!project) return;
+    const normalized = normalizeProject(project);
+    const activeFile = activeProjectFile(normalized);
+    const answer = window.prompt("Nytt filnavn:", activeFile.name);
+    if (!answer?.trim()) return;
+    const name = `${safeProjectName(answer.trim().replace(/\.py$/i, ""))}.py`;
+    if (normalized.files!.some((file) => file.id !== activeFile.id && file.name.toLowerCase() === name.toLowerCase())) {
+      setShareStatus(`Prosjektet har allerede en fil som heter «${name}».`);
+      return;
+    }
+    const updated = { ...normalized, files: normalized.files!.map((file) => file.id === activeFile.id ? { ...file, name } : file) };
+    const next = projects.map((item) => item.id === project.id ? updated : item);
+    setProjects(next);
+    setShareStatus(`Filen heter nå «${name}».`);
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
+  }
+
+  function deleteProjectFile() {
+    const project = projects.find((item) => item.id === activeProjectId);
+    if (!project) return;
+    const normalized = normalizeProject(project);
+    if (normalized.files!.length === 1) {
+      setShareStatus("Et prosjekt må ha minst én Python-fil.");
+      return;
+    }
+    const activeFile = activeProjectFile(normalized);
+    if (!window.confirm(`Slette filen «${activeFile.name}» fra prosjektet?`)) return;
+    const files = normalized.files!.filter((file) => file.id !== activeFile.id);
+    const nextFile = files[0];
+    const updated = { ...normalized, files, activeFileId: nextFile.id, code: nextFile.code, updatedAt: new Date().toISOString() };
+    const next = projects.map((item) => item.id === project.id ? updated : item);
+    setProjects(next);
+    setCode(nextFile.code);
+    setExecutedCode(null);
+    setOutput(`«${activeFile.name}» ble slettet. «${nextFile.name}» er åpnet.`);
+    window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
+  }
+
+  function currentProjectFiles() {
+    if (!playground) return [] as { name: string; content: string }[];
+    const project = projects.find((item) => item.id === activeProjectId);
+    if (!project) return [];
+    return normalizeProject(project).files!.map((file) => ({ name: file.name, content: file.id === normalizeProject(project).activeFileId ? code : file.code }));
   }
 
   function renameProject() {
@@ -5343,7 +5731,7 @@ export default function Home() {
     const next = projects.filter((item) => item.id !== activeProjectId);
     setProjects(next);
     setActiveProjectId(next[0].id);
-    setCode(next[0].code);
+    setCode(activeProjectFile(next[0]).code);
     setErrorCoach(null);
     window.localStorage.setItem("bjornsveen-python-projects", JSON.stringify(next));
     window.localStorage.setItem("bjornsveen-python-active-project", next[0].id);
@@ -5351,11 +5739,12 @@ export default function Home() {
 
   function downloadProject() {
     const project = projects.find((item) => item.id === activeProjectId) ?? firstProject;
+    const file = activeProjectFile(project);
     const blob = new Blob([code], { type: "text/x-python;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `${safeProjectName(project.name)}.py`;
+    anchor.download = file.name;
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -5363,12 +5752,12 @@ export default function Home() {
   async function openDesktopProject() {
     const opened = await window.bjornsveenDesktop?.openProject();
     if (!opened) return;
-    const project: LocalProject = {
+    const project = normalizeProject({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: opened.name,
       code: opened.code,
       updatedAt: new Date().toISOString(),
-    };
+    });
     const next = [...projects, project];
     setProjects(next);
     setActiveProjectId(project.id);
@@ -5398,12 +5787,12 @@ export default function Home() {
     const file = event.target.files?.[0];
     if (!file) return;
     const importedCode = await file.text();
-    const project: LocalProject = {
+    const project = normalizeProject({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: safeProjectName(file.name.replace(/\.py$/i, "")),
       code: importedCode,
       updatedAt: new Date().toISOString(),
-    };
+    });
     const next = [...projects, project];
     setProjects(next);
     setActiveProjectId(project.id);
@@ -5869,27 +6258,58 @@ export default function Home() {
       DataFrame: "tabell",
       Series: "kolonne",
     };
+    const normalizedQuery = normalizeCommandSearch(variableQuery);
+    const visibleVariables = pythonVariables.filter((variable) => normalizeCommandSearch(`${variable.name} ${variable.type} ${variable.value}`).includes(normalizedQuery));
     return (
       <section className="variable-inspector" aria-label="Variabler etter kjøring">
         <div className="variable-inspector-heading">
           <div><span>Etter kjøring</span><strong>Dette husker Python nå</strong></div>
           <small>{pythonVariables.length} {pythonVariables.length === 1 ? "variabel" : "variabler"}</small>
         </div>
+        {pythonVariables.length > 5 && (
+          <label className="variable-search"><span>Søk i variablene</span><input type="search" value={variableQuery} onChange={(event) => setVariableQuery(event.target.value)} placeholder="navn, type eller verdi" /></label>
+        )}
         <div className="variable-table-wrap">
           <table>
-            <thead><tr><th>Navn</th><th>Type</th><th>Siste verdi</th></tr></thead>
+            <thead><tr><th>Navn</th><th>Type</th><th>Størrelse</th><th>Siste verdi</th></tr></thead>
             <tbody>
-              {pythonVariables.map((variable) => (
+              {visibleVariables.map((variable) => (
                 <tr key={variable.name}>
                   <th scope="row"><code>{variable.name}</code></th>
                   <td>{typeNames[variable.type] ?? variable.type}</td>
+                  <td>{variable.shape || variable.size || "én verdi"}</td>
                   <td><code>{variable.value}</code></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p>Løkkevariabler viser den siste verdien de fikk. Endre koden og kjør igjen for å se hva som forandrer seg.</p>
+        <p>Størrelse viser antall elementer eller formen på en tabell. Løkkevariabler viser den siste verdien de fikk.</p>
+      </section>
+    );
+  }
+
+  function tracePlayer() {
+    if (!traceSteps.length) return null;
+    const safeIndex = Math.min(traceIndex, traceSteps.length - 1);
+    const step = traceSteps[safeIndex];
+    return (
+      <section className="trace-player" aria-label="Stegvis kjøring">
+        <div className="trace-heading">
+          <div><span>Følg programmet</span><strong>Steg {safeIndex + 1} av {traceSteps.length}</strong></div>
+          <div className="trace-controls">
+            <button type="button" onClick={() => setTraceIndex(0)} disabled={safeIndex === 0}>Første</button>
+            <button type="button" onClick={() => setTraceIndex((current) => Math.max(0, current - 1))} disabled={safeIndex === 0}>← Forrige</button>
+            <button type="button" onClick={() => setTraceIndex((current) => Math.min(traceSteps.length - 1, current + 1))} disabled={safeIndex === traceSteps.length - 1}>Neste →</button>
+          </div>
+        </div>
+        <div className="trace-code-line"><span>{step.line}</span><code>{step.code || "(tom linje)"}</code></div>
+        <p>Python står foran denne linjen. Tabellen viser verdiene som finnes akkurat nå.</p>
+        {step.variables.length ? (
+          <div className="trace-variables">
+            {step.variables.map((variable) => <div key={variable.name}><code>{variable.name}</code><span>{variable.value}</span></div>)}
+          </div>
+        ) : <div className="trace-empty">Ingen egne variabler er laget ennå.</div>}
       </section>
     );
   }
@@ -5940,11 +6360,36 @@ export default function Home() {
     setOutput("Kjøringen ble stoppet mens programmet ventet på et svar.");
   }
 
-  async function runCode() {
+  function runCode() {
+    void executeCode(code, "normal");
+  }
+
+  function runSelectedCode() {
+    const editor = document.getElementById("playground-code") as HTMLTextAreaElement | null;
+    const liveSelection = editor ? editor.value.slice(editor.selectionStart, editor.selectionEnd) : editorSelection.selected;
+    const selected = liveSelection.trim();
+    if (!selected) {
+      setOutput("Marker én eller flere hele kodelinjer først. Deretter kan du kjøre bare det markerte området.");
+      return;
+    }
+    void executeCode(liveSelection, "selection");
+  }
+
+  function runTrace() {
+    if (!code.trim()) {
+      setOutput("Skriv litt kode før du følger den steg for steg.");
+      return;
+    }
+    void executeCode(code, "trace");
+  }
+
+  async function executeCode(sourceCode: string, mode: "normal" | "selection" | "trace") {
     setExecutedCode(code);
     setRunnerStatus("loading");
-    setOutput("Starter Python … Første kjøring kan ta litt tid.");
+    setOutput(mode === "selection" ? "Kjører bare den markerte koden …" : mode === "trace" ? "Python lager en stegvis gjennomgang …" : "Starter Python … Første kjøring kan ta litt tid.");
     setPythonVariables([]);
+    setTraceSteps([]);
+    setTraceIndex(0);
     setErrorCoach(null);
     setFeedback("");
     setPlotImages([]);
@@ -5957,13 +6402,17 @@ export default function Home() {
 
     const worker = makeWorker();
     executionRef.current = {
-      code,
-      files: dataFiles.map(({ name, content }) => ({ name, content })),
+      code: sourceCode,
+      files: [
+        ...dataFiles.map(({ name, content }) => ({ name, content })),
+        ...currentProjectFiles(),
+      ],
+      mode,
     };
     let executionStarted = false;
 
     worker.onmessage = (event) => {
-      const data = event.data as { type: string; output?: string; error?: string; prompt?: string; index?: number; plots?: string[]; turtle?: TurtleDrawing | null; game?: SnakeGameConfig | null; variables?: PythonVariable[] };
+      const data = event.data as { type: string; output?: string; error?: string; prompt?: string; index?: number; plots?: string[]; turtle?: TurtleDrawing | null; game?: SnakeGameConfig | null; variables?: PythonVariable[]; trace?: PythonTraceStep[] };
       if (data.type === "ready") {
         executionStarted = true;
         setRunnerStatus("running");
@@ -6001,6 +6450,8 @@ export default function Home() {
         setOutput(data.output?.trim() || (nextGame ? "Snake-spillet er klart. Trykk Start og bruk piltastene." : nextTurtle ? "Turtle-tegningen kan spilles av steg for steg under." : nextPlots.length ? `${nextPlots.length === 1 ? "Grafen" : `${nextPlots.length} grafer`} vises under.` : "Koden kjørte ferdig uten utskrift."));
         setPlotImages(nextPlots);
         setPythonVariables(data.variables ?? []);
+        setTraceSteps(data.trace ?? []);
+        setTraceIndex(0);
         setTurtleDrawing(nextTurtle);
         setSnakeGame(nextGame);
         worker.terminate();
@@ -6013,7 +6464,7 @@ export default function Home() {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         setRunnerStatus("error");
         const error = data.error || "Python stoppet uten en teknisk feilmelding.";
-        setErrorCoach(analyzePythonError(error, code));
+        setErrorCoach(analyzePythonError(error, sourceCode));
         setPythonVariables([]);
         setOutput("Python trenger litt hjelp før programmet kan kjøre ferdig.");
         worker.terminate();
@@ -6086,9 +6537,10 @@ export default function Home() {
           <label htmlFor="module-select">Velg område</label>
           <select
             id="module-select"
-            value={playground ? "playground" : examTrainingView ? "exam-training" : challengeView ? "challenges" : curriculumView ? "curriculum" : String(active.id)}
+            value={playground ? "playground" : pygameView ? "pygame" : examTrainingView ? "exam-training" : challengeView ? "challenges" : curriculumView ? "curriculum" : String(active.id)}
             onChange={(event) => {
               if (event.target.value === "playground") choosePlayground();
+              else if (event.target.value === "pygame") choosePygame();
               else if (event.target.value === "exam-training") chooseExamTraining();
               else if (event.target.value === "challenges") chooseChallenges();
               else if (event.target.value === "curriculum") chooseCurriculum();
@@ -6096,6 +6548,7 @@ export default function Home() {
             }}
           >
             <option value="playground">Python</option>
+            <option value="pygame">Pygame-lab</option>
             <option value="exam-training">Eksamenstrening</option>
             <option value="challenges">Utfordringer</option>
             <option value="curriculum">Læreplanmål</option>
@@ -6105,7 +6558,7 @@ export default function Home() {
               </option>
             ))}
           </select>
-          <span className="module-position">{playground ? "Python-editor" : examTrainingView ? `${completedExamTasks.length} av ${examTasks.length} eksamensoppgaver` : challengeView ? `${completedChallenges.length} av ${pythonChallenges.length} mestret` : curriculumView ? "MAT01-06" : `${completed.length} av ${modules.length} fullført`}</span>
+          <span className="module-position">{playground ? "Python-editor" : pygameView ? "2D-spill i Python" : examTrainingView ? `${completedExamTasks.length} av ${examTasks.length} eksamensoppgaver` : challengeView ? `${completedChallenges.length} av ${pythonChallenges.length} mestret` : curriculumView ? "MAT01-06" : `${completed.length} av ${modules.length} fullført`}</span>
         </div>
         <nav className="top-actions" aria-label="Verktøy">
           <button className="text-button command-library-button" type="button" onClick={() => openCommandLibrary()} aria-pressed={commandLibraryOpen}>
@@ -6148,12 +6601,12 @@ export default function Home() {
                 <div className="editor-panel">
                   <div className="panel-bar">
                     <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
-                    <strong>{safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py</strong>
+                    <strong>{activeLocalFile.name}</strong>
                     <span className="panel-tools">
                       <button type="button" className="command-help-button" onClick={() => openCommandLibrary()} aria-pressed={commandLibraryOpen}>⌘ Kommandoer</button>
                       <button type="button" className="coding-help-button" onClick={openTutorial} aria-pressed={tutorialOpen}>? Hjelp mens du koder</button>
                       <button type="button" onClick={copyCodeAsText}>Kopier kode + svar</button>
-                      <button type="button" onClick={() => copyCodeAsImage(`${safeProjectName(projects.find((item) => item.id === activeProjectId)?.name ?? "mitt-program")}.py`)}>Bilde av kode + svar</button>
+                      <button type="button" onClick={() => copyCodeAsImage(activeLocalFile.name)}>Bilde av kode + svar</button>
                       <span className="editor-size-controls" aria-label="Skriftstørrelse i kodefeltet">
                         <button type="button" onClick={() => changeEditorFontSize(-2)} disabled={editorFontSize <= 15} aria-label="Mindre kodetekst">A−</button>
                         <output aria-live="polite">{editorFontSize} px</output>
@@ -6161,6 +6614,15 @@ export default function Home() {
                       </span>
                       <button type="button" onClick={toggleEditorFullscreen} aria-pressed={editorFullscreen}>{editorFullscreen ? "Avslutt fullskjerm" : "Fullskjerm"}</button>
                     </span>
+                  </div>
+                  <div className="project-file-tabs" aria-label="Python-filer i prosjektet">
+                    <span>Filer</span>
+                    <div>
+                      {activeLocalProject.files!.map((file) => (
+                        <button type="button" className={file.id === activeLocalProject.activeFileId ? "is-active" : ""} aria-pressed={file.id === activeLocalProject.activeFileId} onClick={() => selectProjectFile(file.id)} key={file.id}>{file.name}</button>
+                      ))}
+                      <button type="button" className="add-project-file" onClick={createProjectFile}>+ Ny fil</button>
+                    </div>
                   </div>
                   {dataFileShelf()}
                   <label htmlFor="playground-code" className="sr-only">Skriv Python-kode</label>
@@ -6171,12 +6633,18 @@ export default function Home() {
                     describedBy="playground-help"
                     fontSize={editorFontSize}
                     tall
+                    errorLine={errorCoach?.lineNumber}
+                    onSelectionChange={(start, end, selected) => setEditorSelection({ start, end, selected })}
                   />
                   <div className="editor-footer" id="playground-help">
-                    <span>Start tomt, eller bruk kodebyggeren under.</span>
-                    <button type="button" className="run-button" onClick={runCode} disabled={runnerBusy}>
-                      <span>▶</span>{runButtonLabel}
-                    </button>
+                    <span>{editorSelection.selected.trim() ? `${editorSelection.selected.split("\n").length} markert${editorSelection.selected.includes("\n") ? "e linjer" : " linje"}` : "Marker kode for å kjøre bare en liten del."}</span>
+                    <div className="editor-run-actions">
+                      <button type="button" className="secondary-run-button" onClick={runSelectedCode} disabled={runnerBusy}>Kjør markert</button>
+                      <button type="button" className="secondary-run-button" onClick={runTrace} disabled={runnerBusy || !code.trim()}>Følg stegvis</button>
+                      <button type="button" className="run-button" onClick={runCode} disabled={runnerBusy}>
+                        <span>▶</span>{runButtonLabel}
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className={`output-panel ${resultIsStale ? "is-stale" : ""}`} aria-live="polite">
@@ -6188,6 +6656,7 @@ export default function Home() {
                   {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                   {plotGallery()}
                   {variableInspector()}
+                  {tracePlayer()}
                   <div className="output-tip"><strong>Neste spørsmål:</strong> Hva kan dere endre for å få et annet resultat?</div>
                 </div>
                 {codingTutorialPanel()}
@@ -6398,7 +6867,7 @@ export default function Home() {
                 <div>
                   <p className="section-label"><span>⌂</span> Lokale prosjekter</p>
                   <h2>Fortsett der dere slapp</h2>
-                  <p>Prosjektene lagres automatisk i nettleseren på denne enheten. Last ned en <code>.py</code>-fil hvis prosjektet skal flyttes eller sikkerhetskopieres.</p>
+                  <p>Et prosjekt kan ha flere <code>.py</code>-filer som importerer hverandre. Alt lagres automatisk i nettleseren på denne enheten.</p>
                 </div>
                 <button type="button" className="new-project-button" onClick={createProject}>+ Nytt prosjekt</button>
               </div>
@@ -6410,11 +6879,13 @@ export default function Home() {
                   </select>
                 </label>
                 <button type="button" onClick={renameProject}>Gi nytt navn</button>
-                <button type="button" onClick={downloadProject}>Last ned .py</button>
+                <button type="button" onClick={renameProjectFile}>Gi fil nytt navn</button>
+                <button type="button" onClick={downloadProject}>Last ned åpen .py</button>
                 <label className="import-button">Importer .py<input type="file" accept=".py,text/x-python" onChange={importProject} /></label>
                 {window.bjornsveenDesktop?.isDesktop && <button type="button" onClick={openDesktopProject}>Åpne fra Mac</button>}
                 {window.bjornsveenDesktop?.isDesktop && <button type="button" onClick={() => saveDesktopProject(false)}>Lagre</button>}
                 {window.bjornsveenDesktop?.isDesktop && <button type="button" onClick={() => saveDesktopProject(true)}>Lagre som …</button>}
+                <button type="button" className="delete-project-file-button" onClick={deleteProjectFile}>Slett åpen fil</button>
                 <button type="button" className="delete-project-button" onClick={deleteProject}>Slett</button>
               </div>
             </section>
@@ -6427,6 +6898,81 @@ export default function Home() {
                 <li><span>2</span><p>Endre bare én ting om gangen.</p></li>
                 <li><span>3</span><p>Forklar hva endringen gjorde – og hvorfor.</p></li>
               </ol>
+            </section>
+          </article>
+        )}
+
+        {pygameView && (
+          <article className="lesson pygame-page">
+            <section className="pygame-hero">
+              <div>
+                <p className="section-label inverse"><span>▣</span> Pygame-lab</p>
+                <h1>Lag et spill som faktisk kan spilles</h1>
+                <p>Skriv vanlig <code>pygame</code>-kode, kjør den i spillflaten og styr med tastaturet. Hele spillet kjører lokalt på enheten.</p>
+              </div>
+              <div className="pygame-hero-note"><strong>Arbeidsmåte</strong><span>Bygg én bevegelse, én regel og én utfordring om gangen.</span></div>
+            </section>
+
+            <section className="content-section pygame-lab-section">
+              <div className="pygame-workbench">
+                <div className="editor-panel">
+                  <div className="panel-bar">
+                    <span><i className="dot coral" /><i className="dot cream" /><i className="dot green" /></span>
+                    <strong>pygame-spill.py</strong>
+                    <span className="panel-tools">
+                      <button type="button" onClick={loadPygameStarter}>Hent spillbart startpunkt</button>
+                      <button type="button" onClick={downloadPygameCode}>Last ned .py</button>
+                    </span>
+                  </div>
+                  <label htmlFor="pygame-code" className="sr-only">Skriv Pygame-kode</label>
+                  <PythonEditor id="pygame-code" value={pygameCode} onChange={updatePygameCode} describedBy="pygame-editor-help" fontSize={editorFontSize} tall />
+                  <div className="editor-footer pygame-editor-footer" id="pygame-editor-help">
+                    <span>Koden lagres automatisk på denne enheten.</span>
+                    <div className="editor-run-actions">
+                      <button type="button" className="secondary-run-button" onClick={stopPygame}>■ Stopp og nullstill</button>
+                      <button type="button" className="run-button" onClick={runPygame} disabled={pygameStatus === "running"}><span>▶</span>{pygameStatus === "running" ? "Spillet kjører" : "Start spillet"}</button>
+                    </div>
+                  </div>
+                </div>
+                <section className="pygame-stage-panel" aria-label="Pygame-resultat">
+                  <div className="panel-bar output-bar">
+                    <strong>Spillflate</strong>
+                    <span className="panel-tools">
+                      <button type="button" onClick={savePygameImage}>Lagre bilde</button>
+                      <button type="button" onClick={() => pygameFrameRef.current?.requestFullscreen()}>Fullskjerm</button>
+                      <i className={`status-dot ${pygameStatus}`} />
+                    </span>
+                  </div>
+                  <div className="pygame-frame-wrap">
+                    <iframe key={pygameFrameKey} ref={pygameFrameRef} src="./pygame-runner.html" title="Pygame-spillflate" allow="autoplay" />
+                  </div>
+                  <pre className="pygame-console" aria-live="polite">{pygameConsole}</pre>
+                  <p className="pygame-focus-tip"><strong>For å styre:</strong> Klikk i spillflaten først. Deretter virker piltaster og andre taster i spillet.</p>
+                </section>
+              </div>
+            </section>
+
+            <section className="content-section pygame-tutorial">
+              <div className="pygame-tutorial-heading">
+                <p className="section-label"><span>01</span> Oppskriften</p>
+                <h2>Fire deler finnes i nesten alle spill</h2>
+                <p>Startpunktet viser alt samlet. Her er hva dere skal lete etter og endre.</p>
+              </div>
+              <div className="pygame-concepts">
+                <article><span>1</span><h3>Start Pygame</h3><code>pygame.init()</code><p>Gjør spillverktøyene klare før dere lager vinduet.</p></article>
+                <article><span>2</span><h3>Lag spillflaten</h3><code>pygame.display.set_mode((800, 500))</code><p>De to tallene er bredde og høyde i bildepunkter.</p></article>
+                <article><span>3</span><h3>Les hendelser og taster</h3><code>pygame.key.get_pressed()</code><p>Programmet undersøker hvilke taster spilleren holder inne akkurat nå.</p></article>
+                <article><span>4</span><h3>Tegn neste bilde</h3><code>pygame.display.flip()</code><p>Viser det nye bildet etter at bakgrunn og figurer er tegnet.</p></article>
+              </div>
+              <div className="pygame-browser-rule">
+                <div><strong>Hvorfor står det <code>await asyncio.sleep(0)</code>?</strong><p>Et vanlig skrivebordsprogram kan eie spillvinduet hele tiden. I nettleseren må Pygame slippe nettleseren til mellom bildene, ellers fryser siden. Linjen endrer ikke spillreglene; den gir nettleseren tid til å vise bildet og lese tastene.</p></div>
+                <ol>
+                  <li>Endre fargen i <code>pygame.draw.rect</code>.</li>
+                  <li>Legg til opp- og nedbevegelse med <code>K_UP</code> og <code>K_DOWN</code>.</li>
+                  <li>Lag en vegg: Hva skal skje hvis <code>spiller.x &lt; 0</code>?</li>
+                  <li>Lag et mål og undersøk kollisjon med <code>spiller.colliderect(maal)</code>.</li>
+                </ol>
+              </div>
             </section>
           </article>
         )}
@@ -6617,7 +7163,7 @@ export default function Home() {
                       </span>
                     </div>
                     <label htmlFor="exam-code" className="sr-only">Skriv løsningen på eksamensoppgaven</label>
-                    <PythonEditor id="exam-code" value={code} onChange={updateCode} describedBy="exam-editor-help" fontSize={editorFontSize} tall />
+                    <PythonEditor id="exam-code" value={code} onChange={updateCode} describedBy="exam-editor-help" fontSize={editorFontSize} tall errorLine={errorCoach?.lineNumber} />
                     <div className="editor-footer challenge-editor-footer" id="exam-editor-help">
                       <button type="button" className="challenge-scaffold-button" onClick={() => loadExamStarter(activeExamTask)}>Hent startpunkt</button>
                       <span>Forsøket lagres lokalt på denne enheten.</span>
@@ -6630,6 +7176,7 @@ export default function Home() {
                     {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                     {plotGallery()}
                     {variableInspector()}
+                    {tracePlayer()}
                     <div className="output-tip"><strong>Eksamenstanke:</strong> Stemmer svaret med enheten, situasjonen og overslaget ditt?</div>
                   </div>
                   {codingTutorialPanel()}
@@ -6842,7 +7389,7 @@ export default function Home() {
                       </span>
                     </div>
                     <label htmlFor="challenge-code" className="sr-only">Skriv løsningen på utfordringen</label>
-                    <PythonEditor id="challenge-code" value={code} onChange={updateCode} describedBy="challenge-editor-help" fontSize={editorFontSize} tall />
+                    <PythonEditor id="challenge-code" value={code} onChange={updateCode} describedBy="challenge-editor-help" fontSize={editorFontSize} tall errorLine={errorCoach?.lineNumber} />
                     <div className="editor-footer challenge-editor-footer" id="challenge-editor-help">
                       <button type="button" className="challenge-scaffold-button" onClick={() => loadChallengeScaffold(activeChallenge)}>Hent startpunkt</button>
                       <span>Forsøket lagres lokalt på denne enheten.</span>
@@ -6857,6 +7404,7 @@ export default function Home() {
                     {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                     {plotGallery()}
                     {variableInspector()}
+                    {tracePlayer()}
                     <div className="output-tip"><strong>Observer:</strong> Stemte resultatet med det du trodde før du kjørte?</div>
                   </div>
                   {codingTutorialPanel()}
@@ -7036,7 +7584,7 @@ export default function Home() {
           </article>
         )}
 
-        {!playground && !curriculumView && !challengeView && !examTrainingView && (
+        {!playground && !pygameView && !curriculumView && !challengeView && !examTrainingView && (
         <article className="lesson">
           <section className="lesson-hero">
             <div className="hero-copy">
@@ -7258,6 +7806,7 @@ export default function Home() {
                   onChange={updateCode}
                   describedBy="editor-help"
                   fontSize={editorFontSize}
+                  errorLine={errorCoach?.lineNumber}
                 />
                 <div className="editor-footer" id="editor-help">
                   <span>{labTab === "practice" ? "Skriv én linje om gangen. Feil er en del av øvingen." : "Du kan endre alt i fasiten."}</span>
@@ -7276,6 +7825,7 @@ export default function Home() {
                 {errorCoach ? errorCoachPanel() : <pre>{output}</pre>}
                 {plotGallery()}
                 {variableInspector()}
+                {tracePlayer()}
                 <div className="output-tip"><strong>Observer:</strong> Stemmer resultatet med det du forventet?</div>
               </div>
               {codingTutorialPanel()}

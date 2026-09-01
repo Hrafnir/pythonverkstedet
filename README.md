@@ -90,12 +90,14 @@ Vi bør vente med brukerkontoer, elevdata, KI-funksjoner og en full kodeeditor t
 
 En førsteversjon av **Bjørnsveen Pythonverksted** ligger i mappen [`webapp`](webapp). Den inneholder:
 
-- seks moduler som følger mønsteret problemstilling → teori → prøv → observer → oppgave
+- ti moduler som følger mønsteret problemstilling → teori → prøv → observer → oppgave
 - en Python-motor som kjører elevens kode lokalt i nettleseren
 - sikkerhetsstopp for programmer som ikke avsluttes
-- et fritt Python-rom med lokale prosjekter, `.py`-import og eksport
+- et fritt Python-rom med lokale prosjekter, flere filer, `.py`-import og eksport
+- linjenummer, kodeforslag, feilmarkering, variabelutforsker, markert kjøring og stegvis kjøring
+- en egen Pygame-lab med lokalt spillcanvas og pedagogisk startpunkt
 - deling av kode som formatert tekst eller bilde
-- støtte for blant annet NumPy, pandas og Matplotlib i nettleseren
+- støtte for blant annet NumPy, pandas, Matplotlib og pygame-ce i nettleseren
 - elevmodus og lærermodus
 - lærertips, typiske misforståelser, vurderingsstøtte og utvidelsesoppgaver
 - lokal progresjon uten elevkonto eller innsending av elevdata

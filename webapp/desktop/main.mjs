@@ -136,7 +136,38 @@ async function createWindow() {
       if (!inputAfter.includes(`INPUT_ETTER ${inputState.random} offline`)) {
         throw new Error(`input() mistet Python-tilstanden. Før: ${inputState.value}. Etter: ${inputAfter}`);
       }
-      process.stdout.write("BJORNSVEEN_SMOKE_OK: offline-pakker, matplotlib og input-tilstand\n");
+      process.stdout.write("BJORNSVEEN_SMOKE_STAGE: input-tilstand\n");
+
+      await mainWindow.webContents.executeJavaScript(`
+        (() => {
+          const select = document.querySelector('#module-select');
+          select.value = 'pygame';
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        })()
+      `);
+      await waitFor("Boolean(document.querySelector('#pygame-code'))", 15000);
+      await waitFor("document.querySelector('.pygame-console')?.textContent?.includes('Pygame er klar')", 120000);
+      await mainWindow.webContents.executeJavaScript(`
+        (() => {
+          const editor = document.querySelector('#pygame-code');
+          const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+          setter.call(editor, 'import pygame\\nimport asyncio\\n\\npygame.init()\\nskjerm = pygame.display.set_mode((320, 200))\\nfor bilde in range(3):\\n    skjerm.fill((20, 40, 55))\\n    pygame.draw.rect(skjerm, (244, 111, 78), (40 + bilde * 20, 60, 80, 60))\\n    pygame.display.flip()\\n    await asyncio.sleep(0)\\nprint("PYGAME_OFFLINE_OK", pygame.version.ver)');
+          editor.dispatchEvent(new Event('input', { bubbles: true }));
+          document.querySelector('.pygame-editor-footer .run-button').click();
+        })()
+      `);
+      const pygameResult = await waitFor(`
+        (() => {
+          const value = document.querySelector('.pygame-console')?.textContent || '';
+          return value.includes('PYGAME_OFFLINE_OK')
+            ? value
+            : value.includes('Traceback') || value.includes('Error')
+              ? 'FEIL:' + value
+              : '';
+        })()
+      `, 120000);
+      if (pygameResult.startsWith('FEIL:')) throw new Error(pygameResult);
+      process.stdout.write("BJORNSVEEN_SMOKE_OK: offline-pakker, matplotlib, input-tilstand og Pygame\n");
       app.exit(0);
     } catch (error) {
       process.stderr.write(`BJORNSVEEN_SMOKE_FAILED: ${error.message}\n`);

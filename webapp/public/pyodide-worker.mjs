@@ -56,6 +56,7 @@ self.onmessage = async (event) => {
   const pyodide = await pyodideReady;
   const code = event.data.code;
   const files = Array.isArray(event.data.files) ? event.data.files : [];
+  const mode = event.data.mode === "trace" ? "trace" : event.data.mode === "selection" ? "selection" : "normal";
   let stdout = "";
   let stderr = "";
   let inputIndex = 0;
@@ -98,13 +99,18 @@ if hasattr(_skolepython_builtins, "_skolepython_original_input"):
     pyodide.FS.chdir("/home/pyodide");
     for (const file of files) {
       const name = String(file?.name ?? "").replace(/\\/g, "/").split("/").at(-1);
-      if (!name || !/\.(?:txt|csv)$/i.test(name) || typeof file?.content !== "string") continue;
+      if (!name || !/\.(?:txt|csv|py)$/i.test(name) || typeof file?.content !== "string") continue;
       pyodide.FS.writeFile(name, file.content, { encoding: "utf8" });
     }
     const usesGame = /(?:^|\n)\s*(?:from\s+spill\s+import|import\s+spill\b)/.test(code);
-    const packageCode = usesGame
-      ? code.replace(/^\s*(?:from\s+spill\s+import.*|import\s+spill(?:\s+as\s+\w+)?\s*)$/gm, "")
-      : code;
+    const localModules = new Set(files
+      .map((file) => String(file?.name ?? "").replace(/\\/g, "/").split("/").at(-1))
+      .filter((name) => /\.py$/i.test(name ?? ""))
+      .map((name) => name.replace(/\.py$/i, "")));
+    const packageCode = code.split("\n").filter((line) => {
+      const importName = line.trim().match(/^(?:from|import)\s+([A-Za-z_]\w*)/)?.[1];
+      return importName !== "spill" && !localModules.has(importName);
+    }).join("\n");
     await pyodide.loadPackagesFromImports(packageCode);
     stdout = "";
     stderr = "";
@@ -531,7 +537,59 @@ plt.show = _bjornsveen_show
     // utskrift fra sitt eget program og eventuelle figurer.
     stdout = "";
     stderr = "";
-    await pyodide.runPythonAsync(code, { globals });
+    if (mode === "trace") {
+      await pyodide.runPythonAsync(`
+import sys as _skolepython_sys
+import types as _skolepython_types
+
+_skolepython_trace = []
+
+def _skolepython_trace_value(value):
+    value_type = type(value).__name__
+    try:
+        display = repr(value)
+    except Exception:
+        display = f"<{value_type}>"
+    if len(display) > 90:
+        display = display[:87] + "..."
+    return {"name": "", "type": value_type, "value": display}
+
+def _skolepython_tracer(frame, event, arg):
+    if event != "line" or frame.f_code.co_filename != "<exec>" or len(_skolepython_trace) >= 160:
+        return _skolepython_tracer
+    values = []
+    for name, value in list(frame.f_locals.items()):
+        if name.startswith("_") or isinstance(value, _skolepython_types.ModuleType) or callable(value):
+            continue
+        item = _skolepython_trace_value(value)
+        item["name"] = name
+        values.append(item)
+        if len(values) >= 16:
+            break
+    _skolepython_trace.append({"line": frame.f_lineno, "variables": values})
+    return _skolepython_tracer
+
+_skolepython_sys.settrace(_skolepython_tracer)
+`, { globals });
+    }
+    try {
+      await pyodide.runPythonAsync(code, { globals });
+    } finally {
+      if (mode === "trace") await pyodide.runPythonAsync("_skolepython_sys.settrace(None)", { globals });
+    }
+    let trace = [];
+    if (mode === "trace") try {
+      const encodedTrace = await pyodide.runPythonAsync(`
+import json as _skolepython_trace_json
+_skolepython_trace_json.dumps(_skolepython_trace, ensure_ascii=False)
+`, { globals });
+      trace = JSON.parse(encodedTrace).map((step) => ({
+        ...step,
+        code: code.split("\n")[Math.max(0, Number(step.line) - 1)] ?? "",
+      }));
+    } catch {
+      trace = [];
+    }
     let turtle = null;
     if (usesTurtle) try {
       const encodedTurtle = await pyodide.runPythonAsync(`
@@ -624,10 +682,23 @@ for _skolepython_name, _skolepython_value in list(globals().items()):
         _skolepython_display = f"<{_skolepython_type}>"
     if len(_skolepython_display) > 140:
         _skolepython_display = _skolepython_display[:137] + "..."
+    _skolepython_size = None
+    _skolepython_shape = None
+    try:
+        _skolepython_size = str(len(_skolepython_value))
+    except Exception:
+        pass
+    try:
+        if hasattr(_skolepython_value, "shape"):
+            _skolepython_shape = " × ".join(str(part) for part in _skolepython_value.shape)
+    except Exception:
+        pass
     _skolepython_variables.append({
         "name": _skolepython_name,
         "type": _skolepython_type,
         "value": _skolepython_display,
+        "size": _skolepython_size,
+        "shape": _skolepython_shape,
     })
 
 _skolepython_json.dumps(_skolepython_variables[:30], ensure_ascii=False)
@@ -637,7 +708,7 @@ _skolepython_json.dumps(_skolepython_variables[:30], ensure_ascii=False)
       variables = [];
     }
     await releaseGlobals();
-    self.postMessage({ type: "result", output: `${stdout}${stderr}`, plots, turtle, game, variables });
+    self.postMessage({ type: "result", output: `${stdout}${stderr}`, plots, turtle, game, variables, trace });
   } catch (error) {
     const message = String(error?.message ?? error);
     await releaseGlobals();
