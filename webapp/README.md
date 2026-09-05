@@ -1,6 +1,12 @@
-# Skolepython 0.17.0
+# Skolepython 0.17.1
 
 Fra Bjørnsveen: Python-arbeidsflate og læringshefte for matematikk på 8.–10. trinn.
+
+## Editorrettelse i 0.17.1
+
+Markør, tekstlag og linjenummer bruker samme linjehøyde, også ved endret skriftstørrelse og rulling. Feilmarkeringen flytter ikke teksten.
+
+Kodeforslag vises ved markøren med svak forhåndsvisning av resten av ordet. **Tab/Enter** bruker forslaget, **↑/↓** velger og **Esc** lukker. **Ctrl+Space** åpner forslag manuelt. Fullføring tar hensyn til lokale variabler/funksjoner, kjente bibliotekimporter og aliaser, og enkle liste-/tekstvariabler. Den lokale katalogen omfatter vanlige skolekommandoer; dette er ikke PyCharms komplette Python-analyse. Forslag vises ikke inne i kommentarer eller tekststrenger.
 
 ## Arbeidsflyt
 

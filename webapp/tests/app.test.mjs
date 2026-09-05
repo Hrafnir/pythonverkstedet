@@ -368,6 +368,8 @@ test("feilhjelpen gir konkrete neste steg for indeks, null og import", () => {
 test("parentespar får riktig innrykk og posisjon", () => {
   assert.deepEqual(pythonPairedEnter('data = {}',8),{insertion:'\n    \n',nextCursor:13});
   assert.equal(pythonPairedEnter('tekst = ""',9),null);
+  assert.equal(pythonPairedEnter('print(5)',8),null);
+  assert.equal(pythonPairedEnter('tall = 5',8),null);
 });
 
 test('ett hjelpesøk finner løkke, graf og fil med norske ord', async()=>{
@@ -377,4 +379,22 @@ test('ett hjelpesøk finner løkke, graf og fil med norske ord', async()=>{
   assert.equal(topics.filter(t=>t.kind==='Kommando').length,143);
   assert.ok(!searchHelp('').some(t=>t.advanced));
   assert.ok(searchHelp('heapq').length);
+});
+
+test('kodefullføring følger markør, importer og egne navn',async()=>{
+  const {suggestionsAtCursor,completionEdit}=await import('../app/lib/editorHelp.ts');
+  const suggest=code=>suggestionsAtCursor(code,code.length).suggestions;
+  assert.equal(suggest('pr')[0].label,'print');
+  assert.deepEqual(completionEdit('pr',2,suggest('pr')[0]),{value:'print()',cursor:6});
+  assert.deepEqual(completionEdit('print(5)',2,suggest('pr')[0]),{value:'print(5)',cursor:5});
+  assert.equal(suggest('import random\nrandom.')[0].label,'randint');
+  assert.equal(suggest('import random as r\nr.ra')[0].label,'randint');
+  assert.equal(suggest('import numpy as np\nnp.lin')[0].label,'linspace');
+  assert.equal(suggest('import ra')[0].insert,'random');
+  assert.equal(suggest('from random import ra')[0].insert,'randint');
+  assert.equal(suggest('pris = 800\npr')[0].label,'pris');
+  assert.equal(suggest('def doble(tall):\n    return tall*2\ndo')[0].label,'doble');
+  assert.equal(suggest('tall = []\ntall.ap')[0].label,'append');
+  assert.equal(suggest('tekst = "hei"\ntekst.up')[0].label,'upper');
+  for(const code of ['# pr','print("pr',"tekst = '''\npr",'ukjent.ra'])assert.deepEqual(suggest(code),[],code);
 });

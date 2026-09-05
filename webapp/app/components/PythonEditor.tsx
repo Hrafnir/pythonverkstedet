@@ -1,5 +1,5 @@
 import type { EditorSuggestion } from "../lib/editorHelp";
-import { pythonRangePreview, pythonLineDiagnostic, startsPythonBlockWithoutColon, findPythonBlockSuggestion, suggestionsAtCursor, pythonPairedEnter, pythonPairMap, pythonClosingCharacters } from "../lib/editorHelp";
+import { pythonRangePreview, pythonLineDiagnostic, startsPythonBlockWithoutColon, findPythonBlockSuggestion, suggestionsAtCursor, completionEdit, pythonPairedEnter, pythonPairMap, pythonClosingCharacters } from "../lib/editorHelp";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode, CSSProperties, KeyboardEvent } from "react";
 import { pythonCodeOnly } from "../lib/pythonSource";
@@ -48,6 +48,14 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
   onSelectionChange?: (start: number, end: number, selected: string) => void;
 }) {
   const escapeTabRef = useRef(false);
+  const [focused,setFocused] = useState(false);
+  const [selectedCompletion,setSelectedCompletion] = useState(0);
+  const [dismissed,setDismissed] = useState(false);
+  const [explicitCompletion,setExplicitCompletion] = useState(false);
+  const [hasSelection,setHasSelection] = useState(false);
+  const [caret,setCaret] = useState({x:0,y:0,lineHeight:0,width:0,height:0});
+  const composing = useRef(false);
+
   const highlightRef = useRef<HTMLPreElement | null>(null);
   const gutterRef = useRef<HTMLPreElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -68,11 +76,44 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
   const rangePreview = pythonRangePreview(maskedLine);
   const lineDiagnostic = pythonLineDiagnostic(maskedLine);
   const importStatuses = analyzePythonImports(value);
-  const suggestionData = suggestionsAtCursor(value, cursor);
+  const suggestionData = suggestionsAtCursor(value, cursor, explicitCompletion);
+  const completionOpen = focused && !hasSelection && !dismissed && !composing.current && suggestionData.suggestions.length > 0;
+  const activeCompletion = Math.min(selectedCompletion,Math.max(0,suggestionData.suggestions.length-1));
+  const suggested = suggestionData.suggestions[activeCompletion];
+  const ghost = completionOpen && suggestionData.end===cursor && !value.slice(cursor).split("\n")[0].trim() ? suggested?.label.slice(suggestionData.word.length) : "";
+  const menuWidth=Math.min(330,Math.max(0,caret.width-16));
+  const roomBelow=caret.height-caret.y-caret.lineHeight-6;
+  const menuAbove=roomBelow<Math.min(150,suggestionData.suggestions.length*32+28) && caret.y>roomBelow;
+  const menuHeight=Math.min(270,Math.max(0,menuAbove?caret.y-6:roomBelow));
+  const menuLeft=Math.max(8,Math.min(caret.x,caret.width-menuWidth-8));
+
   const lineCount = Math.max(1, value.split("\n").length);
   const blockSuggestion = pendingBlock
     ? { ...pendingBlock, hasFollowingNewline: false }
     : findPythonBlockSuggestion(value, cursor);
+
+  function updateCaret() {
+    const input=inputRef.current;
+    if(!input)return;
+    const style=getComputedStyle(input);
+    const before=input.value.slice(0,input.selectionStart);
+    const lines=before.split("\n");
+    let column=0;
+    const expanded=lines.at(-1)!.replace(/\t|[^\t]/gu, c=>{if(c!=="\t"){column++;return c;}const n=4-column%4;column+=n;return " ".repeat(n);});
+    const context=document.createElement("canvas").getContext("2d")!;
+    context.font=`${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    const lineHeight=parseFloat(style.lineHeight);
+    setCaret({x:parseFloat(style.paddingLeft)+context.measureText(expanded).width-input.scrollLeft,y:parseFloat(style.paddingTop)+(lines.length-1)*lineHeight-input.scrollTop,lineHeight,width:input.clientWidth,height:input.clientHeight});
+  }
+  useLayoutEffect(()=>{updateCaret();},[value,cursor,fontSize,focused]);
+  useEffect(()=>{
+    const input=inputRef.current;if(!input)return;
+    const resize=new ResizeObserver(updateCaret);resize.observe(input);return()=>resize.disconnect();
+  },[]);
+  useEffect(()=>{setSelectedCompletion(0);},[suggestionData.word,suggestionData.start]);
+  useEffect(()=>{
+    if(completionOpen)document.getElementById(`${id}-completion-${activeCompletion}`)?.scrollIntoView({block:"nearest"});
+  },[activeCompletion,completionOpen,id]);
 
   const pendingCursor = useRef<number | null>(null);
   useLayoutEffect(() => {
@@ -95,6 +136,7 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
     const start = input.selectionStart;
     const end = input.selectionEnd;
     setCursor(start);
+    setHasSelection(start!==end);
     onSelectionChange?.(start, end, input.value.slice(start, end));
   }
 
@@ -130,10 +172,10 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
   }
 
   function acceptSuggestion(suggestion: EditorSuggestion, liveValue = value, liveCursor = cursor) {
-    const match = suggestionsAtCursor(liveValue, liveCursor);
-    if (!match.word) return;
-    const nextCursor = match.start + suggestion.insert.length - (suggestion.cursorBack ?? 0);
-    replaceSelection(match.start, liveCursor, suggestion.insert, nextCursor);
+    const edit=completionEdit(liveValue,liveCursor,suggestion);
+    onChange(edit.value);
+    moveCursor(edit.cursor);
+    setDismissed(true);setExplicitCompletion(false);setPendingBlock(null);
   }
 
   function handleEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -155,18 +197,20 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
       return;
     }
 
-    const liveSuggestions = suggestionsAtCursor(liveValue, start);
-    if (event.key === "Tab" && !event.shiftKey && start === end && liveSuggestions.suggestions.length) {
-      event.preventDefault();
-      const suggestion = liveSuggestions.suggestions[0];
-      replaceLiveSelection(
-        suggestion.insert,
-        liveSuggestions.start + suggestion.insert.length - (suggestion.cursorBack ?? 0),
-        liveSuggestions.start,
-        start,
-      );
-      return;
+    if(composing.current || event.nativeEvent.isComposing)return;
+    if(event.ctrlKey && event.code==="Space"){
+      event.preventDefault();setExplicitCompletion(true);setDismissed(false);setSelectedCompletion(0);return;
     }
+    if(completionOpen && !event.metaKey && !event.ctrlKey && !event.altKey){
+      if(event.key==="Escape") {event.preventDefault();event.stopPropagation();setDismissed(true);setExplicitCompletion(false);return;}
+      if(event.key==="ArrowDown" || event.key==="ArrowUp"){
+        event.preventDefault();setSelectedCompletion((activeCompletion+(event.key==="ArrowDown"?1:-1)+suggestionData.suggestions.length)%suggestionData.suggestions.length);return;
+      }
+      if((event.key==="Tab"||event.key==="Enter")&&!event.shiftKey){
+        event.preventDefault();acceptSuggestion(suggestionData.suggestions[activeCompletion],liveValue,start);return;
+      }
+    }
+    if(["ArrowLeft","ArrowRight","Home","End"].includes(event.key)){setDismissed(true);setExplicitCompletion(false);}
 
     if (event.key === "Enter" && !event.shiftKey && !event.metaKey && !event.ctrlKey && start === end) {
       event.preventDefault();
@@ -278,16 +322,24 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
           value={value}
           onChange={(event) => {
             pendingCursor.current = null;
+            setDismissed(false);setExplicitCompletion(false);setSelectedCompletion(0);
             onChange(event.target.value);
             reportSelection(event.target);
             setPendingBlock(null);
           }}
           onKeyDown={handleEditorKeyDown}
-          onBlur={(event) => reportSelection(event.currentTarget)}
+          onFocus={()=>{setFocused(true);updateCaret();}}
+          onBlur={(event) => {setFocused(false);reportSelection(event.currentTarget);}}
+          onCompositionStart={()=>{composing.current=true;setDismissed(true);}}
+          onCompositionEnd={()=>{composing.current=false;setDismissed(false);}}
+          aria-autocomplete="both"
+          aria-controls={completionOpen?`${id}-completions`:undefined}
+          aria-activedescendant={completionOpen?`${id}-completion-${activeCompletion}`:undefined}
           onSelect={(event) => reportSelection(event.currentTarget)}
           onClick={(event) => reportSelection(event.currentTarget)}
           onKeyUp={(event) => reportSelection(event.currentTarget)}
           onScroll={(event) => {
+            updateCaret();
             if (!highlightRef.current) return;
             highlightRef.current.scrollTop = event.currentTarget.scrollTop;
             highlightRef.current.scrollLeft = event.currentTarget.scrollLeft;
@@ -298,18 +350,16 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
           autoCorrect="off"
           aria-describedby={`${describedBy} ${id}-assist`}
         />
-      </div>
-      {suggestionData.suggestions.length > 0 && (
-        <div className="editor-suggestions" aria-label="Forslag mens du skriver">
-          <span>Forslag for <code>{suggestionData.word}</code></span>
-          {suggestionData.suggestions.map((suggestion) => (
-            <button type="button" key={suggestion.label} onMouseDown={(event) => event.preventDefault()} onClick={() => acceptSuggestion(suggestion)}>
+        {ghost && caret.x>=0 && caret.y>=0 && caret.y<caret.height && <span className="completion-ghost" aria-hidden="true" style={{left:caret.x,top:caret.y,lineHeight:`${caret.lineHeight}px`}}>{ghost}</span>}
+        {completionOpen && caret.y>=0 && caret.y<caret.height && menuHeight>45 && <div className="editor-suggestions completion-popup" style={{left:menuLeft,width:menuWidth,maxHeight:menuHeight,...(menuAbove?{bottom:caret.height-caret.y+4}:{top:caret.y+caret.lineHeight+4})}}>
+          <div role="listbox" id={`${id}-completions`} aria-label="Kodeforslag">
+            {suggestionData.suggestions.map((suggestion,index)=><button type="button" role="option" aria-selected={activeCompletion===index} id={`${id}-completion-${index}`} tabIndex={-1} key={suggestion.label} onMouseDown={event=>event.preventDefault()} onClick={()=>acceptSuggestion(suggestion)}>
               <code>{suggestion.label}</code><small>{suggestion.detail}</small>
-            </button>
-          ))}
-          <small>Trykk Tab for første forslag</small>
-        </div>
-      )}
+            </button>)}
+          </div>
+          <small className="completion-shortcuts">↑↓ velg · Tab/Enter bruk · Esc lukk</small>
+        </div>}
+      </div>
       {importStatuses.length > 0 && (
         <div className="editor-library-status" aria-label="Biblioteker i programmet" aria-live="polite">
           {importStatuses.map((status) => (

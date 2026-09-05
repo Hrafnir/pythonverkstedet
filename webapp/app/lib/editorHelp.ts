@@ -146,23 +146,77 @@ const editorSuggestions: EditorSuggestion[] = [
   { label: "pygame", insert: "import pygame", detail: "Lag 2D-spill i Pygame-laben" },
 ];
 
-export function suggestionsAtCursor(value: string, cursor: number) {
-  const before = value.slice(0, cursor);
-  const match = before.match(/[A-Za-z_][A-Za-z_0-9]*$/);
-  const word = match?.[0] ?? "";
-  if (word.length < 2) return { word: "", start: cursor, suggestions: [] as EditorSuggestion[] };
-  const normalized = word.toLowerCase();
-  return {
-    word,
-    start: cursor - word.length,
-    suggestions: editorSuggestions.filter((suggestion) => suggestion.label.startsWith(normalized) && suggestion.label !== normalized).slice(0, 5),
-  };
+const moduleMembers: Record<string, EditorSuggestion[]> = {
+  random: [
+    {label:"randint",insert:"randint()",cursorBack:1,detail:"Tilfeldig heltall, inkludert begge grensene"},
+    {label:"choice",insert:"choice()",cursorBack:1,detail:"Velg et tilfeldig element fra en liste"},
+    {label:"random",insert:"random()",cursorBack:1,detail:"Tilfeldig desimaltall fra 0 til 1"},
+    {label:"shuffle",insert:"shuffle()",cursorBack:1,detail:"Bland rekkefølgen i en liste"},
+    {label:"uniform",insert:"uniform()",cursorBack:1,detail:"Tilfeldig desimaltall mellom to grenser"},
+  ],
+  math: ["sqrt", "sin", "cos", "tan", "radians", "degrees", "hypot", "ceil", "floor"].map(label=>({label,insert:`${label}()`,cursorBack:1,detail:"Matematikkfunksjon"})).concat([{label:"pi",insert:"pi",cursorBack:0,detail:"Tallet π"}]),
+  statistics: ["mean", "median", "multimode", "stdev", "pstdev", "quantiles"].map(label=>({label,insert:`${label}()`,cursorBack:1,detail:"Statistikk for en talliste"})),
+  numpy: ["array", "linspace", "arange", "mean", "sum", "zeros", "sqrt"].map(label=>({label,insert:`${label}()`,cursorBack:1,detail:"NumPy"})),
+  "matplotlib.pyplot": ["plot", "show", "scatter", "xlabel", "ylabel", "title", "grid", "legend", "subplots", "hist"].map(label=>({label,insert:`${label}()`,cursorBack:1,detail:"Tegn og tilpass en graf"})),
+  pandas: ["DataFrame", "read_csv", "Series"].map(label=>({label,insert:`${label}()`,cursorBack:1,detail:"Arbeid med tabeller"})),
+  turtle: ["forward", "backward", "left", "right", "color", "pensize", "penup", "pendown", "done"].map(label=>({label,insert:`${label}()`,cursorBack:1,detail:"Turtle-tegning"})),
+};
+const modulesForImport = ["random","math","statistics","csv","turtle","numpy","pandas","matplotlib.pyplot","pygame","spill"];
+
+/** Small local completion catalog, plus names declared above the caret. No code is executed. */
+export function suggestionsAtCursor(value: string, cursor: number, explicit = false) {
+  cursor = Math.max(0,Math.min(cursor,value.length));
+  const empty = {word:"",start:cursor,end:cursor,suggestions:[] as EditorSuggestion[]};
+  const before = value.slice(0,cursor);
+  if(!pythonCodeOnly(before+"X").endsWith("X")) return empty;
+  const masked = pythonCodeOnly(before);
+  const word = before.match(/[\p{L}_][\p{L}\p{N}_]*$/u)?.[0] ?? "";
+  const start = cursor-word.length;
+  const end = cursor+(value.slice(cursor).match(/^[\p{L}\p{N}_]*/u)?.[0].length ?? 0);
+  const line = masked.slice(masked.lastIndexOf("\n")+1);
+  const aliases = new Map<string,string>();
+  for(const match of masked.matchAll(/\bimport\s+([\w.]+)(?:\s+as\s+(\w+))?/g)) aliases.set(match[2]||match[1],match[1]);
+  for(const match of masked.matchAll(/\bfrom\s+([\w.]+)\s+import\s+(\w+)(?:\s+as\s+(\w+))?/g)) aliases.set(match[3]||match[2],`${match[1]}.${match[2]}`);
+  const receiver=before.slice(0,start).match(/([\p{L}_][\p{L}\p{N}_.]*)\.$/u)?.[1];
+  let candidates: EditorSuggestion[];
+  if(receiver){
+    const library=aliases.get(receiver)||receiver;
+    candidates=moduleMembers[library]??[];
+    // Offer methods only for simple assignments whose type is clear in the source.
+    const definition=[...before.slice(0,start).matchAll(/^\s*([\p{L}_][\p{L}\p{N}_]*)\s*=\s*(.+)$/gmu)].reverse().find(m=>m[1]===receiver);
+    if(definition?.[2].startsWith("[")) candidates=["append","extend","pop","sort","reverse","count","index"].map(label=>({label,insert:`${label}()`,cursorBack:1,detail:`Listemetode på ${receiver}`}));
+    else if(/^['"]/.test(definition?.[2]??"")) candidates=["lower","upper","strip","split","replace","startswith","endswith"].map(label=>({label,insert:`${label}()`,cursorBack:1,detail:`Tekstmetode på ${receiver}`}));
+  }else if(/^\s*(?:import|from)\s+[\w.]*$/.test(line)){
+    candidates=modulesForImport.map(label=>({label,insert:label,detail:"Importer bibliotek"}));
+  }else if(/^\s*from\s+([\w.]+)\s+import\s+\w*$/.test(line)){
+    const library=line.match(/^\s*from\s+([\w.]+)/)![1];
+    candidates=(moduleMembers[library]??[]).map(t=>({...t,insert:t.label,cursorBack:0}));
+  }else{
+    if(!explicit&&word.length<2)return empty;
+    if(/\b(?:def|class)\s+[\w]*$/.test(line))return empty;
+    const local:EditorSuggestion[]=[];
+    for(const m of masked.slice(0,start).matchAll(/(?:^|\n)\s*(?:def\s+([\p{L}_][\p{L}\p{N}_]*)\s*\(|(?:for\s+)?([\p{L}_][\p{L}\p{N}_]*)\s*(?:=(?!=)|\bin\b))/gu)){
+      const name=m[1]||m[2];local.push({label:name,insert:m[1]?`${name}()`:name,cursorBack:m[1]?1:0,detail:m[1]?"Funksjon i programmet":"Variabel i programmet"});
+    }
+    for(const [name] of aliases) local.push({label:name,insert:name,detail:"Importert navn"});
+    candidates=[...local,...editorSuggestions.filter(t=>!modulesForImport.includes(t.label))];
+  }
+  const unique=new Map<string,EditorSuggestion>();
+  for(const t of candidates)if(t.label.startsWith(word)&&t.label!==word&&!unique.has(t.label))unique.set(t.label,t);
+  return {word,start,end,suggestions:[...unique.values()].slice(0,8)};
+}
+
+export function completionEdit(value:string,cursor:number,suggestion:EditorSuggestion) {
+  const match=suggestionsAtCursor(value,cursor,true);
+  let insert=suggestion.insert, back=suggestion.cursorBack??0;
+  if(value[match.end]==="("&&insert.startsWith(suggestion.label+"(")){insert=suggestion.label;back=0;}
+  return {value:value.slice(0,match.start)+insert+value.slice(match.end),cursor:match.start+insert.length-back};
 }
 
 export function pythonPairedEnter(value: string, cursor: number) {
   const opening = value[cursor - 1];
   const closing = value[cursor];
-  if (!opening || pythonPairMap[opening] !== closing || opening === "\"" || opening === "'") return null;
+  if (!opening || !pythonPairMap[opening] || pythonPairMap[opening] !== closing || opening === "\"" || opening === "'") return null;
   const lineStart = value.lastIndexOf("\n", Math.max(0, cursor - 1)) + 1;
   const indent = value.slice(lineStart, cursor).match(/^\s*/)?.[0] ?? "";
   return {
