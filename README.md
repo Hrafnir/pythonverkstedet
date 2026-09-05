@@ -6,6 +6,12 @@ Dette prosjektet er et arbeidsgrunnlag for et kort, praktisk hefte for matematik
 
 GitHub Pages-adressen fungerer fortsatt som inngang: [hrafnir.github.io/pythonverkstedet](https://hrafnir.github.io/pythonverkstedet/).
 
+## Oppdatert arbeidsflate · 0.17.0
+
+Den lokale appen åpner direkte i kode med fast kjøring, stopp og resultatfelt. **Kode / Lær / Øv / Lærer** gir kortere navigasjon, og én samlet hjelp erstatter de separate oppslagsflatene. Alle ti moduler bruker Forstå → Forutsi → Prøv → Forklar → Oppgave. Utkast og eksempeldata bevares lokalt, og oppgavesjekker er tydelig merket som veiledning.
+
+Se [brukerveiledningen](hefte/02-bruk-arbeidsflaten.md) og [utvikling og tester](webapp/README.md). Nettadressen over viser den publiserte utgaven; lokale endringer må publiseres separat.
+
 ## Hva som er nytt fra 1. august 2026
 
 Den reviderte læreplanen **MAT01-06** erstatter MAT01-05. De eksisterende programmeringsmålene på 8., 9. og 10. trinn er videreført. Det nye, konkrete målet etter 10. trinn er at eleven skal kunne:

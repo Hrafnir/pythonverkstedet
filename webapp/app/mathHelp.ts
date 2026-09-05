@@ -94,14 +94,14 @@ print("Variasjonsbredde:", max(poeng) - min(poeng))`,
     intro: "To datasett kan ha samme gjennomsnitt, men svært ulik spredning. Variasjonsbredde er størst minus minst. Kvartiler deler sorterte data i fire, og standardavvik måler typisk avstand fra gjennomsnittet.",
     steps: [
       "max(tall) - min(tall) gir variasjonsbredden.",
-      "statistics.quantiles(tall, n=4) gir tre kvartilgrenser.",
+      'statistics.quantiles(tall, n=4, method="inclusive") gir tre kvartilgrenser. Dette er samme metode som standarden i numpy.percentile.',
       "statistics.pstdev brukes når listen er hele datasettet du undersøker.",
       "statistics.stdev brukes når listen er et utvalg fra en større gruppe.",
     ],
     example: `import statistics
 
 tall = [3, 5, 6, 7, 7, 8, 10, 14]
-kvartiler = statistics.quantiles(tall, n=4)
+kvartiler = statistics.quantiles(tall, n=4, method="inclusive")
 
 print("Variasjonsbredde:", max(tall) - min(tall))
 print("Nedre kvartil:", kvartiler[0])
@@ -184,7 +184,7 @@ print("f(x):", y)
 print("Gjennomsnitt:", np.mean(y))
 print("Median:", np.median(y))
 print("Standardavvik:", round(np.std(y), 2))`,
-    notice: "En vanlig Python-liste ganger seg selv ved liste * 2. Et NumPy-array ganger derimot hver tallverdi med 2.",
+    notice: "Innholdet i en vanlig Python-liste gjentas to ganger ved liste * 2. Et NumPy-array ganger derimot hver tallverdi med 2.",
     challenge: "Bytt funksjonen til y = 2 * x + 5. Finn minste og største y-verdi og tegn serien med Matplotlib.",
   },
   {

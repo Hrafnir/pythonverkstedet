@@ -1,4 +1,4 @@
-import { mathLibraryCommands } from "./mathCommands";
+import { mathLibraryCommands } from "./mathCommands.ts";
 
 export const commandCategories = [
   "Alle",
@@ -1086,7 +1086,7 @@ export const pythonCommands: PythonCommand[] = [
     syntax: "open(\"fil.txt\", \"w\")",
     title: "w åpner en fil for skriving",
     summary: "Skrivemodus w lager en ny fil eller erstatter innholdet i en eksisterende fil.",
-    explanation: "Bruk fil.write(tekst) i with-blokken. I nettleseren ligger filen i det midlertidige Python-miljøet til den eventuelt lastes ned.",
+    explanation: "Bruk fil.write(tekst) i with-blokken. I Skolepython er filen midlertidig og forsvinner når kjøringen avsluttes. Les og skriv ut innholdet i samme kjøring; bruk «Last ned .py» for å lagre selve programmet.",
     example: "with open(\"svar.txt\", \"w\", encoding=\"utf-8\") as fil:\n    fil.write(\"Resultat: 42\\n\")",
     commonMistake: "w overskriver gammelt innhold. Bruk a hvis du vil legge til bakerst.",
     keywords: ["skriv fil", "lag tekstfil", "lagre tekst", "write", "overskriv", "fil ut"],
@@ -1141,7 +1141,7 @@ export const pythonCommands: PythonCommand[] = [
     title: "xlabel, ylabel og title navngir grafen",
     summary: "Kommandoene gir x-aksen, y-aksen og hele grafen tydelige titler.",
     explanation: "På vurderinger bør aksetitlene også ha enheter når det er relevant, for eksempel Tid (timer) og Pris (kr).",
-    example: "plt.xlabel(\"Tid (timer)\")\nplt.ylabel(\"Pris (kr)\")\nplt.title(\"Pris for leie\")",
+    example: "import matplotlib.pyplot as plt\n\nx = [0, 1, 2, 3]\ny = [0, 1, 4, 9]\nplt.plot(x, y)\nplt.xlabel(\"Tid (timer)\")\nplt.ylabel(\"Pris (kr)\")\nplt.title(\"Pris for leie\")\nplt.show()",
     keywords: ["aksetittel", "navn på akse", "x akse", "y akse", "graf tittel", "enhet", "eksamen"],
   },
   {
@@ -1151,7 +1151,7 @@ export const pythonCommands: PythonCommand[] = [
     title: "xlim og ylim bestemmer grafutsnittet",
     summary: "Grensene bestemmer hvilke x- og y-verdier koordinatsystemet viser.",
     explanation: "Velg et utsnitt som viser de viktige punktene uten store tomme områder. Utsnittet endrer ikke funksjonen, bare visningen.",
-    example: "plt.xlim(-5, 5)\nplt.ylim(-10, 20)",
+    example: "import matplotlib.pyplot as plt\n\nx = [0, 1, 2, 3]\ny = [0, 1, 4, 9]\nplt.plot(x, y)\nplt.xlim(-5, 5)\nplt.ylim(-10, 20)\nplt.show()",
     keywords: ["aksegrenser", "graf utsnitt", "målestokk", "zoom", "x min maks", "y min maks"],
   },
   {
@@ -1161,7 +1161,7 @@ export const pythonCommands: PythonCommand[] = [
     title: "set_aspect bestemmer forholdet mellom aksene",
     summary: "Akseforhold 1 gjør én x-enhet og én y-enhet like lange på arket.",
     explanation: "Bruk \"auto\" når grafen skal fylle plassen. Bruk 1 når geometriske former og stigning skal vises med lik fysisk målestokk på aksene.",
-    example: "fig, ax = plt.subplots()\nax.set_aspect(1, adjustable=\"box\")",
+    example: "import matplotlib.pyplot as plt\n\nx = [0, 1, 2, 3]\ny = [0, 1, 4, 9]\nplt.plot(x, y)\nfig, ax = plt.subplots()\nax.set_aspect(1, adjustable=\"box\")\nplt.show()",
     keywords: ["akseforhold", "forhold mellom aksene", "like enheter", "målestokk", "aspect", "eksamen"],
   },
   {
@@ -1190,8 +1190,8 @@ export const pythonCommands: PythonCommand[] = [
     syntax: "plt.savefig(\"graf.png\", dpi=300)",
     title: "savefig lagrer grafen som bilde",
     summary: "savefig lager en PNG-, SVG- eller PDF-fil av figuren.",
-    explanation: "Filtypen bestemmes av slutten på filnavnet. Kall gjerne savefig før show. I Skolepython kan grafen også lagres med knappen ved resultatet.",
-    example: "plt.tight_layout()\nplt.savefig(\"graf.png\", dpi=300)\nplt.show()",
+    explanation: "Filtypen bestemmes av slutten på filnavnet. Kall gjerne savefig før show. Filen ligger midlertidig i Python. For å laste ned grafen på enheten bruker du «Lagre bilde» ved resultatet.",
+    example: "import matplotlib.pyplot as plt\n\nx = [0, 1, 2, 3]\ny = [0, 1, 4, 9]\nplt.plot(x, y)\nplt.tight_layout()\nplt.savefig(\"graf.png\", dpi=300)\nplt.show()",
     keywords: ["lagre graf", "last ned bilde", "png", "svg", "eksporter", "save figure"],
   },
   {

@@ -1,5 +1,7 @@
 # Modul 1: Les og forklar Python-kode
 
+Dette lærerheftet brukes sammen med [den oppdaterte arbeidsflaten](02-bruk-arbeidsflaten.md). I appen finner du stoffet under Lær → Variabler, med egne steg for forutsigelse, utprøving og forklaring.
+
 ## Målet med modulen
 
 Etter denne modulen skal læreren og eleven kunne:

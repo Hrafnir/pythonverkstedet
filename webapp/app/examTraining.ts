@@ -1,3 +1,4 @@
+import { pythonCodeOnly } from "./lib/pythonSource.ts";
 export const examLevels = ["Alle", "Grunnleggende", "Sammensatt", "Utforskende"] as const;
 export type ExamLevel = (typeof examLevels)[number];
 
@@ -57,10 +58,7 @@ export type ExamTask = {
 };
 
 export function evaluateExamAttempt(task: ExamTask, code: string, output: string) {
-  const executableCode = code
-    .split("\n")
-    .map((line) => line.replace(/#.*$/, ""))
-    .join("\n");
+  const executableCode = pythonCodeOnly(code);
   const compactCode = executableCode.toLocaleLowerCase("nb").replace(/\s+/g, "");
   const normalizedOutput = output.toLocaleLowerCase("nb");
   const hasCodePart = (part: string) => compactCode.includes(part.toLocaleLowerCase("nb").replace(/\s+/g, ""));
@@ -81,8 +79,8 @@ export function evaluateExamAttempt(task: ExamTask, code: string, output: string
 
   if (requiredPassed) {
     results.push(missingAdvice
-      ? "✓ Oppgaven er faglig løst. Trekantene er forbedringsråd som kan gjøre besvarelsen tydeligere eller mer robust."
-      : "✓ Koden viser viktige deler av løsningen. Nå må du også kunne forklare valgene og vurdere svaret.");
+      ? "△ Sjekken fant de forventede sporene. Dette beviser ikke at oppgaven er løst. Test med nye verdier og forklar valgene."
+      : "△ Sjekken fant forventede spor. Prøv testtilfellene; forklar også hvorfor løsningen virker.");
   } else {
     results.push("○ Ett eller flere nødvendige krav mangler ennå. En annen framgangsmåte kan likevel være riktig – sammenlign resultatet med oppgaveteksten.");
   }

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 async function openPython(page) {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Skriv og kjør" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Skriv Python-kode" })).toBeVisible();
   return {
     editor: page.getByRole("textbox", { name: "Skriv Python-kode" }),
     output: page.locator(".output-panel:visible"),
@@ -26,7 +26,7 @@ print("Etter svar:", tall)
 print(navn, "blir", alder + 1, "år neste år.")`);
 
   await expect(page.getByRole("dialog", { name: "Skriv et svar til Python" })).toBeVisible();
-  const before = await output.locator("pre").textContent();
+  const before = await output.locator(".console-output").textContent();
   const firstRandom = before.match(/Før svar:\s*([0-9.]+)/)?.[1];
   expect(firstRandom).toBeTruthy();
 
@@ -44,9 +44,9 @@ print(navn, "blir", alder + 1, "år neste år.")`);
   await expect(page.getByText("Hvor gammel er du?", { exact: true })).toBeVisible();
   await page.getByRole("textbox", { name: "Svaret ditt" }).fill("14");
   await page.getByRole("button", { name: "Send svaret til Python →" }).click();
-  await expect(output.locator("pre")).toContainText("Ada blir 15 år neste år.");
+  await expect(output.locator(".console-output")).toContainText("Ada blir 15 år neste år.");
 
-  const completed = await output.locator("pre").textContent();
+  const completed = await output.locator(".console-output").textContent();
   expect(completed).toContain(`Etter svar: ${firstRandom}`);
 
   await editor.fill('print("Koden er endret")');
@@ -57,7 +57,7 @@ print(navn, "blir", alder + 1, "år neste år.")`);
   await expect(answer).toBeFocused();
   await answer.press("Escape");
   await expect(page.getByRole("dialog", { name: "Skriv et svar til Python" })).toBeHidden();
-  await expect(output.locator("pre")).toContainText("Kjøringen ble stoppet");
+  await expect(output.locator(".console-output")).toContainText("Kjøringen ble stoppet");
 });
 
 test("standardbibliotek, datafiler og alle annonserte pakker kjører", async ({ page }) => {
@@ -84,8 +84,9 @@ nett = nx.path_graph(4)
 figur = Polygon([(0, 0), (2, 0), (2, 1), (0, 1)])
 
 print("PAKKER_OK", math.sqrt(81), statistics.mean([2, 4, 6]), int(tabell["tall"].sum()), round(linje.slope), sp.solve(x - 5)[0], round(modell.predict([[4]])[0]), bilde.size[0], nx.shortest_path_length(nett, 0, 3), figur.area)`);
-  await expect(output.locator("pre")).toContainText("PAKKER_OK 9.0 4 6 2 5 8 12 3 2.0");
+  await expect(output.locator(".console-output")).toContainText("PAKKER_OK 9.0 4 6 2 5 8 12 3 2.0");
 
+  await page.getByRole("button", { name: /^Filer/ }).click();
   await page.getByRole("button", { name: "Bruk eksempel .txt" }).click();
   await page.getByRole("button", { name: "Bruk eksempel .csv" }).click();
   await runCode(page, editor, run, `import csv
@@ -97,7 +98,7 @@ with open("maalinger.csv", encoding="utf-8-sig", newline="") as fil:
     rader = list(csv.DictReader(fil, delimiter=";"))
 
 print("FILER_OK", sum(temperaturer), rader[-1]["dag"], rader[-1]["temperatur"])`);
-  await expect(output.locator("pre")).toContainText("FILER_OK 65 fredag 13");
+  await expect(output.locator(".console-output")).toContainText("FILER_OK 65 fredag 13");
 });
 
 test("Matplotlib, Pillow, Turtle, SVG-verktøy og Snake gir interaktive resultater", async ({ page }) => {
@@ -112,7 +113,7 @@ plt.imshow(bilde)
 plt.axis("off")
 plt.show()
 print("BILDE_OK")`);
-  await expect(output.locator("pre")).toContainText("BILDE_OK");
+  await expect(output.locator(".console-output")).toContainText("BILDE_OK");
   await expect(output.locator(".plot-card img")).toBeVisible();
   await expect(output.getByRole("button", { name: "Lagre bilde" })).toBeVisible();
 
@@ -191,39 +192,30 @@ test("editorhjelp og modale vinduer fungerer med tastatur", async ({ page }) => 
   expect(editorMetrics.tokenSize).toBe(editorMetrics.inputSize);
   expect(editorMetrics.tokenSpacing).toBe(editorMetrics.inputSpacing);
 
-  const commands = page.locator(".top-actions").getByRole("button", { name: "Kommandoer", exact: true });
-  await commands.click();
-  await expect(page.getByRole("dialog", { name: "Kommandobibliotek" })).toBeVisible();
+  await page.locator(".header-actions").getByRole("button", {name:"? Hjelp"}).click();
+  await expect(page.getByRole("searchbox")).toBeFocused();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Kommandobibliotek" })).toBeHidden();
-
+  await expect(page.locator(".help-panel")).toBeHidden();
+  await expect(editor).toBeFocused();
+  await page.getByLabel("Appmeny").click();
   await page.getByRole("button", { name: "Gi tilbakemelding" }).click();
   await expect(page.getByRole("dialog", { name: "Gi tilbakemelding" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Gi tilbakemelding" })).toBeHidden();
 });
 
-test("matematikkhjelpen er søkbar og gir kjørbare oppskrifter", async ({ page }) => {
+test("samlet hjelp søker og åpner et eksempel uten å miste prosjektet", async ({ page }) => {
   const { editor, output, run } = await openPython(page);
-
-  await page.getByRole("button", { name: "Kommandoer", exact: true }).first().click();
-  const commandDialog = page.getByRole("dialog", { name: "Kommandobibliotek" });
-  await commandDialog.getByRole("searchbox").fill("største felles divisor");
-  await expect(commandDialog.getByRole("heading", { name: "gcd og lcm finner felles faktorer og multipler" })).toBeVisible();
-  await page.keyboard.press("Escape");
-
-  await page.getByRole("button", { name: "Hjelp mens du koder" }).first().click();
-  const helpDialog = page.getByRole("dialog", { name: "Finn den lille detaljen" });
-  await helpDialog.getByRole("searchbox").fill("gjennomsnitt median typetall");
-  await expect(helpDialog.getByRole("heading", { name: "Gjennomsnitt, median og typetall" })).toBeVisible();
-  await helpDialog.getByRole("button", { name: "+ Sett inn ved markøren" }).click();
-  await page.getByRole("button", { name: "Lukk kodehjelpen" }).click();
-
-  await expect(editor).toHaveValue(/statistics\.multimode/);
+  await editor.fill('print("MITT_UTKAST")');
+  await page.locator(".header-actions").getByRole("button", {name:"? Hjelp"}).click();
+  await page.getByRole("searchbox").fill("gjennomsnitt median typetall");
+  await page.locator(".help-result").filter({hasText:"Gjennomsnitt, median og typetall"}).first().click();
+  await page.getByRole("button", {name:"Prøv i nytt eksempel ↗"}).click();
+  await expect(editor).toHaveValue(/statistics.multimode/);
   await run.click();
-  await expect(output.locator("pre")).toContainText("Gjennomsnitt: 8");
-  await expect(output.locator("pre")).toContainText("Median: 7.5");
-  await expect(output.locator("pre")).toContainText("Typetall: [7]");
+  await expect(output.locator(".console-output")).toContainText("Median: 7.5");
+  await page.getByRole("combobox", {name:"Åpent prosjekt"}).selectOption("mitt-forste-prosjekt");
+  await expect(editor).toHaveValue('print("MITT_UTKAST")');
 });
 
 test("IDE-hjelpen støtter forslag, feilmarkering, markert kode, steg og flere filer", async ({ page }) => {
@@ -236,17 +228,21 @@ test("IDE-hjelpen støtter forslag, feilmarkering, markert kode, steg og flere f
   await expect(page.locator(".syntax-gutter span")).toHaveCount(1);
 
   await editor.fill('print("BARE_MARKERT")');
-  await editor.selectText();
+  await editor.focus();
+  await editor.press("ControlOrMeta+A");
+  await page.getByText("Flere verktøy", {exact:true}).click();
   await expect(page.getByRole("button", { name: "Kjør markert" })).toBeEnabled();
   await page.getByRole("button", { name: "Kjør markert" }).click();
-  await expect(output.locator("pre")).toContainText("BARE_MARKERT");
+  await expect(output.locator(".console-output")).toContainText("BARE_MARKERT");
 
   await editor.fill("start = 2\ndobbelt = start * 2\nprint(dobbelt)");
+  await page.getByText("Flere verktøy",{exact:true}).click();
   await page.getByRole("button", { name: "Følg stegvis" }).click();
   await expect(page.locator(".trace-player")).toBeVisible();
   await expect(page.locator(".trace-player")).toContainText("Følg programmet");
 
   page.once("dialog", (dialog) => dialog.accept("hjelper.py"));
+  await page.getByRole("button", { name: /^Filer/ }).click();
   await page.getByRole("button", { name: "+ Ny fil" }).click();
   await expect(page.getByRole("button", { name: "hjelper.py" })).toBeVisible();
   await editor.fill("def doble(tall):\n    return tall * 2");
@@ -254,68 +250,100 @@ test("IDE-hjelpen støtter forslag, feilmarkering, markert kode, steg og flere f
   await mainFile.click();
   await editor.fill("from hjelper import doble\nprint(doble(6))");
   await run.click();
-  await expect(output.locator("pre")).toContainText("12");
+  await expect(output.locator(".console-output")).toContainText("12");
 
   await editor.fill("if 3 > 2\n    print('ja')");
   await run.click();
   await expect(page.locator(".syntax-gutter .is-error-line")).toHaveText("1");
 });
 
-test("Pygame-laben starter et lokalt spill i canvas", async ({ page }) => {
-  await page.goto("/");
-  const areaPicker = page.getByRole("combobox", { name: "Velg område" });
-  const areaLabels = await areaPicker.locator("option").allTextContents();
-  expect(areaLabels.indexOf("Pygame-lab · bygg egne spill")).toBeGreaterThan(areaLabels.findIndex((label) => label.startsWith("Modul 8:")));
-  expect(areaLabels.indexOf("Pygame-lab · bygg egne spill")).toBeLessThan(areaLabels.findIndex((label) => label.startsWith("Modul 9:")));
-  await areaPicker.selectOption("pygame");
-  await expect(page.getByRole("heading", { name: "Lag et spill som faktisk kan spilles" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Bygg «Fang mynten» i seks forståelige steg" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Tutorial-steg i Pygame" }).getByRole("button")).toHaveCount(6);
-  await page.getByRole("button", { name: "Hent steg 1 i editoren" }).click();
-  const editor = page.getByRole("textbox", { name: "Skriv Pygame-kode" });
+for (const step of [1, 6]) test(`Pygame-steg ${step} starter og stopper`, async ({page}) => {
+  await page.goto("/#pygame");
+  await expect(page.getByRole("heading", {name:"Fang mynten", exact:true})).toBeVisible();
+  await page.getByLabel("Velg steg").selectOption({index:step-1});
+  await page.getByRole("button", {name:`Prøv steg ${step}`, exact:true}).click();
+  const editor=page.getByRole("textbox", {name:"Skriv Pygame-kode"});
   await expect(editor).toHaveValue(/while kjorer:/);
-  await page.getByRole("button", { name: "Start spillet" }).click();
-  const frame = page.frameLocator('iframe[title="Pygame-spillflate"]');
-  await expect(frame.locator("canvas")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Spillet kjører" })).toBeVisible();
+  await page.getByRole("button", {name:"Start spillet"}).click();
+  await expect(page.getByRole("button", {name:"Spillet kjører", exact:true})).toBeVisible();
+  await expect(page.frameLocator('iframe[title="Pygame-spillflate"]').locator("canvas")).toBeVisible();
   await expect(page.locator(".pygame-console")).not.toContainText(/Traceback|Error:/);
-  await expect(page.getByRole("button", { name: "Lagre bilde" })).toBeVisible();
-  await page.getByRole("button", { name: "■ Stopp og nullstill" }).click();
+  await page.getByRole("button", {name:"■ Stopp", exact:true}).click();
 });
 
-test("Pygame-tutorialen kan laste sluttspillet i laben", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("combobox", { name: "Velg område" }).selectOption("pygame");
-  await page.getByRole("navigation", { name: "Tutorial-steg i Pygame" }).getByRole("button", { name: /Ferdig spill/ }).click();
-  await page.getByRole("button", { name: "Hent steg 6 i editoren" }).click();
-  const editor = page.getByRole("textbox", { name: "Skriv Pygame-kode" });
-  await expect(editor).toHaveValue(/maal = 10/);
-  await expect(editor).toHaveValue(/pygame\.K_SPACE/);
-  await page.getByRole("button", { name: "Start spillet" }).click();
-  await expect(page.getByRole("button", { name: "Spillet kjører" })).toBeVisible();
-  await expect(page.locator(".pygame-console")).not.toContainText(/Traceback|Error:/);
-  await page.getByRole("button", { name: "■ Stopp og nullstill" }).click();
+test("utkast, angre og historikk tåler oppfriskning", async ({page}) => {
+  const {editor}=await openPython(page);
+  await editor.fill('print("LAGRET")');
+  await page.reload();
+  await expect(editor).toHaveValue('print("LAGRET")');
+  await page.getByRole('link',{name:'Lær',exact:true}).click();
+  const lesson=page.getByRole('textbox',{name:'Skriv Python-kode'});
+  await lesson.fill('print("MODUL_UTKAST")');
+  await page.reload();
+  await expect(lesson).toHaveValue('print("MODUL_UTKAST")');
+  await page.getByText('Flere verktøy',{exact:true}).click();
+  await page.getByRole('button',{name:'Tøm kodefeltet'}).click();
+  await expect(lesson).toHaveValue('');
+  await page.getByRole('button',{name:/Angre/}).click();
+  await expect(lesson).toHaveValue('print("MODUL_UTKAST")');
+  await page.getByRole('link',{name:'Øv',exact:true}).click();
+  await page.goBack();
+  await expect(page.getByRole('combobox',{name:'Velg modul'})).toHaveValue('1');
+  await expect(lesson).toHaveValue('print("MODUL_UTKAST")');
 });
 
-test("biblioteksområdet forklarer i vanlig språk og åpner kjørbare eksempler", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("combobox", { name: "Velg område" }).selectOption("libraries");
-  await expect(page.getByRole("heading", { name: "Forstå verktøyet før du bruker kommandoen" })).toBeVisible();
-  await expect(page.locator(".library-card")).toHaveCount(38);
+test("stopp og navigasjon avbryter kjøring uten å flytte gamle resultater",async({page})=>{
+  const {editor,run,output}=await openPython(page);
+  await runCode(page,editor,run,'while True:\n    pass');
+  await page.getByRole('button',{name:'■ Stopp',exact:true}).click();
+  await expect(output).toContainText('stoppet');
+  await expect(run).toBeEnabled();
+  await run.click();
+  await page.getByRole('link',{name:'Lær',exact:true}).click();
+  await expect(page.getByRole('button',{name:'■ Stopp',exact:true})).toBeHidden();
+  await expect(page.getByRole('combobox',{name:'Velg modul'})).toBeVisible();
+});
 
-  const search = page.getByRole("searchbox", { name: "Søk med egne ord" });
-  await search.fill("gjennomsnitt");
-  const statisticsCard = page.locator(".library-card").filter({ has: page.locator("strong", { hasText: /^statistics$/ }) });
-  await expect(statisticsCard).toBeVisible();
-  await statisticsCard.click();
-  await expect(page.getByRole("heading", { name: "Dette biblioteket bruker du hvis du skal …" })).toBeVisible();
-  await expect(page.locator(".library-plain-language")).toContainText("Dette biblioteket bruker du hvis du skal arbeide med");
-  await expect(page.locator(".library-command-grid")).toContainText("statistics.mean(tall)");
+for(const [width,height] of [[1280,720],[1366,768],[1024,768],[390,844],[640,360]]) test(`arbeidsflaten fungerer på ${width}×${height}`,async({page})=>{
+  await page.setViewportSize({width,height});
+  const {editor,run}=await openPython(page);
+  await expect(run).toBeInViewport();
+  await expect(editor).toBeInViewport();
+  const metrics=await page.evaluate(()=>({width:document.documentElement.scrollWidth,view:innerWidth,font:getComputedStyle(document.querySelector('.syntax-input')).fontFamily}));
+  expect(metrics.width).toBeLessThanOrEqual(metrics.view);
+  expect(metrics.font).toMatch(/mono|Menlo|Consolas/i);
+  await page.locator('.header-actions').getByRole('button',{name:'? Hjelp'}).click();
+  await expect(page.getByRole('searchbox')).toBeInViewport();
+  await page.getByRole('button',{name:'Lukk hjelpen og gå til koden'}).click();
+  await expect(editor).toBeFocused();
+});
 
-  await page.getByRole("button", { name: "Åpne som nytt prosjekt" }).click();
-  const editor = page.getByRole("textbox", { name: "Skriv Python-kode" });
-  await expect(editor).toHaveValue(/import statistics/);
-  await page.getByRole("button", { name: /Kjør kode/ }).click();
-  await expect(page.locator(".output-panel pre")).toContainText("Gjennomsnitt:");
-  await expect(page.locator(".output-panel pre")).toContainText("Median:");
+test('modul 9 starter med en kort kjørbar graf og modul 10 får datafilen med',async({page})=>{
+  await page.goto('/#learn/9');
+  await page.getByRole('button',{name:/Forutsi/}).click();
+  await page.getByRole('button',{name:'Prøv eksemplet i koden'}).click();
+  const editor=page.getByRole('textbox',{name:'Skriv Python-kode'});
+  expect((await editor.inputValue()).split('\n').length).toBeLessThan(20);
+  await page.getByRole('button',{name:/Kjør kode/}).click();
+  await expect(page.locator('.plot-card img')).toBeVisible();
+  await page.getByRole('combobox',{name:'Velg modul'}).selectOption('10');
+  await page.getByRole('button',{name:/Forutsi/}).click();
+  await page.getByRole('button',{name:'Prøv eksemplet i koden'}).click();
+  await page.getByRole('button',{name:/Kjør kode/}).click();
+  await expect(page.locator('.console-output')).toContainText('13');
+  await expect(page.locator('.error-coach')).toBeHidden();
+});
+
+test('vurdering krever gjeldende kjøring og gir ingen hardkodet godkjenning',async({page})=>{
+  await page.goto('/#learn/1');
+  await page.locator('.lesson-step-nav').getByRole('button',{name:/Oppgave/}).click();
+  const editor=page.getByRole('textbox',{name:'Skriv Python-kode'});
+  await editor.fill('print(560)');
+  await page.getByRole('button',{name:'Sjekk resultatet'}).click();
+  await expect(page.locator('.lesson-body [role="status"]')).toContainText(/Kjør/);
+  await page.getByRole('button',{name:/Kjør kode/}).click();
+  await expect(page.locator('.console-output')).toContainText('560');
+  await editor.fill('print(100)');
+  await page.getByRole('button',{name:'Sjekk resultatet'}).click();
+  await expect(page.locator('.lesson-body [role="status"]')).toContainText(/Kjør/);
 });

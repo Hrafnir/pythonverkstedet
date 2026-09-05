@@ -1,3 +1,4 @@
+import { pythonCodeOnly } from "./lib/pythonSource.ts";
 export const challengeDifficulties = ["Alle", "Enkel", "Middels", "Utfordrende"] as const;
 export type ChallengeDifficulty = (typeof challengeDifficulties)[number];
 
@@ -43,10 +44,7 @@ export type PythonChallenge = {
 };
 
 export function evaluateChallengeAttempt(challenge: PythonChallenge, code: string, output: string) {
-  const executableCode = code
-    .split("\n")
-    .map((line) => line.replace(/#.*$/, ""))
-    .join("\n");
+  const executableCode = pythonCodeOnly(code);
   const compactCode = executableCode.toLocaleLowerCase("nb").replace(/\s+/g, "");
   const normalizedOutput = output.toLocaleLowerCase("nb");
   const hasCodePart = (part: string) => compactCode.includes(part.toLocaleLowerCase("nb").replace(/\s+/g, ""));
@@ -61,7 +59,7 @@ export function evaluateChallengeAttempt(challenge: PythonChallenge, code: strin
   });
 
   if (results.every((result) => result.startsWith("✓"))) {
-    results.push("✓ Flott! Test nå minst ett annet tall eller datasett før du kaller løsningen ferdig.");
+    results.push("△ Dette er veiledende spor, ikke en godkjenning. Kjør testtilfellene og forklar løsningen.");
   } else {
     results.push("○ Sjekken leter bare etter noen synlige spor. En annen løsning kan fortsatt være riktig – sammenlign resultatet med kravene i oppgaven.");
   }

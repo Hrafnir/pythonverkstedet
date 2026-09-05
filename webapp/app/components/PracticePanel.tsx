@@ -1,0 +1,20 @@
+import { challengeCases, examCases } from "../content/checkCases";
+import { useState } from "react";
+import type { PythonChallenge } from "../challenges";
+import type { ExamTask } from "../examTraining";
+export default function PracticePanel({challenge,exam,onTry,onCheck,onComplete,completed,feedback,onBack}:{challenge?:PythonChallenge;exam?:ExamTask;onTry:(code:string)=>void;onCheck:()=>void;onComplete:()=>void;completed:boolean;feedback:string[];onBack:()=>void}){
+  const task=exam||challenge!; const [hints,setHints]=useState(0),[answers,setAnswers]=useState<Record<string,number>>({}),[checked,setChecked]=useState(false);
+  return <aside className="lesson-panel practice-panel"><div className="lesson-title"><button className="back-link" onClick={onBack}>← Alle {exam?"eksamensoppgaver":"utfordringer"}</button><small>{exam?exam.level:challenge!.difficulty} · {task.estimatedMinutes} min</small><h1>{task.title}</h1></div><div className="lesson-body">
+    <h2>Oppdraget</h2><p>{exam?exam.situation:challenge!.mission}</p>{exam&&<p>{exam.taskText}</p>}
+    {exam&&<><pre><code>{exam.sourceCode}</code></pre><h3>Les og forutsi</h3>{exam.questions.map(q=><fieldset key={q.id}><legend>{q.prompt}</legend>{q.choices.map((choice,i)=><label className="choice" key={choice.text}><input type="radio" name={q.id} checked={answers[q.id]===i} onChange={()=>{setAnswers({...answers,[q.id]:i});setChecked(false);}} />{choice.text}</label>)}{checked&&<p className="notice">{answers[q.id]===q.correctIndex?"✓ ":"Se en gang til: "}{q.choices[answers[q.id]]?.feedback||"Velg et svar først."} {q.explanation}</p>}</fieldset>)}<button onClick={()=>setChecked(true)}>Sjekk forutsigelsen</button><h3>Bygg programmet</h3><p>{exam.codingMission}</p></>}
+    <details><summary>Lag en liten plan først</summary><ol>{(exam?exam.planPrompts:challenge!.beforeQuestions).map(q=><li key={q}>{q}</li>)}</ol></details>
+    <button onClick={()=>onTry(exam?exam.starterCode:challenge!.scaffold)}>Hent startpunkt</button>
+    <h3>Dette skal programmet gjøre</h3><ul>{task.successCriteria.map(t=><li key={t}>{t}</li>)}</ul>
+    <h3>Hintestige</h3><p>Åpne ett hint om gangen, og prøv i koden før du åpner neste.</p>{task.hints.slice(0,hints).map((h,i)=><div className="notice" key={i}><strong>{i+1}. {h.title}</strong><p>{h.body}</p>{h.code&&<pre><code>{h.code}</code></pre>}</div>)}<button disabled={hints===task.hints.length} onClick={()=>setHints(hints+1)}>Vis neste hint ({hints}/{task.hints.length})</button>
+    {challenge&&<details><summary>Opplysninger og hensikt</summary><ul>{challenge.given.map(t=><li key={t}>{t}</li>)}</ul><p>{challenge.whyItMatters}</p></details>}<h3>Test med flere verdier</h3><ul>{task.testCases.map(t=><li key={t.change}><strong>{t.change}</strong><br/>{t.expect}</li>)}</ul><ul>{(exam?examCases:challengeCases)[task.id]?.map(t=><li key={t}>{t}</li>)}</ul><p className="muted">Disse testtilfellene prøver du selv ved å endre inndata. Sjekken under gir råd fra siste kjøring; den kjører ikke alle testtilfellene for deg.</p>
+    <button className="primary" onClick={onCheck}>Gi meg råd om forsøket</button>{feedback.length>0&&<div className="notice" role="status">{feedback.map((line,i)=><p key={i}>{line}</p>)}</div>}
+    <details><summary>Vis løsningsforslag og forklaring</summary><pre><code>{task.solutionCode}</code></pre><ol>{(exam?exam.solutionNotes:challenge!.solutionWalkthrough).map(t=><li key={t}>{t}</li>)}</ol><button onClick={()=>onTry(task.solutionCode)}>Prøv løsningsforslaget</button></details>
+    <h3>Forklar med egne ord</h3>{exam?<p>{exam.reflection}</p>:<ul>{challenge!.reflection.map(t=><li key={t}>{t}</li>)}</ul>}{challenge&&<details><summary>Utforsk videre</summary><p>{challenge.extension}</p></details>}{exam&&<details><summary>Tips til en tydelig besvarelse</summary><p>{exam.sensorTip}</p></details>}
+    <p className="muted">Fullført er egenvurdering. Forklar løsningen og prøv testene først.</p><button onClick={onComplete}>{completed?"✓ Markert som fullført":"Jeg har testet og forklart"}</button>
+  </div></aside>;
+}

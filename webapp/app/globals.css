@@ -10,7 +10,7 @@
   --mint: #d9e8df;
   --yellow: #f4c95d;
   --line: #d8d6cd;
-  --mono: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
+  --mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -19,7 +19,7 @@ body {
   margin: 0;
   background: var(--cream);
   color: var(--ink);
-  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   font-size: 18px;
   line-height: 1.6;
 }

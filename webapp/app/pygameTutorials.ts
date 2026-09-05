@@ -221,10 +221,14 @@ while kjorer:
             kjorer = False
 
     taster = pygame.key.get_pressed()
-    if taster[pygame.K_LEFT]: spiller.x -= fart
-    if taster[pygame.K_RIGHT]: spiller.x += fart
-    if taster[pygame.K_UP]: spiller.y -= fart
-    if taster[pygame.K_DOWN]: spiller.y += fart
+    if taster[pygame.K_LEFT]:
+        spiller.x -= fart
+    if taster[pygame.K_RIGHT]:
+        spiller.x += fart
+    if taster[pygame.K_UP]:
+        spiller.y -= fart
+    if taster[pygame.K_DOWN]:
+        spiller.y += fart
     spiller.clamp_ip(skjerm.get_rect())
 
     # True betyr at spilleren berører mynten
@@ -288,10 +292,14 @@ while kjorer:
             kjorer = False
 
     taster = pygame.key.get_pressed()
-    if taster[pygame.K_LEFT]: spiller.x -= fart
-    if taster[pygame.K_RIGHT]: spiller.x += fart
-    if taster[pygame.K_UP]: spiller.y -= fart
-    if taster[pygame.K_DOWN]: spiller.y += fart
+    if taster[pygame.K_LEFT]:
+        spiller.x -= fart
+    if taster[pygame.K_RIGHT]:
+        spiller.x += fart
+    if taster[pygame.K_UP]:
+        spiller.y -= fart
+    if taster[pygame.K_DOWN]:
+        spiller.y += fart
     spiller.clamp_ip(skjerm.get_rect())
 
     if spiller.colliderect(mynt):
@@ -375,10 +383,14 @@ while kjorer:
     # DEL 4: Beveg spilleren mens runden pågår
     if not vunnet:
         taster = pygame.key.get_pressed()
-        if taster[pygame.K_LEFT]: spiller.x -= fart
-        if taster[pygame.K_RIGHT]: spiller.x += fart
-        if taster[pygame.K_UP]: spiller.y -= fart
-        if taster[pygame.K_DOWN]: spiller.y += fart
+        if taster[pygame.K_LEFT]:
+            spiller.x -= fart
+        if taster[pygame.K_RIGHT]:
+            spiller.x += fart
+        if taster[pygame.K_UP]:
+            spiller.y -= fart
+        if taster[pygame.K_DOWN]:
+            spiller.y += fart
         spiller.clamp_ip(skjerm.get_rect())
 
         # Treffer spilleren mynten?

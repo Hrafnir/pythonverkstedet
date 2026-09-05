@@ -54,15 +54,21 @@ async function createWindow() {
       throw new Error("Røyketesten brukte for lang tid");
     };
     try {
-      await waitFor("Boolean(document.querySelector('#module-select'))", 15000);
+      await waitFor("Boolean(document.querySelector('#playground-code'))", 15000);
       process.stdout.write("BJORNSVEEN_SMOKE_STAGE: app-loaded\n");
-      await mainWindow.webContents.executeJavaScript(`
+      mainWindow.webContents.setZoomFactor(2);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      const zoomLayout = await mainWindow.webContents.executeJavaScript(`
         (() => {
-          const select = document.querySelector('#module-select');
-          select.value = 'playground';
-          select.dispatchEvent(new Event('change', { bubbles: true }));
+          const run = document.querySelector('.run-button').getBoundingClientRect();
+          const editor = document.querySelector('#playground-code').getBoundingClientRect();
+          return { overflow: document.documentElement.scrollWidth > innerWidth, runVisible: run.top >= 0 && run.bottom <= innerHeight, editorVisible: editor.top < innerHeight && editor.height > 0 };
         })()
       `);
+      if (zoomLayout.overflow || !zoomLayout.runVisible || !zoomLayout.editorVisible) throw new Error('Arbeidsflaten er klippet ved 200 % zoom: ' + JSON.stringify(zoomLayout));
+      mainWindow.webContents.setZoomFactor(1);
+      process.stdout.write("BJORNSVEEN_SMOKE_STAGE: 200-prosent-zoom\n");
+
       await waitFor("Boolean(document.querySelector('#playground-code'))", 15000);
       process.stdout.write("BJORNSVEEN_SMOKE_STAGE: playground-loaded\n");
       await mainWindow.webContents.executeJavaScript(`
@@ -140,7 +146,7 @@ async function createWindow() {
 
       await mainWindow.webContents.executeJavaScript(`
         (() => {
-          const select = document.querySelector('#module-select');
+          const select = document.querySelector('[aria-label="Python-miljø"]');
           select.value = 'pygame';
           select.dispatchEvent(new Event('change', { bubbles: true }));
         })()
@@ -153,7 +159,7 @@ async function createWindow() {
           const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
           setter.call(editor, 'import pygame\\nimport asyncio\\n\\npygame.init()\\nskjerm = pygame.display.set_mode((320, 200))\\nfor bilde in range(3):\\n    skjerm.fill((20, 40, 55))\\n    pygame.draw.rect(skjerm, (244, 111, 78), (40 + bilde * 20, 60, 80, 60))\\n    pygame.display.flip()\\n    await asyncio.sleep(0)\\nprint("PYGAME_OFFLINE_OK", pygame.version.ver)');
           editor.dispatchEvent(new Event('input', { bubbles: true }));
-          document.querySelector('.pygame-editor-footer .run-button').click();
+          document.querySelector('.workspace-toolbar .run-button').click();
         })()
       `);
       const pygameResult = await waitFor(`

@@ -1,0 +1,32 @@
+/** Boundary cases to try manually; these are not claims of automated grading. */
+export const challengeCases: Record<string,string[]> = {
+  'sum-variables':['Bytt til pris 100 og frakt 20: totalen skal bli 120.'],
+  discount:['0 % rabatt gir opprinnelig pris; 50 % gir halv pris.'],
+  'even-odd':['Prøv 0, −3 og −4: partall, oddetall, partall.'],
+  'input-age':['Gi både navn og alder. Prøv Ada/14 og Bo/20; begge opplysningene skal påvirke svaret.'],
+  hypotenuse:['Kateter 5 og 12 gir 13. Kontroller at enheten følger svaret.'],
+  'multiplication-table':['Prøv 7-gangen: ti linjer, fra 7 til 70.'],
+  'ticket-price':['Prøv grensene 11, 12, 17 og 18 år. Sammenlign med prisreglene.'],
+  'right-triangle':['3, 4, 5 skal gi ja; 3, 4, 6 skal gi nei. Målte desimaltall kan trenge toleranse.'],
+  'missing-leg':['Hypotenusen må være lengre enn kateten. Forklar feilen ved hypotenus 4 og katet 5.'],
+  'largest-without-max':['Prøv [−8, −2, −5] og omvendt rekkefølge: størst er −2.'],
+  'average-analysis':['[2, 2, 2] gir gjennomsnitt 2 og ingen over gjennomsnittet.'],
+  'count-vowels':['Prøv «ÆØÅ» (3), «rhythm» (0) og både små/store bokstaver.'],
+  'turtle-polygon':['Bytt til 3 sider/120° og 8 sider/45°. Begge skal lukke seg.'],
+  'triangle-classifier':['Prøv 3,3,3; 3,3,4; 1,2,4. Den siste er ingen trekant. Alle lengder må være positive.'],
+  'prime-number':['1 er ikke primtall, 2 er primtall, 49 er ikke primtall.'],
+  'growth-threshold':['Start over grensen gir 0 runder. Avklar om likhet er nok. Stopp eller forklar når veksten er 0.'],
+  'dice-simulation':['Begge terningene trekkes inne i løkken. For sum 7 gir (1,6) treff og (1,5) ikke treff.'],
+  'caesar-cipher':['Kontroller passering av z, mellomrom og negativ forskyvning. Forklar hvilket alfabet programmet støtter.'],
+  'turtle-spiral':['Prøv 4 og 8 runder. Tell strekene i avspillingen og sammenlign lengdene.'],
+};
+export const examCases: Record<string,string[]> = {
+  'discount-code-reading':['Prøv begge oppgitte datasett. Vis både spart beløp og ny pris.'],
+  'taxi-linear-model':['0 km → 85 kr; 5 km → 170 kr; 12 km → 289 kr.'],
+  'savings-growth':['«Passerer» betyr større enn. Saldo lik målet trenger fortsatt en runde med positiv rente.'],
+  'statistics-outlier':['En verdi langt fra gjennomsnittet er et mulig avvik, ikke bevis på målefeil.'],
+  'dice-simulation':['Test logikken med (1,6), (3,4) og (2,2). Prosent er andel × 100.'],
+  'right-triangle-exam':['Test både rett og ikke rett vinkel. Avviket a²+b²−c² har kvadrert lengdeenhet; toleransen må ha samme enhet.'],
+  'ticket-equation-search':['Tell hver undersøkte kandidat, også dem som ikke er løsninger. Forklar hva telleren betyr.'],
+  'water-model-validity':['Test 0, 13, 14 og 16 minutter. Vis når den opprinnelige modellen blir negativ og skill dette fra en avgrensning ved 0 liter.'],
+};

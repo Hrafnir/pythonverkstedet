@@ -314,7 +314,7 @@ print("Filtype:", sti.suffix)`,
   {
     id: "os", name: "os", importCode: "import os", availability: "standard", group: "Programmeringsverktøy", level: "Videre",
     tagline: "Enkle opplysninger om filer og kjøremiljø.",
-    intro: "os er laget for kontakt med operativsystemet. Skolepython støtter de ufarlige, filrelaterte delene, men nettleseren er isolert fra resten av Mac-en.",
+    intro: "os er laget for kontakt med operativsystemet. Skolepython støtter de ufarlige, filrelaterte delene, men nettleseren er isolert fra resten av enheten.",
     useCases: ["Undersøke filnavn", "Se prosjektfiler", "Bygge portable stier"],
     steps: ["Importer os.", "Bruk os.path til å undersøke navn.", "Husk at nettleserens filsystem er avgrenset."],
     commands: [
@@ -536,7 +536,7 @@ if tilstand == Tilstand.SPILLER:
     note: "Enum er nyttig når valgene er faste. En vanlig variabel er enklere for mange små programmer.",
   },
   {
-    id: "typing", name: "typing", importCode: "from typing import Iterable", availability: "standard", group: "Programmeringsverktøy", level: "Videre",
+    id: "typing", name: "typing", importCode: "# Innebygde typehint: list[float] og -> float", availability: "standard", group: "Programmeringsverktøy", level: "Videre",
     tagline: "Beskriv hvilke typer verdier funksjoner forventer.",
     intro: "typing lar deg skrive typehint. Python kjører fortsatt dynamisk, men hintene gjør større programmer lettere å lese og gir bedre forslag i avanserte editorer.",
     useCases: ["Dokumentere funksjoner", "Forstå returverdier", "Bedre editorhjelp"],
