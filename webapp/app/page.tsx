@@ -942,7 +942,7 @@ export default function Home() {
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const executionRef = useRef<{ code: string; files: { name: string; content: string }[]; mode: "normal" | "selection" | "trace" } | null>(null);
-  const inputDialogRef = useRef<HTMLFormElement | null>(null);
+  const inputAnswerRef = useRef<HTMLInputElement | null>(null);
   const feedbackDialogRef = useRef<HTMLElement | null>(null);
   const turtleDialogRef = useRef<HTMLDivElement | null>(null);
   const plotDialogRef = useRef<HTMLDivElement | null>(null);
@@ -1175,9 +1175,7 @@ export default function Home() {
   }, [code]);
 
   useEffect(() => {
-    const activeDialog = pythonInputRequest
-      ? inputDialogRef.current
-      : feedbackDialogOpen
+    const activeDialog = feedbackDialogOpen
         ? feedbackDialogRef.current
           : turtleExpanded
             ? turtleDialogRef.current
@@ -1188,10 +1186,6 @@ export default function Home() {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const focusableSelector = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
     const focusFirst = () => {
-      if (pythonInputRequest) {
-        (activeDialog.querySelector("input") as HTMLElement | null)?.focus();
-        return;
-      }
       (activeDialog.querySelector(focusableSelector) as HTMLElement | null)?.focus();
     };
     requestAnimationFrame(focusFirst);
@@ -1200,8 +1194,7 @@ export default function Home() {
     function handleModalKeyboard(event: globalThis.KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        if (pythonInputRequest) cancelPythonInput();
-        else if (feedbackDialogOpen) setFeedbackDialogOpen(false);
+        if (feedbackDialogOpen) setFeedbackDialogOpen(false);
         else if (turtleExpanded) setTurtleExpanded(false);
         else if (expandedPlotIndex !== null) setExpandedPlotIndex(null);
         return;
@@ -1229,7 +1222,16 @@ export default function Home() {
       document.removeEventListener("keydown", handleModalKeyboard);
       if (previouslyFocused?.isConnected) requestAnimationFrame(() => previouslyFocused.focus());
     };
-  }, [expandedPlotIndex, feedbackDialogOpen, pythonInputRequest, turtleExpanded]);
+  }, [expandedPlotIndex, feedbackDialogOpen, turtleExpanded]);
+
+  useEffect(() => {
+    if (!pythonInputRequest || resultTab !== "output" || workspaceTab !== "result") return;
+    const frame = requestAnimationFrame(() => {
+      inputAnswerRef.current?.focus({ preventScroll: true });
+      inputAnswerRef.current?.scrollIntoView({ block: "nearest" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pythonInputRequest, resultTab, workspaceTab]);
 
   function changeEditorFontSize(change: number) {
     const next = Math.min(28, Math.max(15, editorFontSize + change));
@@ -2149,7 +2151,7 @@ export default function Home() {
     setPythonInputRequest(null);
     setPythonInputValue("");
     setRunnerStatus("running");
-    setOutput(`Svaret er sendt til Python. Programmet fortsetter fra samme sted …`);
+    setOutput(previous => `${previous}${pythonInputRequest.prompt}${answer}\n`);
     worker.postMessage({ type: "input-response", value: answer });
     armExecutionTimeout(worker);
   }
@@ -2162,7 +2164,7 @@ export default function Home() {
     setPythonInputRequest(null);
     setPythonInputValue("");
     setRunnerStatus("idle");
-    setOutput("Kjøringen ble stoppet mens programmet ventet på et svar.");
+    setOutput(previous => `${previous}\nKjøringen ble stoppet mens programmet ventet på et svar.`);
   }
 
   function runCode() {
@@ -2248,12 +2250,13 @@ export default function Home() {
           setOutput("Programmet ba om mer enn 20 svar og ble stoppet. Sjekk om input() ligger i en løkke som aldri avsluttes.");
           return;
         }
-        const prompt = data.prompt?.trim() || "Skriv et svar:";
+        const prompt = data.prompt || "Skriv et svar: ";
         setRunnerStatus("input");
         setPythonInputValue("");
         setPythonInputRequest({ prompt, index: data.index ?? 0 });
-        const partialOutput = data.output?.trim();
-        setOutput(partialOutput ? `${partialOutput}\n\nProgrammet venter nå på et svar.` : `Programmet spør: ${prompt}`);
+        setWorkspaceTab("result");
+        setResultTab("output");
+        setOutput(data.output ?? "");
       }
 
       if (data.type === "result") {
@@ -2386,7 +2389,14 @@ export default function Home() {
               <div className="result-scroll">
                 {pygameView ? <><div className="pygame-frame-wrap"><iframe key={pygameFrameKey} ref={pygameFrameRef} src="./pygame-runner.html" title="Pygame-spillflate" allow="autoplay" /></div><button onClick={savePygameImage}>Lagre bilde</button><pre className="pygame-console" aria-live="polite">{pygameConsole}</pre></> : <>
                   {resultIsStale&&<p className="stale-result-notice" role="status"><strong>Koden er endret.</strong> Dette er resultatet fra forrige kjøring. Kjør på nytt før du vurderer svaret.</p>}
-                  {resultTab==="output"&&<>{errorCoach?errorCoachPanel():<pre className="console-output" aria-live="polite">{output}</pre>}{plotGallery()}</>}
+                  {resultTab==="output"&&<>{errorCoach?errorCoachPanel():<pre className="console-output" aria-live="polite">{output}</pre>}{pythonInputRequest && <form className="console-input" aria-label="Svar til Python" onSubmit={submitPythonInput}>
+                    <label htmlFor="python-input-answer" className="console-input-prompt">{pythonInputRequest.prompt}</label>
+                    <div className="console-input-row">
+                      <input ref={inputAnswerRef} id="python-input-answer" aria-label="Svaret ditt" aria-describedby="python-input-hint" value={pythonInputValue} onChange={event=>setPythonInputValue(event.target.value)} onKeyDown={event=>{if(event.key==="Escape"){event.preventDefault();event.stopPropagation();cancelPythonInput();}}} autoComplete="off" spellCheck={false}/>
+                      <button type="submit">Send svar ↵</button>
+                    </div>
+                    <div className="console-input-actions"><small id="python-input-hint">Enter sender svaret. Programmet venter på deg.</small><button type="button" onClick={cancelPythonInput}>Stopp programmet</button></div>
+                  </form>}{plotGallery()}</>}
                   {resultTab==="variables"&&(pythonVariables.length?variableInspector():<p className="empty-result">Kjør koden for å se variablene. Verdiene gjelder siste kjøring.</p>)}
                   {resultTab==="trace"&&(traceSteps.length?tracePlayer():<div className="empty-result"><h3>Forutsi neste steg</h3><p>Kjør en gjennomgang, og følg hvordan verdiene endres foran hver linje.</p><button onClick={runTrace} disabled={runnerBusy||!code.trim()}>Følg stegvis</button></div>)}
                 </>}
@@ -2428,33 +2438,6 @@ export default function Home() {
             </div>
             <img src={`data:image/png;base64,${plotImages[expandedPlotIndex]}`} alt={`Graf ${expandedPlotIndex + 1} laget av Python-koden`} />
           </div>
-        </div>
-      )}
-      {pythonInputRequest && (
-        <div className="python-input-modal" role="presentation">
-          <form ref={inputDialogRef} className="python-input-card" role="dialog" aria-modal="true" aria-labelledby="python-input-title" onSubmit={submitPythonInput}>
-            <header>
-              <span>Programmet ditt spør · input {pythonInputRequest.index + 1}</span>
-              <h2 id="python-input-title">Skriv et svar til Python</h2>
-            </header>
-            <div className="python-input-body">
-              <p className="python-input-prompt">{pythonInputRequest.prompt}</p>
-              <label htmlFor="python-input-answer">Svaret ditt</label>
-              <input
-                id="python-input-answer"
-                value={pythonInputValue}
-                onChange={(event) => setPythonInputValue(event.target.value)}
-                placeholder="Skriv her …"
-                autoComplete="off"
-                autoFocus
-              />
-              <p className="python-input-tip"><strong>Husk:</strong> <code>input()</code> gir alltid tekst. <code>int(...)</code> gjør heltallstekst om til et tall, mens <code>float(...)</code> brukes til desimaltall.</p>
-            </div>
-            <footer>
-              <button type="button" className="python-input-cancel" onClick={cancelPythonInput}>Stopp programmet</button>
-              <button type="submit" className="python-input-submit">Send svaret til Python →</button>
-            </footer>
-          </form>
         </div>
       )}
       {feedbackDialogOpen && (

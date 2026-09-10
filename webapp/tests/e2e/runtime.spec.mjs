@@ -25,25 +25,24 @@ alder = int(input("Hvor gammel er du? "))
 print("Etter svar:", tall)
 print(navn, "blir", alder + 1, "år neste år.")`);
 
-  await expect(page.getByRole("dialog", { name: "Skriv et svar til Python" })).toBeVisible();
+  await expect(output.getByRole("form", { name: "Svar til Python" })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(output.locator(".console-output")).toContainText("Før svar:");
   const before = await output.locator(".console-output").textContent();
   const firstRandom = before.match(/Før svar:\s*([0-9.]+)/)?.[1];
   expect(firstRandom).toBeTruthy();
 
   const firstAnswer = page.getByRole("textbox", { name: "Svaret ditt" });
-  const firstSubmit = page.getByRole("button", { name: "Send svaret til Python →" });
-  await firstSubmit.focus();
-  await page.keyboard.press("Tab");
   await expect(firstAnswer).toBeFocused();
-  await firstAnswer.focus();
-  await page.keyboard.press("Shift+Tab");
-  await expect(firstSubmit).toBeFocused();
-
+  await firstAnswer.press("Tab");
+  await expect(output.getByRole("button", { name: "Send svar ↵" })).toBeFocused();
   await firstAnswer.fill("Ada");
-  await firstSubmit.click();
+  await firstAnswer.press("Enter");
   await expect(page.getByText("Hvor gammel er du?", { exact: true })).toBeVisible();
+  await expect(output.locator(".console-output")).toContainText("Hva heter du? Ada");
+  await expect(firstAnswer).toBeFocused();
   await page.getByRole("textbox", { name: "Svaret ditt" }).fill("14");
-  await page.getByRole("button", { name: "Send svaret til Python →" }).click();
+  await page.getByRole("button", { name: "Send svar ↵" }).click();
   await expect(output.locator(".console-output")).toContainText("Ada blir 15 år neste år.");
 
   const completed = await output.locator(".console-output").textContent();
@@ -56,7 +55,7 @@ print(navn, "blir", alder + 1, "år neste år.")`);
   const answer = page.getByRole("textbox", { name: "Svaret ditt" });
   await expect(answer).toBeFocused();
   await answer.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Skriv et svar til Python" })).toBeHidden();
+  await expect(page.getByRole("form", { name: "Svar til Python" })).toBeHidden();
   await expect(output.locator(".console-output")).toContainText("Kjøringen ble stoppet");
 });
 
