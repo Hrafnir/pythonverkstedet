@@ -1,5 +1,12 @@
 # Skolepython 0.17.1
 
+## Tutorials og kopiering
+
+Åpne **Tutorials** øverst for fem programmer med 16 kjørbare steg: hilsningsprogram, gjett tallet, quiz, kalkulator og terningkast. Hvert steg har forklaring, kontrolltilfeller og en egen utfordring. Stegvalg endrer ikke koden; bruk «Bruk stegets kode» (kan angres) eller «Åpne i nytt prosjekt» for å prøve eksemplet. Progresjonen lagres lokalt som elevens egenvurdering. På smale skjermer kan eleven veksle mellom Hjelp og Kode uten å miste steget.
+
+Kodefeltet har synlige knapper for **Kopier kode** og **Kopier kode + svar**. Resultatflaten har **Kopier resultat**, og input-feltet har **Kopier svar**. Nettleserens utklippstavletilgang må være tillatt.
+
+
 Fra Bjørnsveen: Python-arbeidsflate og læringshefte for matematikk på 8.–10. trinn.
 
 ## Editorrettelse i 0.17.1

@@ -1,8 +1,10 @@
+import TutorialPanel from "./TutorialPanel";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { topics, searchHelp } from "../lib/helpSearch";
 import type { HelpExample } from "../lib/helpSearch";
 export type { HelpExample } from "../lib/helpSearch";
-export default function HelpPanel({ initialQuery = "", initialTopic = "", onInsert, onExample, onClose, onTopic }: {
+export default function HelpPanel({ initialQuery = "", initialTopic = "", onInsert, onExample, onTutorialTry, onTutorialExample, onClose, onTopic }: {
+  onTutorialTry:(example:HelpExample)=>void; onTutorialExample:(example:HelpExample)=>void;
   initialQuery?: string; initialTopic?: string; onInsert:(example:HelpExample)=>void; onExample:(example:HelpExample)=>void; onClose:()=>void; onTopic:(id:string)=>void;
 }) {
   const [query,setQuery]=useState(initialQuery), [kind,setKind]=useState("Alle"), [advanced,setAdvanced]=useState(false), [selected,setSelected]=useState(initialTopic);
@@ -12,7 +14,9 @@ export default function HelpPanel({ initialQuery = "", initialTopic = "", onInse
   const matches=useMemo(()=>searchHelp(query,kind,advanced),[query,kind,advanced]);
   const topic=topics.find(t=>t.id===selected);
   return <aside className="help-panel" aria-label="Hjelp mens du koder">
-    <header><div><small>OPPSLAG OG OPPSKRIFTER</small><h2>Hva vil du få til?</h2></div><button onClick={onClose} aria-label="Lukk hjelpen og gå til koden">Lukk ×</button></header>
+    <header><div><small>{selected.startsWith("tutorial")?"PYTHON · STEG FOR STEG":"OPPSLAG OG OPPSKRIFTER"}</small><h2>{selected.startsWith("tutorial")?"Lær ved å bygge":"Hva vil du få til?"}</h2></div><button onClick={onClose} aria-label="Lukk hjelpen og gå til koden">Lukk ×</button></header>
+    <nav className="help-modes" aria-label="Type hjelp"><button aria-pressed={!selected.startsWith("tutorial")} onClick={()=>{setSelected("");onTopic("");}}>Oppslag</button><button aria-pressed={selected.startsWith("tutorial")} onClick={()=>{setSelected("tutorials");onTopic("tutorials");}}>Steg for steg</button></nav>
+    {selected.startsWith("tutorial") ? <TutorialPanel topic={selected} onTopic={id=>{setSelected(id);onTopic(id);}} onTry={onTutorialTry} onExample={onTutorialExample}/> : <>
     <label className="help-search">Søk i all hjelp<input ref={searchRef} type="search" value={query} onChange={e=>{setQuery(e.target.value);setSelected("");}} placeholder="Løkke, tegne graf, lese fil …" /></label>
     {!topic ? <>
       <div className="help-filters"><label>Vis<select value={kind} onChange={e=>setKind(e.target.value)}>{["Alle","Oppskrift","Kommando","Byggekloss","Bibliotek","Fordypning"].map(k=><option key={k}>{k}</option>)}</select></label><label><input type="checkbox" checked={advanced} onChange={e=>setAdvanced(e.target.checked)} /> Også videre stoff</label></div>
@@ -28,5 +32,6 @@ export default function HelpPanel({ initialQuery = "", initialTopic = "", onInse
       {topic.notice && <div className="notice"><strong>Viktig å vite</strong><p>{topic.notice}</p></div>}
       <h4>Prøv en endring</h4><p>{topic.challenge || "Endre én verdi, kjør på nytt og forklar forskjellen."}</p>
     </article>}
+    </>}
   </aside>;
 }

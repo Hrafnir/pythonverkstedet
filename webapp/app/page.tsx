@@ -1012,7 +1012,13 @@ export default function Home() {
     const base=location.hash.slice(1).split("?")[0]||"code";
     history.replaceState(null,"",`#${base}${id?`?help=${encodeURIComponent(id)}`:""}`);
   }
-  function openHelp(query="") { setHelpQuery(query);setHelpTopic("");setHelpOpen(true);setWorkspaceTab("help");setFocusMode(false); }
+  function openHelp(query="") { setHelpQuery(query);if(query)setHelpTopic("");setHelpOpen(true);setWorkspaceTab("help");setFocusMode(false); }
+  function openTutorials(){openHelp();setHelpAddress("tutorials");}
+  function tryTutorial(example:HelpExample){
+    if(pygameView||directory)newHelpExample(example);else replaceWithUndo(example.code);
+    setHelpOpen(true);setHelpAddress(helpTopic);
+  }
+  function newTutorialProject(example:HelpExample){newHelpExample(example);setHelpOpen(true);setHelpAddress(helpTopic);}
   function closeHelp() {setHelpOpen(false);setHelpAddress("");focusEditor();}
   function backupCode(current:string) {
     if(!current.trim()) return;
@@ -1816,8 +1822,13 @@ export default function Home() {
     event.target.value = "";
   }
 
+  async function copyPlainText(text:string, message:string) {
+    try {await navigator.clipboard.writeText(text);setShareStatus(message);}
+    catch {setShareStatus("Nettleseren tillot ikke kopiering. Marker teksten og bruk Ctrl/Cmd+C.");}
+  }
+
   async function copyCodeAsText() {
-    const answer = output.trim() || "Ingen utskrift ennå.";
+    const answer = `${resultIsStale ? "Merk: Dette resultatet er fra en tidligere versjon av koden.\n" : ""}${output.trim() || "Ingen utskrift ennå."}`;
     const plainText = `Python-kode:\n${code || "(tom editor)"}\n\nSvar / resultat:\n${answer}`;
     try {
       if ("ClipboardItem" in window && navigator.clipboard?.write) {
@@ -2350,7 +2361,7 @@ export default function Home() {
           <a href="#challenge" aria-current={challengeView||examTrainingView?"page":undefined} onClick={e=>{e.preventDefault();chooseChallenges();}}>Øv</a>
           <a href="#teacher" aria-current={curriculumView?"page":undefined} onClick={e=>{e.preventDefault();chooseCurriculum();}}>Lærer</a>
         </nav>
-        <div className="header-actions"><button onClick={()=>openHelp()} aria-expanded={helpOpen}>? Hjelp</button><details className="menu" onClick={e=>{if((e.target as HTMLElement).closest("button"))e.currentTarget.open=false;}}><summary aria-label="Appmeny">•••</summary><div><button onClick={()=>setFeedbackDialogOpen(true)}>Gi tilbakemelding</button><button onClick={()=>window.print()}>Skriv ut hefte</button><button onClick={()=>setFocusMode(!focusMode)}>{focusMode?"Avslutt fokusvisning":"Fokusvisning"}</button><small>Skolepython 0.17.1 · Arbeid lagres på denne enheten.</small></div></details></div>
+        <div className="header-actions"><button onClick={openTutorials}>Tutorials</button><button onClick={()=>openHelp()} aria-expanded={helpOpen}>? Hjelp</button><details className="menu" onClick={e=>{if((e.target as HTMLElement).closest("button"))e.currentTarget.open=false;}}><summary aria-label="Appmeny">•••</summary><div><button onClick={()=>setFeedbackDialogOpen(true)}>Gi tilbakemelding</button><button onClick={()=>window.print()}>Skriv ut hefte</button><button onClick={()=>setFocusMode(!focusMode)}>{focusMode?"Avslutt fokusvisning":"Fokusvisning"}</button><small>Skolepython 0.17.1 · Arbeid lagres på denne enheten.</small></div></details></div>
       </header>
       {!directory && <div className="workspace-context">
         {playground ? <><label>Prosjekt<select aria-label="Åpent prosjekt" value={activeProjectId} onChange={e=>{stopExecution();selectProject(e.target.value);}}>{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button onClick={createProject}>+ Nytt prosjekt</button></> : view==="learn" ? <label>Modul<select aria-label="Velg modul" value={activeId} onChange={e=>chooseModule(modules.find(m=>m.id===Number(e.target.value))!)}>{learningOrder.map(id=>{const m=modules.find(m=>m.id===id)!;return <option key={id} value={id}>{completed.includes(id)?"✓ ":""}{id}. {m.shortTitle}</option>})}</select></label> : <strong>{pygameView ? "Pygame · Fang mynten" : activeChallenge?.title || activeExamTask?.title}</strong>}
@@ -2358,7 +2369,7 @@ export default function Home() {
       </div>}
       {directory ? <>
         {curriculumView ? <Suspense fallback={<p>Laster lærerveiledning …</p>}><TeacherView onModule={id=>chooseModule(modules.find(m=>m.id===id)!)} /></Suspense> : <section className="directory"><header><small>LES · BYGG · FORKLAR</small><h1>{examTrainingView?"Eksamenstrening":"Utfordringer"}</h1><p>{examTrainingView?"Egenproduserte øvingsoppgaver med kodeforståelse og matematisk forklaring.":"Velg et oppdrag. Ta ett hint om gangen, og test ideen din i Python."}</p><div className="button-row"><button aria-pressed={challengeView} onClick={chooseChallenges}>Utfordringer</button><button aria-pressed={examTrainingView} onClick={chooseExamTraining}>Eksamenstrening</button><label>Nivå<select aria-label="Filtrer nivå" value={examTrainingView?examLevel:challengeDifficulty} onChange={e=>examTrainingView?setExamLevel(e.target.value as ExamLevel):setChallengeDifficulty(e.target.value as ChallengeDifficulty)}>{(examTrainingView?examLevels:challengeDifficulties).map(level=><option key={level}>{level}</option>)}</select></label></div></header><div className="directory-grid">{examTrainingView ? filteredExamTasks.map(t=><button className="task-card" key={t.id} onClick={()=>openExamTask(t)}><small>{t.level} · {t.estimatedMinutes} min {completedExamTasks.includes(t.id)?"· ✓ Fullført":""}</small><h2>{t.title}</h2><p>{t.shortDescription}</p><span>Åpne oppgaven →</span></button>) : filteredChallenges.map(t=><button className="task-card" key={t.id} onClick={()=>openChallenge(t)}><small>{t.difficulty} · {t.estimatedMinutes} min {completedChallenges.includes(t.id)?"· ✓ Fullført":""}</small><h2>{t.title}</h2><p>{t.teaser}</p><span>Åpne utfordringen →</span></button>)}</div></section>}
-        {helpOpen&&<div className="directory-help"><Suspense fallback={<p>Laster hjelp …</p>}><HelpPanel initialQuery={helpQuery} initialTopic={helpTopic} onTopic={setHelpAddress} onClose={closeHelp} onInsert={insertHelpExample} onExample={newHelpExample}/></Suspense></div>}
+        {helpOpen&&<div className="directory-help"><Suspense fallback={<p>Laster hjelp …</p>}><HelpPanel initialQuery={helpQuery} initialTopic={helpTopic} onTopic={setHelpAddress} onClose={closeHelp} onInsert={insertHelpExample} onExample={newHelpExample} onTutorialTry={tryTutorial} onTutorialExample={newTutorialProject}/></Suspense></div>}
       </> : <>
         <nav className="workspace-tabs" aria-label="Vis arbeidsfelt">{hasTask&&<button aria-pressed={workspaceTab==="lesson"} onClick={()=>setWorkspaceTab("lesson")}>Oppgave</button>}<button aria-pressed={workspaceTab==="code"} onClick={()=>focusEditor()}>Kode</button><button aria-pressed={workspaceTab==="result"} onClick={()=>setWorkspaceTab("result")}>Resultat{runnerStatus==="error"?" !":""}</button><button aria-pressed={workspaceTab==="help"} onClick={()=>openHelp()}>Hjelp</button></nav>
         <div className={`studio-workspace ${hasTask?"with-lesson":""} ${helpOpen?"with-help":""} tab-${workspaceTab}`} style={{"--editor-share":`${editorShare}%`} as CSSProperties} ref={workbenchRef}>
@@ -2376,7 +2387,7 @@ export default function Home() {
                 {!pygameView&&<><button onClick={copyCodeAsText}>Kopier kode + svar</button><button onClick={()=>copyCodeAsImage(activeLocalFile.name)}>Bilde av kode + svar</button></>}
                 <button onClick={restorePreviousDraft}>Gjenopprett forrige utkast</button><button onClick={()=>replaceWithUndo("")}>Tøm kodefeltet</button>
               </div></details></div></div>
-              <div className="file-strip"><strong>{pygameView?"pygame-spill.py":playground?activeLocalFile.name:"verksted.py"}</strong>{view==="learn"&&<div className="lab-tabs" aria-label="Arbeidsmåte"><button aria-pressed={labTab==="practice"} onClick={()=>{stopExecution();switchLabTab("practice");}}>Skriv selv</button><button aria-pressed={labTab==="solution"} onClick={()=>{stopExecution();switchLabTab("solution");}}>Fasit</button></div>}{!pygameView&&<button onClick={()=>setFilesOpen(!filesOpen)} aria-expanded={filesOpen}>Filer {dataFiles.length?`(${dataFiles.length})`:""}</button>}</div>
+              <div className="file-strip"><button onClick={()=>copyPlainText(pygameView?pygameCode:code,"Koden er kopiert.")}>Kopier kode</button>{!pygameView&&<button onClick={copyCodeAsText}>Kopier kode + svar</button>}<strong>{pygameView?"pygame-spill.py":playground?activeLocalFile.name:"verksted.py"}</strong>{view==="learn"&&<div className="lab-tabs" aria-label="Arbeidsmåte"><button aria-pressed={labTab==="practice"} onClick={()=>{stopExecution();switchLabTab("practice");}}>Skriv selv</button><button aria-pressed={labTab==="solution"} onClick={()=>{stopExecution();switchLabTab("solution");}}>Fasit</button></div>}{!pygameView&&<button onClick={()=>setFilesOpen(!filesOpen)} aria-expanded={filesOpen}>Filer {dataFiles.length?`(${dataFiles.length})`:""}</button>}</div>
               {filesOpen&&!pygameView&&<div className="workspace-files">{playground&&<><div className="project-file-tabs" aria-label="Python-filer i prosjektet">{activeLocalProject.files!.map(f=><button key={f.id} aria-pressed={f.id===activeLocalProject.activeFileId} onClick={()=>{stopExecution();selectProjectFile(f.id);}}>{f.name}</button>)}<button onClick={createProjectFile}>+ Ny fil</button></div><div className="button-row"><button onClick={renameProject}>Gi prosjekt nytt navn</button><button onClick={renameProjectFile}>Gi fil nytt navn</button><label className="file-upload">Importer .py<input type="file" accept=".py" onChange={importProject}/></label><button onClick={deleteProjectFile}>Slett åpen fil</button><button onClick={deleteProject}>Slett prosjekt</button>{window.bjornsveenDesktop&&<><button onClick={openDesktopProject}>Åpne fra Mac</button><button onClick={()=>void saveDesktopProject()}>Lagre på Mac</button></>}</div></>}{dataFileShelf()}<p className="muted">Datafiler lagres sammen med arbeidsområdet. Python-filer som programmet selv oppretter, finnes bare i den kjøringen.</p></div>}
               {undoCode!==null&&<div className="undo-notice" role="status">Koden er byttet. Forrige utkast er bevart.<button onClick={undoReplacement}>Angre byttet</button></div>}
               <label htmlFor={editorId} className="sr-only">{pygameView?"Skriv Pygame-kode":"Skriv Python-kode"}</label>
@@ -2384,7 +2395,7 @@ export default function Home() {
               <div id="studio-editor-help" className="studio-editor-footer"><span>{pygameView?"Klikk i spillflaten for å bruke piltastene.":"Python kjører lokalt på enheten din."}</span><span>Tab: innrykk · Esc, så Tab: gå videre</span></div>
             </section>
             <section className={`output-panel studio-output ${resultIsStale?"is-stale":""}`} aria-label="Resultat">
-              <header><h2>{pygameView?"Spillflate":"Resultat"}</h2><span role="status">{pygameView?pygameStatus==="running"?"● Kjører":"Pygame":runnerBusy?runButtonLabel:runnerStatus==="error"?"! Stoppet":executedCode!==null?"✓ Ferdig":"Klar"}</span></header>
+              <header><h2>{pygameView?"Spillflate":"Resultat"}</h2><button onClick={()=>copyPlainText(pygameView?pygameConsole:output,"Resultatteksten er kopiert.")}>Kopier resultat</button><span role="status">{pygameView?pygameStatus==="running"?"● Kjører":"Pygame":runnerBusy?runButtonLabel:runnerStatus==="error"?"! Stoppet":executedCode!==null?"✓ Ferdig":"Klar"}</span></header>
               {!pygameView&&<nav className="result-tabs" aria-label="Resultatverktøy"><button aria-pressed={resultTab==="output"} onClick={()=>setResultTab("output")}>Utskrift og grafikk</button><button aria-pressed={resultTab==="variables"} onClick={()=>setResultTab("variables")}>Variabler</button><button aria-pressed={resultTab==="trace"} onClick={()=>setResultTab("trace")}>Steg</button></nav>}
               <div className="result-scroll">
                 {pygameView ? <><div className="pygame-frame-wrap"><iframe key={pygameFrameKey} ref={pygameFrameRef} src="./pygame-runner.html" title="Pygame-spillflate" allow="autoplay" /></div><button onClick={savePygameImage}>Lagre bilde</button><pre className="pygame-console" aria-live="polite">{pygameConsole}</pre></> : <>
@@ -2393,7 +2404,7 @@ export default function Home() {
                     <label htmlFor="python-input-answer" className="console-input-prompt">{pythonInputRequest.prompt}</label>
                     <div className="console-input-row">
                       <input ref={inputAnswerRef} id="python-input-answer" aria-label="Svaret ditt" aria-describedby="python-input-hint" value={pythonInputValue} onChange={event=>setPythonInputValue(event.target.value)} onKeyDown={event=>{if(event.key==="Escape"){event.preventDefault();event.stopPropagation();cancelPythonInput();}}} autoComplete="off" spellCheck={false}/>
-                      <button type="submit">Send svar ↵</button>
+                      <button type="submit">Send svar ↵</button><button type="button" disabled={!pythonInputValue} onClick={()=>copyPlainText(pythonInputValue,"Svaret er kopiert.")}>Kopier svar</button>
                     </div>
                     <div className="console-input-actions"><small id="python-input-hint">Enter sender svaret. Programmet venter på deg.</small><button type="button" onClick={cancelPythonInput}>Stopp programmet</button></div>
                   </form>}{plotGallery()}</>}
@@ -2403,7 +2414,7 @@ export default function Home() {
               </div>
             </section>
           </div>
-          {helpOpen&&<Suspense fallback={<aside className="help-panel">Laster hjelp …</aside>}><HelpPanel initialQuery={helpQuery} initialTopic={helpTopic} onTopic={setHelpAddress} onClose={closeHelp} onInsert={insertHelpExample} onExample={newHelpExample}/></Suspense>}
+          {helpOpen&&<Suspense fallback={<aside className="help-panel">Laster hjelp …</aside>}><HelpPanel initialQuery={helpQuery} initialTopic={helpTopic} onTopic={setHelpAddress} onClose={closeHelp} onInsert={insertHelpExample} onExample={newHelpExample} onTutorialTry={tryTutorial} onTutorialExample={newTutorialProject}/></Suspense>}
         </div>
       </>}
       {shareStatus&&<div className="studio-status" role="status">{shareStatus}<button aria-label="Lukk status" onClick={()=>setShareStatus("")}>×</button></div>}
