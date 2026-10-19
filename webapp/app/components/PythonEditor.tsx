@@ -1,3 +1,4 @@
+import { EditorHistory } from "../lib/editorHistory";
 import type { EditorSuggestion } from "../lib/editorHelp";
 import { pythonRangePreview, pythonLineDiagnostic, startsPythonBlockWithoutColon, findPythonBlockSuggestion, suggestionsAtCursor, completionEdit, pythonPairedEnter, pythonPairMap, pythonClosingCharacters } from "../lib/editorHelp";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -19,13 +20,13 @@ function colorPython(source: string, importedAliases = new Set<string>()): React
   });
 }
 
-function colorPythonLines(source: string, errorLine?: number) {
+function colorPythonLines(source: string, errorLine?: number, traceLine?: number) {
   const importedAliases = new Set(analyzePythonImports(source).flatMap((status) => status.available && status.alias ? [status.alias] : []));
   return source.split("\n").map((line, lineIndex) => {
     const leadingSpaces = line.match(/^ */)?.[0].length ?? 0;
     const indentLevels = Math.floor(leadingSpaces / 4);
     return (
-      <span className={`syntax-line ${errorLine === lineIndex + 1 ? "is-error-line" : ""}`} key={`${lineIndex}-${line}`}>
+      <span className={`syntax-line ${errorLine === lineIndex + 1 ? "is-error-line" : ""} ${traceLine === lineIndex + 1 ? "is-trace-line" : ""}`} key={`${lineIndex}-${line}`}>
         <span className="indent-guide-layer" aria-hidden="true">
           {Array.from({ length: indentLevels }, (_, level) => (
             <i key={level} style={{ left: `${(level + 1) * 4}ch` }} />
@@ -37,8 +38,12 @@ function colorPythonLines(source: string, errorLine?: number) {
   });
 }
 
-export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall = false, errorLine, onSelectionChange }: {
+export function PythonEditor({ id, value, onChange: emitChange, historyKey, histories, offlineRuntime = false, traceLine, describedBy, fontSize, tall = false, errorLine, onSelectionChange }: {
   id: string;
+  historyKey: string;
+  histories: Map<string,EditorHistory>;
+  offlineRuntime?: boolean;
+  traceLine?: number;
   value: string;
   onChange: (value: string) => void;
   describedBy: string;
@@ -47,6 +52,40 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
   errorLine?: number;
   onSelectionChange?: (start: number, end: number, selected: string) => void;
 }) {
+  if(!histories.has(historyKey))histories.set(historyKey,new EditorHistory(value));
+  const history=histories.get(historyKey)!;
+  const restoredSelection=useRef<{start:number;end:number}|null>(null);
+  function onChange(next:string){
+    const input=inputRef.current;
+    if(input?.value===history.current.text)history.select(input.selectionStart,input.selectionEnd);
+    history.record(next,input?.selectionStart??0,input?.selectionEnd??0);
+    emitChange(next);
+  }
+  function travelHistory(redo:boolean){
+    const snapshot=redo?history.redo():history.undo();
+    restoredSelection.current={start:snapshot.start,end:snapshot.end};
+    pendingCursor.current=null;
+    emitChange(snapshot.text);setCursor(snapshot.start);setDismissed(true);setPendingBlock(null);
+    inputRef.current?.setSelectionRange(snapshot.start,snapshot.end);
+  }
+  useLayoutEffect(()=>{
+    if(history.current.text!==value)history.record(value,0);
+    const selection=restoredSelection.current;
+    if(selection){inputRef.current?.setSelectionRange(selection.start,selection.end);restoredSelection.current=null;setHasSelection(selection.start!==selection.end);}
+  },[value,history]);
+  useLayoutEffect(()=>{
+    const input=inputRef.current;if(!input||!traceLine)return;
+    const height=parseFloat(getComputedStyle(input).lineHeight);
+    const top=(traceLine-1)*height;
+    if(top<input.scrollTop||top+height>input.scrollTop+input.clientHeight)input.scrollTop=Math.max(0,top-input.clientHeight/3);
+    if(highlightRef.current)highlightRef.current.scrollTop=input.scrollTop;
+    if(gutterRef.current)gutterRef.current.scrollTop=input.scrollTop;
+  },[traceLine]);
+  useLayoutEffect(()=>{
+    pendingCursor.current=null;restoredSelection.current=null;
+    inputRef.current?.setSelectionRange(history.current.start,history.current.end);
+    setCursor(history.current.start);setDismissed(true);setPendingBlock(null);
+  },[historyKey]);
   const escapeTabRef = useRef(false);
   const [focused,setFocused] = useState(false);
   const [selectedCompletion,setSelectedCompletion] = useState(0);
@@ -122,6 +161,7 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
     pendingCursor.current = null;
     inputRef.current.setSelectionRange(next, next);
     setCursor(next);
+    history.select(next,next);
     onSelectionChange?.(next, next, "");
   }, [value]);
   function moveCursor(next: number) {
@@ -129,12 +169,14 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
     inputRef.current?.setSelectionRange(next, next);
     inputRef.current?.focus();
     setCursor(next);
+    history.select(next,next);
     onSelectionChange?.(next, next, "");
   }
 
   function reportSelection(input: HTMLTextAreaElement) {
     const start = input.selectionStart;
     const end = input.selectionEnd;
+    if(input.value===history.current.text)history.select(start,end);
     setCursor(start);
     setHasSelection(start!==end);
     onSelectionChange?.(start, end, input.value.slice(start, end));
@@ -179,6 +221,7 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
   }
 
   function handleEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if(!event.nativeEvent.isComposing&&(event.metaKey||event.ctrlKey)&&!event.altKey&&(event.key.toLowerCase()==="z"||event.key.toLowerCase()==="y")){event.preventDefault();travelHistory(event.shiftKey||event.key.toLowerCase()==="y");return;}
     if(event.key === "Escape") escapeTabRef.current = true;
     else if(event.key === "Tab" && escapeTabRef.current) { escapeTabRef.current = false; return; }
     else escapeTabRef.current = false;
@@ -311,10 +354,10 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
       <div className="python-editor-surface">
         <pre className="syntax-gutter" ref={gutterRef} aria-hidden="true">
           {Array.from({ length: lineCount }, (_, index) => (
-            <span className={errorLine === index + 1 ? "is-error-line" : ""} key={index + 1}>{index + 1}</span>
+            <span className={`${errorLine===index+1?"is-error-line":""} ${traceLine===index+1?"is-trace-line":""}`} key={index + 1}>{index + 1}</span>
           ))}
         </pre>
-        <pre className="syntax-layer" ref={highlightRef} aria-hidden="true">{colorPythonLines(`${value}\n`, errorLine)}</pre>
+        <pre className="syntax-layer" ref={highlightRef} aria-hidden="true">{colorPythonLines(`${value}\n`, errorLine, traceLine)}</pre>
         <textarea
           ref={inputRef}
           id={id}
@@ -327,6 +370,7 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
             reportSelection(event.target);
             setPendingBlock(null);
           }}
+          onBeforeInput={event=>{const type=(event.nativeEvent as InputEvent).inputType;if(type==="historyUndo"||type==="historyRedo"){event.preventDefault();travelHistory(type==="historyRedo");}else{history.select(event.currentTarget.selectionStart,event.currentTarget.selectionEnd);}}}
           onKeyDown={handleEditorKeyDown}
           onFocus={()=>{setFocused(true);updateCaret();}}
           onBlur={(event) => {setFocused(false);reportSelection(event.currentTarget);}}
@@ -366,8 +410,8 @@ export function PythonEditor({ id, value, onChange, describedBy, fontSize, tall 
             <span className={status.available ? "is-available" : "is-unknown"} key={`${status.module}-${status.alias ?? ""}`}>
               <strong aria-hidden="true">{status.available ? "✓" : "?"}</strong>
               {status.available
-                ? `${status.label}${status.alias ? ` som ${status.alias}` : ""} er tilgjengelig${status.availability === "offline" || status.availability === "local" ? " offline" : ""}`
-                : `${status.module} er ikke bekreftet i offline-pakken`}
+                ? `${status.label}${status.alias ? ` som ${status.alias}` : ""} er tilgjengelig${offlineRuntime ? " offline" : status.availability === "offline" ? " – lastes ned ved behov" : ""}`
+                : `${status.module} er ikke bekreftet i dette kjøremiljøet`}
             </span>
           ))}
         </div>

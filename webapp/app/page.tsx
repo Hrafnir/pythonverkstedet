@@ -1,3 +1,5 @@
+import { EditorHistory } from "./lib/editorHistory";
+import { wrapExportLines } from "./lib/imageExport";
 import { exampleFiles, exampleDataFiles, completeExample } from "./lib/exampleFiles";
 
 import LessonPanel from "./components/LessonPanel";
@@ -1858,7 +1860,10 @@ export default function Home() {
     const measure = canvas.getContext("2d");
     if (!measure) return;
     measure.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
-    const width = Math.min(1800, Math.max(720, ...[...lines, ...answerLines].map((line) => measure.measureText(line).width + padding * 2)));
+    const gutter = Math.max(48,measure.measureText(String(lines.length)).width+24);
+    const width = Math.min(1800,[...lines,...answerLines].reduce((w,line)=>Math.max(w,measure.measureText(line).width+padding*2+gutter),720));
+    const codeRows=wrapExportLines(lines,text=>measure.measureText(text).width,width-padding*2-gutter);
+    const answerRows=wrapExportLines(answerLines,text=>measure.measureText(text).width,width-padding*2);
     const visualSources = plotImages.map((plotImage) => `data:image/png;base64,${plotImage}`);
     const snakeCanvas = document.querySelector<HTMLCanvasElement>(".snake-canvas");
     if (snakeGame && snakeCanvas) visualSources.unshift(snakeCanvas.toDataURL("image/png"));
@@ -1873,12 +1878,13 @@ export default function Home() {
       await plot.decode();
       return plot;
     }));
-    const codeHeight = padding + lines.length * lineHeight + padding;
+    const codeHeight = padding + codeRows.length * lineHeight + padding;
     const answerHeaderHeight = 48;
-    const answerHeight = padding + answerLines.length * lineHeight + padding;
+    const answerHeight = padding + answerRows.length * lineHeight + padding;
     const plotHeights = plots.map((plot) => Math.min(430, (plot.height / plot.width) * (width - padding * 2)));
     const plotHeight = plotHeights.reduce((sum, item) => sum + item + padding, 0);
     const height = Math.max(320, titleHeight + codeHeight + answerHeaderHeight + answerHeight + plotHeight);
+    if(height>8000||width*height>8_000_000){setShareStatus("Teksten er for stor for ett lesbart bilde. Bruk Kopier kode + svar eller last ned koden i stedet.");return;}
     canvas.width = width * 2;
     canvas.height = height * 2;
     const context = canvas.getContext("2d");
@@ -1896,10 +1902,15 @@ export default function Home() {
     context.beginPath(); context.arc(65, 29, 6, 0, Math.PI * 2); context.fill();
     context.fillStyle = "#d9e8df";
     context.font = "700 14px ui-monospace, SFMono-Regular, Consolas, monospace";
-    context.fillText(filename, 92, 34);
+    context.fillText(filename, 92, 34,width-110);
     context.fillStyle = "#e7eee9";
     context.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
-    lines.forEach((line, index) => context.fillText(line, padding, titleHeight + padding + (index + 1) * lineHeight));
+    codeRows.forEach((row,index)=>{
+      const y=titleHeight+padding+(index+1)*lineHeight;
+      context.fillStyle="#87aa98";
+      context.fillText(row.lineNumber===null?"↳":String(row.lineNumber),padding,y);
+      context.fillStyle="#e7eee9";context.fillText(row.text,padding+gutter,y);
+    });
     const answerTop = titleHeight + codeHeight;
     context.fillStyle = "#234b46";
     context.fillRect(0, answerTop, width, answerHeaderHeight);
@@ -1910,7 +1921,7 @@ export default function Home() {
     context.fillRect(0, answerTop + answerHeaderHeight, width, answerHeight + plotHeight);
     context.fillStyle = "#e7eee9";
     context.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
-    answerLines.forEach((line, index) => context.fillText(line, padding, answerTop + answerHeaderHeight + padding + (index + 1) * lineHeight));
+    answerRows.forEach((row, index) => context.fillText(row.text, padding, answerTop + answerHeaderHeight + padding + (index + 1) * lineHeight));
     let nextPlotTop = answerTop + answerHeaderHeight + answerHeight;
     plots.forEach((plot, index) => {
       const drawWidth = width - padding * 2;
@@ -2122,7 +2133,7 @@ export default function Home() {
           </div>
         </div>
         <div className="trace-code-line"><span>{step.line}</span><code>{step.code || "(tom linje)"}</code></div>
-        <p>Python står foran denne linjen. Tabellen viser verdiene som finnes akkurat nå.</p>
+        <p>Opptak fra siste kjøring: Python stod foran denne linjen. Tabellen viser verdiene på dette steget.</p>
         {step.variables.length ? (
           <div className="trace-variables">
             {step.variables.map((variable) => <div key={variable.name}><code>{variable.name}</code><span>{variable.value}</span></div>)}
@@ -2347,6 +2358,7 @@ export default function Home() {
     saveLocal("pythonverkstedet-progress", JSON.stringify(next));
   }
 
+  const editorHistories = useRef(new Map<string,EditorHistory>());
   const editorId = pygameView ? "pygame-code" : examTrainingView ? "exam-code" : challengeView ? "challenge-code" : playground ? "playground-code" : "python-code";
   const hasTask = view === "learn" || pygameView || !!(challengeView && activeChallenge) || !!(examTrainingView && activeExamTask);
   const directory = curriculumView || (challengeView && !activeChallenge) || (examTrainingView && !activeExamTask);
@@ -2391,7 +2403,7 @@ export default function Home() {
               {filesOpen&&!pygameView&&<div className="workspace-files">{playground&&<><div className="project-file-tabs" aria-label="Python-filer i prosjektet">{activeLocalProject.files!.map(f=><button key={f.id} aria-pressed={f.id===activeLocalProject.activeFileId} onClick={()=>{stopExecution();selectProjectFile(f.id);}}>{f.name}</button>)}<button onClick={createProjectFile}>+ Ny fil</button></div><div className="button-row"><button onClick={renameProject}>Gi prosjekt nytt navn</button><button onClick={renameProjectFile}>Gi fil nytt navn</button><label className="file-upload">Importer .py<input type="file" accept=".py" onChange={importProject}/></label><button onClick={deleteProjectFile}>Slett åpen fil</button><button onClick={deleteProject}>Slett prosjekt</button>{window.bjornsveenDesktop&&<><button onClick={openDesktopProject}>Åpne fra Mac</button><button onClick={()=>void saveDesktopProject()}>Lagre på Mac</button></>}</div></>}{dataFileShelf()}<p className="muted">Datafiler lagres sammen med arbeidsområdet. Python-filer som programmet selv oppretter, finnes bare i den kjøringen.</p></div>}
               {undoCode!==null&&<div className="undo-notice" role="status">Koden er byttet. Forrige utkast er bevart.<button onClick={undoReplacement}>Angre byttet</button></div>}
               <label htmlFor={editorId} className="sr-only">{pygameView?"Skriv Pygame-kode":"Skriv Python-kode"}</label>
-              <PythonEditor id={editorId} value={pygameView?pygameCode:code} onChange={pygameView?updatePygameCode:updateCode} describedBy="studio-editor-help" fontSize={editorFontSize} errorLine={executedCode===code?errorCoach?.lineNumber:undefined} onSelectionChange={(start,end,selected)=>setEditorSelection({start,end,selected})}/>
+              <PythonEditor historyKey={`${areaKey}:${playground?activeLocalFile.id:"main"}`} histories={editorHistories.current} offlineRuntime={!!window.bjornsveenDesktop} traceLine={!pygameView&&executedCode===code&&resultTab==="trace"?traceSteps[Math.min(traceIndex,traceSteps.length-1)]?.line:undefined} id={editorId} value={pygameView?pygameCode:code} onChange={pygameView?updatePygameCode:updateCode} describedBy="studio-editor-help" fontSize={editorFontSize} errorLine={executedCode===code?errorCoach?.lineNumber:undefined} onSelectionChange={(start,end,selected)=>setEditorSelection({start,end,selected})}/>
               <div id="studio-editor-help" className="studio-editor-footer"><span>{pygameView?"Klikk i spillflaten for å bruke piltastene.":"Python kjører lokalt på enheten din."}</span><span>Tab: innrykk · Esc, så Tab: gå videre</span></div>
             </section>
             <section className={`output-panel studio-output ${resultIsStale?"is-stale":""}`} aria-label="Resultat">
