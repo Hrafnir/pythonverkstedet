@@ -163,9 +163,9 @@ test("editorhjelp og modale vinduer fungerer med tastatur", async ({ page }) => 
 
   await editor.fill("import numpy as np\nimport math\nimport random\nimport pygame\nimport requests");
   const libraryStatus = page.locator(".editor-library-status");
-  await expect(libraryStatus).toContainText("NumPy som np er tilgjengelig offline");
+  await expect(libraryStatus).toContainText("NumPy som np er tilgjengelig – lastes ned ved behov");
   await expect(libraryStatus).toContainText("math er tilgjengelig");
-  await expect(libraryStatus).toContainText("requests er ikke bekreftet i offline-pakken");
+  await expect(libraryStatus).toContainText("requests er ikke bekreftet i dette kjøremiljøet");
   await expect(page.locator(".py-library").filter({ hasText: /^numpy$/ }).first()).toBeVisible();
   await expect(page.locator(".py-library").filter({ hasText: /^np$/ }).first()).toBeVisible();
   await expect(page.locator(".py-library").filter({ hasText: /^pygame$/ }).first()).toBeVisible();
